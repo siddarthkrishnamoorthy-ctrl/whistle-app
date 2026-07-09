@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  /* Deep slate → charcoal gradient behind every screen. */
+  background: linear-gradient(165deg, #151c2c 0%, #0e1420 45%, #0b0d12 100%) fixed;
+  color: #ffffff;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Glassmorphism table rows: soft hover highlight everywhere without touching
+   each page's <tr> markup. */
+tbody tr {
+  transition: background-color 120ms ease;
+}
+tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Slim, theme-matched scrollbars instead of the chunky OS default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 185, 63, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Every interactive control gets an explicit hover/press response. */
+button,
+a {
+  transition:
+    background-color 130ms ease,
+    color 130ms ease,
+    border-color 130ms ease,
+    box-shadow 130ms ease,
+    transform 80ms ease;
+}
+button:active {
+  transform: scale(0.98);
+}

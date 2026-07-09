@@ -1,0 +1,1156 @@
+// Whistle data model — transcribed from Technical Design Document v1.0 Section 5
+// (DDL) and Section 14 (BRD conceptual entities), adapted to Prisma conventions:
+// PascalCase models / camelCase fields mapped via @@map/@map to the exact
+// snake_case table/column names the TDD specifies, so raw SQL/DBA tooling still
+// sees the documented schema.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  account_manager
+  venue_manager
+  head_coach
+  coach
+  // Dedicated scorer role (2026-07): results entered by a referee are final
+  // immediately — no opponent-coach approval round.
+  referee
+  parent
+  student
+}
+
+enum SalaryBasis {
+  fixed
+  session
+  days_present
+}
+
+enum PlanType {
+  subscription
+  trial
+  one_time
+}
+
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+  elite
+}
+
+enum ClassMode {
+  offline
+  online
+  both
+}
+
+enum ClassStatus {
+  active
+  inactive
+}
+
+enum SessionStatus {
+  not_started
+  ongoing
+  completed
+}
+
+enum EnrollmentStatus {
+  active
+  due
+  overdue
+  renewed
+  stopped
+}
+
+enum EnquiryTemperature {
+  hot
+  warm
+  cold
+}
+
+enum EnquiryStage {
+  lead
+  closed
+  junk
+}
+
+enum AttendanceStatus {
+  present
+  late
+  absent
+}
+
+enum InvoiceStatus {
+  pending
+  paid
+}
+
+enum FormatType {
+  individual
+  pair
+  team
+}
+
+enum EventStatus {
+  draft
+  scheduled
+  live
+  completed
+  // BRD 11.5 step 10: "Close Event" is a distinct Tournament Director action
+  // after all fixtures are completed — archives standings/MVPs and moves the
+  // event to history. Missing from the original enum (which stopped at completed).
+  closed
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  declined
+}
+
+enum EligibilityStatus {
+  pending
+  eligible
+  ineligible
+}
+
+enum FixtureStatus {
+  draft
+  scheduled
+  live
+  pending_confirmation
+  completed
+  abandoned
+}
+
+enum MatchType {
+  interschool
+  internal_ladder
+  practice
+}
+
+enum RatingConfidence {
+  low
+  medium
+  high
+}
+
+// ─── Core platform ──────────────────────────────────────────────────────────
+
+model Academy {
+  id            String   @id @default(uuid())
+  name          String
+  // contactEmail/phone/website/settings are missing from the TDD's DDL
+  // entirely, even though BRD 7.8 Settings > General needs the contact
+  // fields and Policies/Payments need somewhere to persist to.
+  contactEmail  String?  @map("contact_email")
+  phone         String?
+  website       String?
+  // { policies: { deductOnAbsence, priorNoticeHours, allowMakeupSessions },
+  //   paymentGateways: { razorpay: {...}, googlePay: {...} } }
+  settings      Json?
+  networkOptIn  Boolean  @default(false) @map("network_opt_in")
+  brandTheme    Json?    @map("brand_theme")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  centers            Center[]
+  users               User[]
+  plans               Plan[]
+  clients             Client[]
+  enquiries           Enquiry[]
+  drills              Drill[]
+  semesters           Semester[]
+  lessonPlans         LessonPlan[]
+  invoices            Invoice[]
+  hostedEvents        InterschoolEvent[]      @relation("HostAcademy")
+  eventInvitations    EventInvitation[]
+  eventRosters        EventRoster[]
+  schoolRatings       SchoolRating[]
+  chatThreads         ChatThread[]
+  noticeBoardPosts    NoticeBoardPost[]
+  grades              Grade[]
+  timetables          Timetable[]
+  curriculumTracks    CurriculumTrack[]
+  platformSubscription PlatformSubscription?
+  platformInvoices    PlatformInvoice[]
+  schools             School[]
+  lblRegistrations    LblRegistration[]
+
+  @@map("academies")
+}
+
+model Center {
+  id          String  @id @default(uuid())
+  academyId   String  @map("academy_id")
+  name        String
+  address     String?
+  geoLat      Decimal? @map("geo_lat") @db.Decimal(9, 6)
+  geoLng      Decimal? @map("geo_lng") @db.Decimal(9, 6)
+  geoRadiusM  Int?     @default(500) @map("geo_radius_m")
+
+  academy Academy  @relation(fields: [academyId], references: [id])
+  classes Class[]
+  staff   StaffProfile[]
+  clients Client[]
+  timetablePeriods TimetablePeriod[]
+
+  @@map("centers")
+}
+
+model Sport {
+  key  String @id
+  name String
+  icon String?
+
+  classes           Class[]
+  enquiries         Enquiry[]
+  drills            Drill[]
+  lessonPlans       LessonPlan[]
+  clientSkillLevels ClientSkillLevel[]
+  scoringTemplates  ScoringTemplate[]
+  fixtures          Fixture[]
+  ratings           Rating[]
+  ratingTransactions RatingTransaction[]
+  schoolRatings     SchoolRating[]
+  curriculumTracks  CurriculumTrack[]
+  timetablePeriods  TimetablePeriod[]
+
+  @@map("sports")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  academyId    String?  @map("academy_id")
+  name         String
+  email        String?  @unique
+  phone        String?
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  academy         Academy?         @relation(fields: [academyId], references: [id])
+  staffProfile    StaffProfile?
+  refreshTokens   RefreshToken[]
+  guardianOf      ClientGuardian[]
+  assignedEnquiries Enquiry[]      @relation("AssignedStaff")
+  markedAttendance  AttendanceRecord[] @relation("MarkedBy")
+  staffAttendance   AttendanceRecord[] @relation("StaffAttendance")
+  recordedAssessments Assessment[] @relation("RecordedBy")
+  officiatedSessions ScoringSession[] @relation("OfficiatedBy")
+  enteredScoreEvents ScoreEvent[]  @relation("EnteredBy")
+  chatThreadMemberships ChatThreadMember[]
+  sentMessages        ChatMessage[]      @relation("SentMessages")
+  authoredNotices     NoticeBoardPost[]  @relation("AuthoredNotices")
+  uploadedTimetables  Timetable[]        @relation("UploadedTimetable")
+  timetablePeriodsCoaching TimetablePeriod[] @relation("TimetableCoach")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @map("token_hash")
+  rememberMe Boolean  @default(false) @map("remember_me")
+  expiresAt  DateTime @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model StaffProfile {
+  userId              String       @id @map("user_id")
+  skills              String[]     @default([])
+  // Module keys this staff member may access in the apps (empty = all their
+  // role allows). Lets an admin grant e.g. the scoring module to a coach.
+  moduleAccess        String[]     @default([]) @map("module_access")
+  salaryBasis          SalaryBasis? @map("salary_basis")
+  salaryAmount         Decimal?     @map("salary_amount") @db.Decimal(10, 2)
+  reportingManagerId   String?      @map("reporting_manager_id")
+  centerId             String?      @map("center_id")
+
+  user             User    @relation(fields: [userId], references: [id])
+  center           Center? @relation(fields: [centerId], references: [id])
+  coachedClasses   Class[]
+
+  @@map("staff_profiles")
+}
+
+model Plan {
+  id                String   @id @default(uuid())
+  academyId         String   @map("academy_id")
+  title             String
+  type              PlanType
+  durationValue     Int?     @map("duration_value")
+  durationUnit      String?  @map("duration_unit")
+  fee               Decimal  @db.Decimal(10, 2)
+  sessionsIncluded  Int?     @map("sessions_included")
+  makeupsIncluded   Int      @default(0) @map("makeups_included")
+  autoRenewDefault  Boolean  @default(false) @map("auto_renew_default")
+  visibility        String   @default("all")
+
+  academy     Academy      @relation(fields: [academyId], references: [id])
+  classPlans  ClassPlan[]
+  enrollments Enrollment[]
+  invoices    Invoice[]
+
+  @@map("plans")
+}
+
+model Class {
+  id        String      @id @default(uuid())
+  centerId  String      @map("center_id")
+  title     String
+  sportKey  String      @map("sport_key")
+  level     SkillLevel?
+  mode      ClassMode?
+  capacity  Int?
+  coachId   String?     @map("coach_id")
+  status    ClassStatus @default(active)
+  // Recurring weekly pattern used to generate ScheduledSession rows, e.g.
+  // [{ "days": ["mon","wed","fri"], "startTime": "06:00", "endTime": "07:30" }].
+  // Not in the TDD's DDL (which only models individual dated sessions), but
+  // every reference screen shows a recurring "Timings" block on Class detail
+  // that sessions get generated from — JSONB keeps this flexible without a
+  // dedicated table for what's essentially UI-facing config.
+  timings   Json?
+  // Addendum v3 Section 4.2 — optional Grade anchor for school-type academies;
+  // a pure sports academy's class can continue using level/age_group alone.
+  gradeId   String?     @map("grade_id")
+  // Addendum v3 4.4/4.11 #6 — needed alongside gradeId+sportKey to match a
+  // re-uploaded timetable's rows back to the exact existing Class ("Grade 5
+  // Section A Football" vs "Section B"), not just create duplicates.
+  section   String?
+  // Partner school this class is run for (2026-07). Drives the per-school
+  // lesson-plan scheduling mode in the coach app.
+  schoolId  String?     @map("school_id")
+
+  center            Center             @relation(fields: [centerId], references: [id])
+  sport             Sport              @relation(fields: [sportKey], references: [key])
+  coach             StaffProfile?      @relation(fields: [coachId], references: [userId])
+  grade             Grade?             @relation(fields: [gradeId], references: [id])
+  school            School?            @relation(fields: [schoolId], references: [id])
+  classPlans        ClassPlan[]
+  scheduledSessions ScheduledSession[]
+  enrollments       Enrollment[]
+  lessonPlans       LessonPlan[]
+  sequenceProgress  ClassSequenceProgress?
+  timetablePeriods  TimetablePeriod[]
+
+  @@map("classes")
+}
+
+// Partner school an academy runs programs for (2026-07). Each school can
+// choose how its coaches receive lesson plans (calendar vs grade sequence),
+// overriding the academy-level default.
+model School {
+  id                       String   @id @default(uuid())
+  academyId                String   @map("academy_id")
+  name                     String
+  address                  String?
+  contactName              String?  @map("contact_name")
+  contactPhone             String?  @map("contact_phone")
+  // "calendar" | "grade_sequence" | null (null = inherit academy default)
+  lessonPlanAssignmentMode String?  @map("lesson_plan_assignment_mode")
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  academy Academy @relation(fields: [academyId], references: [id])
+  classes Class[]
+
+  @@map("schools")
+}
+
+model ClassPlan {
+  classId String @map("class_id")
+  planId  String @map("plan_id")
+
+  class Class @relation(fields: [classId], references: [id])
+  plan  Plan  @relation(fields: [planId], references: [id])
+
+  @@id([classId, planId])
+  @@map("class_plans")
+}
+
+model ScheduledSession {
+  id           String        @id @default(uuid())
+  classId      String        @map("class_id")
+  sessionDate  DateTime      @map("session_date") @db.Date
+  startTime    DateTime      @map("start_time") @db.Time
+  endTime      DateTime      @map("end_time") @db.Time
+  status       SessionStatus @default(not_started)
+  // Coach venue check-in (2026-07): recorded when the coach starts the
+  // session — GPS coordinates validated against the center's geofence, plus
+  // whether a device biometric (Face/fingerprint) confirmation succeeded.
+  checkinLat        Decimal? @map("checkin_lat") @db.Decimal(9, 6)
+  checkinLng        Decimal? @map("checkin_lng") @db.Decimal(9, 6)
+  checkinDistanceM  Int?     @map("checkin_distance_m")
+  checkinBiometric  Boolean? @map("checkin_biometric")
+
+  class             Class              @relation(fields: [classId], references: [id])
+  attendanceRecords AttendanceRecord[]
+  lessonPlans       LessonPlan[]
+  lessonDelivery    SessionLessonDelivery?
+
+  @@map("scheduled_sessions")
+}
+
+model Client {
+  id                  String   @id @default(uuid())
+  academyId           String   @map("academy_id")
+  // centerId/email/phone/linkCode are missing from the TDD's DDL: BRD 7.3.5
+  // needs email/mobile on the client record, centerId to scope/display which
+  // location they belong to, and linkCode is how a parent self-links to this
+  // record from the Parent app ("Add a player with a code" — Student/Parent
+  // Flow deck page 3) since parents self-register with no academy attached.
+  centerId            String?  @map("center_id")
+  name                String
+  email               String?
+  phone               String?
+  dob                 DateTime? @db.Date
+  gender              String?
+  photoUrl            String?  @map("photo_url")
+  linkCode            String?  @unique @map("link_code")
+  interschoolConsent  Boolean  @default(false) @map("interschool_consent")
+
+  center            Center?            @relation(fields: [centerId], references: [id])
+  academy           Academy            @relation(fields: [academyId], references: [id])
+  guardians         ClientGuardian[]
+  skillLevels       ClientSkillLevel[]
+  enrollments       Enrollment[]
+  convertedFrom     Enquiry[]          @relation("ConvertedClient")
+  attendanceRecords AttendanceRecord[]
+  invoices          Invoice[]
+  assessments       Assessment[]
+  eventRosters      EventRoster[]
+  playerMatchStats  PlayerMatchStat[]
+  ratings           Rating[]
+  ratingTransactions RatingTransaction[]
+
+  @@map("clients")
+}
+
+model ClientGuardian {
+  clientId String @map("client_id")
+  userId   String @map("user_id")
+
+  client Client @relation(fields: [clientId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@id([clientId, userId])
+  @@map("client_guardians")
+}
+
+model ClientSkillLevel {
+  clientId String     @map("client_id")
+  sportKey String     @map("sport_key")
+  level    SkillLevel
+
+  client Client @relation(fields: [clientId], references: [id])
+  sport  Sport  @relation(fields: [sportKey], references: [key])
+
+  @@id([clientId, sportKey])
+  @@map("client_skill_levels")
+}
+
+model Enrollment {
+  id           String           @id @default(uuid())
+  clientId     String           @map("client_id")
+  planId       String           @map("plan_id")
+  classId      String           @map("class_id")
+  startDate    DateTime         @map("start_date") @db.Date
+  endDate      DateTime         @map("end_date") @db.Date
+  sessionsUsed Int              @default(0) @map("sessions_used")
+  sessionsLeft Int?             @map("sessions_left")
+  autoRenew    Boolean          @default(false) @map("auto_renew")
+  status       EnrollmentStatus @default(active)
+
+  client Client @relation(fields: [clientId], references: [id])
+  plan   Plan   @relation(fields: [planId], references: [id])
+  class  Class  @relation(fields: [classId], references: [id])
+
+  @@map("enrollments")
+}
+
+model Enquiry {
+  id               String             @id @default(uuid())
+  academyId        String             @map("academy_id")
+  name             String
+  parentName       String?            @map("parent_name")
+  // email/gender/birthday/note/activityLog are missing from the TDD's DDL
+  // entirely, even though BRD 7.3.4's Add Enquiry modal and detail screen
+  // require all of them (personal details fields + note + activity timeline).
+  email            String?
+  gender           String?
+  birthday         DateTime?          @db.Date
+  phone            String?
+  sportKey         String?            @map("sport_key")
+  level            String?
+  centerId         String?            @map("center_id")
+  status           EnquiryTemperature
+  stage            EnquiryStage       @default(lead)
+  assignedTo       String?            @map("assigned_to")
+  followUpDate     DateTime?          @map("follow_up_date") @db.Date
+  note             String?
+  // Append-only log: [{ text, at, by }] — rendered as the Activity & follow-ups
+  // timeline on the Enquiry detail screen.
+  activityLog      Json               @default("[]") @map("activity_log")
+  convertedClientId String?           @map("converted_client_id")
+  // Missing from the TDD's DDL — needed for the Reports module's date-range
+  // filter (BRD 7.9) and the Enquiry & Conversion report.
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  academy         Academy  @relation(fields: [academyId], references: [id])
+  sport           Sport?   @relation(fields: [sportKey], references: [key])
+  assignedStaff   User?    @relation("AssignedStaff", fields: [assignedTo], references: [id])
+  convertedClient Client?  @relation("ConvertedClient", fields: [convertedClientId], references: [id])
+
+  @@map("enquiries")
+}
+
+model AttendanceRecord {
+  id       String           @id @default(uuid())
+  sessionId String          @map("session_id")
+  clientId String?          @map("client_id")
+  staffId  String?          @map("staff_id")
+  status   AttendanceStatus
+  markedBy String?          @map("marked_by")
+  markedAt DateTime         @default(now()) @map("marked_at")
+
+  session ScheduledSession @relation(fields: [sessionId], references: [id])
+  client  Client?           @relation(fields: [clientId], references: [id])
+  staff   User?             @relation("StaffAttendance", fields: [staffId], references: [id])
+  marker  User?             @relation("MarkedBy", fields: [markedBy], references: [id])
+
+  @@unique([sessionId, clientId])
+  @@map("attendance_records")
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  // academyId/invoiceNumber missing from the TDD's DDL — academyId avoids a
+  // join through Client on every list query, and every Sales > Invoice
+  // wireframe shows a human-readable "INV-1001" number, not the raw UUID.
+  academyId     String        @map("academy_id")
+  invoiceNumber String        @map("invoice_number")
+  clientId      String        @map("client_id")
+  planId        String?       @map("plan_id")
+  amount        Decimal       @db.Decimal(10, 2)
+  status        InvoiceStatus @default(pending)
+  gatewayTxnId  String?       @map("gateway_txn_id")
+  issuedAt      DateTime      @default(now()) @map("issued_at")
+
+  academy     Academy      @relation(fields: [academyId], references: [id])
+  client      Client       @relation(fields: [clientId], references: [id])
+  plan        Plan?        @relation(fields: [planId], references: [id])
+  eventRoster EventRoster?
+
+  @@unique([academyId, invoiceNumber])
+  @@map("invoices")
+}
+
+// ─── Coaching content ───────────────────────────────────────────────────────
+
+model Drill {
+  id                String      @id @default(uuid())
+  academyId         String      @map("academy_id")
+  // Missing from the TDD's DDL for this table entirely, even though every
+  // Drill Bank screen in the deck shows a drill name — added here.
+  title             String
+  sportKey          String      @map("sport_key")
+  skillCategory     String?     @map("skill_category")
+  ageGroups         String[]    @default([]) @map("age_groups")
+  level             SkillLevel?
+  durationMin       Int?        @map("duration_min")
+  equipment         String[]    @default([])
+  description       String?
+  media             Json?
+  standardParameters Json?      @map("standard_parameters")
+
+  academy     Academy      @relation(fields: [academyId], references: [id])
+  sport       Sport        @relation(fields: [sportKey], references: [key])
+  assessments Assessment[]
+
+  @@map("drills")
+}
+
+model Semester {
+  id            String   @id @default(uuid())
+  academyId     String   @map("academy_id")
+  title         String
+  durationWeeks Int?     @map("duration_weeks")
+  focusAreas    String[] @default([]) @map("focus_areas")
+  objective     String?
+  status        String   @default("planned")
+
+  academy     Academy      @relation(fields: [academyId], references: [id])
+  lessonPlans LessonPlan[]
+
+  @@map("semesters")
+}
+
+model LessonPlan {
+  id                String   @id @default(uuid())
+  // Denormalized (not in the TDD's DDL, which only scoped lesson_plans via
+  // class_id): the Coach/Admin flow explicitly creates a lesson plan shell
+  // first and assigns it to a class afterward (BRD 8.3/9.5), so classId can't
+  // be the only way to know which academy owns a plan.
+  academyId         String   @map("academy_id")
+  classId           String?  @map("class_id")
+  semesterId        String?  @map("semester_id")
+  sessionId         String?  @map("session_id")
+  title             String
+  sportKey          String?  @map("sport_key")
+  level             String?
+  goals             String?
+  // "Player takeaways" (BRD 8.3) and the auto-aggregated equipment checklist
+  // (BRD 8.3 "Equipment for the entire session is aggregated automatically
+  // from constituent drills") — also not in the TDD's DDL.
+  objectives        String[] @default([])
+  whatToBring       String[] @default([]) @map("what_to_bring")
+  targetDurationMin Int?     @map("target_duration_min")
+  sessionFlow       Json     @map("session_flow")
+  status            String   @default("active")
+
+  academy  Academy           @relation(fields: [academyId], references: [id])
+  class    Class?            @relation(fields: [classId], references: [id])
+  semester Semester?         @relation(fields: [semesterId], references: [id])
+  session  ScheduledSession? @relation(fields: [sessionId], references: [id])
+  sport    Sport?            @relation(fields: [sportKey], references: [key])
+  curriculumItem CurriculumItem?
+
+  @@map("lesson_plans")
+}
+
+model Assessment {
+  id               String   @id @default(uuid())
+  clientId         String   @map("client_id")
+  drillId          String?  @map("drill_id")
+  recordedBy       String?  @map("recorded_by")
+  assessedAt       DateTime @default(now()) @map("assessed_at")
+  timeTakenSec     Decimal? @map("time_taken_sec") @db.Decimal(8, 2)
+  repsCompleted    Int?     @map("reps_completed")
+  accuracyPct      Decimal? @map("accuracy_pct") @db.Decimal(5, 2)
+  distanceM        Decimal? @map("distance_m") @db.Decimal(8, 2)
+  speedMps         Decimal? @map("speed_mps") @db.Decimal(8, 2)
+  errorCount       Int?     @map("error_count")
+  enduranceTimeSec Decimal? @map("endurance_time_sec") @db.Decimal(8, 2)
+  staminaIndex     Decimal? @map("stamina_index") @db.Decimal(6, 2)
+  overallRating    Decimal? @map("overall_rating") @db.Decimal(5, 2)
+  coachNote        String?  @map("coach_note")
+
+  client   Client @relation(fields: [clientId], references: [id])
+  // drillId existed as a bare column with no Prisma relation declared —
+  // needed by the Reports module's Performance Report to join drill
+  // title/sportKey without a second query per assessment.
+  drill    Drill? @relation(fields: [drillId], references: [id])
+  recorder User?  @relation("RecordedBy", fields: [recordedBy], references: [id])
+
+  @@map("assessments")
+}
+
+// ─── Interschool Events & Rating (schema scaffolded in the pivot phase, built out now) ──
+
+model InterschoolEvent {
+  id             String      @id @default(uuid())
+  hostAcademyId  String      @map("host_academy_id")
+  name           String
+  sports         String[]
+  formatType     FormatType  @map("format_type")
+  ageBands       String[]    @map("age_bands")
+  startDate      DateTime    @map("start_date") @db.Date
+  endDate        DateTime    @map("end_date") @db.Date
+  status         EventStatus @default(draft)
+  entryRules     Json?       @map("entry_rules")
+  // BRD 11.6.1's event workspace Settings tab (margin-aware toggle, K-factor
+  // overrides, rating visibility) — distinct from entryRules (min matches/skill
+  // level to enter), so kept as its own JSON bucket rather than overloading it.
+  settings       Json?
+  // Addendum v3 Section 3.2 — Pay-to-Join roster gating (opt-in per event, off
+  // by default). Placed on the Event rather than Fixture since rosters are
+  // nominated at the event level, before any fixture exists.
+  payToJoin      Boolean     @default(false) @map("pay_to_join")
+  pricePerHead   Decimal?    @map("price_per_head") @db.Decimal(10, 2)
+  // LBL tournament flag (2026-07): LBL events are open for self-service
+  // school registration per sport (with payment) instead of invitations.
+  isLbl          Boolean     @default(false) @map("is_lbl")
+
+  hostAcademy Academy           @relation("HostAcademy", fields: [hostAcademyId], references: [id])
+  invitations EventInvitation[]
+  rosters     EventRoster[]
+  fixtures    Fixture[]
+  lblRegistrations LblRegistration[]
+
+  @@map("interschool_events")
+}
+
+// LBL tournament registration (2026-07): a school registering for one sport
+// of an LBL event, with its (mock-gateway) payment state. Fixture generation
+// unlocks once every registration for a sport is paid and rostered.
+model LblRegistration {
+  id           String   @id @default(uuid())
+  eventId      String   @map("event_id")
+  academyId    String   @map("academy_id")
+  sportKey     String   @map("sport_key")
+  status       String   @default("pending_payment") // "pending_payment" | "paid"
+  amount       Decimal? @db.Decimal(10, 2)
+  registeredBy String   @map("registered_by")
+  paidAt       DateTime? @map("paid_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  event   InterschoolEvent @relation(fields: [eventId], references: [id])
+  academy Academy          @relation(fields: [academyId], references: [id])
+
+  @@unique([eventId, academyId, sportKey])
+  @@map("lbl_registrations")
+}
+
+model EventInvitation {
+  id                String           @id @default(uuid())
+  eventId           String           @map("event_id")
+  invitedAcademyId  String           @map("invited_academy_id")
+  status            InvitationStatus @default(pending)
+  responseDeadline  DateTime?        @map("response_deadline") @db.Date
+
+  event          InterschoolEvent @relation(fields: [eventId], references: [id])
+  invitedAcademy Academy          @relation(fields: [invitedAcademyId], references: [id])
+
+  @@unique([eventId, invitedAcademyId])
+  @@map("event_invitations")
+}
+
+model EventRoster {
+  id                 String            @id @default(uuid())
+  eventId            String            @map("event_id")
+  academyId          String            @map("academy_id")
+  sportKey           String            @map("sport_key")
+  clientId           String            @map("client_id")
+  eligibilityStatus  EligibilityStatus @default(pending) @map("eligibility_status")
+  consentConfirmed   Boolean           @default(false) @map("consent_confirmed")
+  // Addendum v3 Section 3.2 — set only when the event's payToJoin is on;
+  // reuses the existing Invoice/payment plumbing (BRD 7.4) rather than a
+  // bespoke payment table. Eligibility cannot be "eligible" while this
+  // invoice is unpaid (BRD 11.8 #1 extended by the addendum's acceptance
+  // criterion in Section 3.2).
+  invoiceId          String?           @unique @map("invoice_id")
+
+  event   InterschoolEvent @relation(fields: [eventId], references: [id])
+  academy Academy          @relation(fields: [academyId], references: [id])
+  client  Client           @relation(fields: [clientId], references: [id])
+  invoice Invoice?         @relation(fields: [invoiceId], references: [id])
+
+  @@unique([eventId, clientId, sportKey])
+  @@map("event_rosters")
+}
+
+model ScoringTemplate {
+  sportKey         String     @map("sport_key")
+  formatType       FormatType @map("format_type")
+  periodStructure  Json       @map("period_structure")
+  scoreFields      Json       @map("score_fields")
+  winCondition     Json       @map("win_condition")
+  playerStatFields Json?      @map("player_stat_fields")
+  displayFormat    String?    @map("display_format")
+
+  sport Sport @relation(fields: [sportKey], references: [key])
+
+  @@id([sportKey, formatType])
+  @@map("scoring_templates")
+}
+
+model Fixture {
+  id           String        @id @default(uuid())
+  eventId      String?       @map("event_id")
+  sportKey     String        @map("sport_key")
+  formatType   FormatType    @map("format_type")
+  entrantA     String[]      @map("entrant_a")
+  entrantB     String[]      @map("entrant_b")
+  scheduledAt  DateTime?     @map("scheduled_at")
+  venue        String?
+  matchType    MatchType     @default(practice) @map("match_type")
+  status       FixtureStatus @default(scheduled)
+  abandonReason String?      @map("abandon_reason")
+  // Neither existed in the TDD's DDL. BRD 11.5 step 7 requires two-sided
+  // confirmation (Match Official + opposing coach) before a fixture can flip
+  // to completed — { sideA: {academyId, confirmedBy, confirmedAt}, sideB: {...} }.
+  // resultSummary holds the win_condition-derived outcome (winnerSide/scoreDisplay/
+  // margin) computed once from ScoringSession.periodState, since nothing else
+  // persists the final result once a session ends.
+  resultConfirmations Json?  @map("result_confirmations")
+  resultSummary       Json?  @map("result_summary")
+
+  event             InterschoolEvent?   @relation(fields: [eventId], references: [id])
+  sport             Sport               @relation(fields: [sportKey], references: [key])
+  scoringSessions   ScoringSession[]
+  playerMatchStats  PlayerMatchStat[]
+  ratingTransactions RatingTransaction[]
+
+  @@map("fixtures")
+}
+
+model ScoringSession {
+  id               String    @id @default(uuid())
+  fixtureId        String    @map("fixture_id")
+  sportKey         String    @map("sport_key")
+  formatType       String    @map("format_type")
+  periodState      Json      @default("{}") @map("period_state")
+  officiatedBy     String?   @map("officiated_by")
+  startedAt        DateTime? @map("started_at")
+  endedAt          DateTime? @map("ended_at")
+  isOfflineCreated Boolean   @default(false) @map("is_offline_created")
+  syncedAt         DateTime? @map("synced_at")
+
+  fixture  Fixture      @relation(fields: [fixtureId], references: [id])
+  officer  User?        @relation("OfficiatedBy", fields: [officiatedBy], references: [id])
+  events   ScoreEvent[]
+
+  @@map("scoring_sessions")
+}
+
+model ScoreEvent {
+  id                String   @id @default(uuid())
+  scoringSessionId  String   @map("scoring_session_id")
+  clientEventId     String   @map("client_event_id")
+  actionType        String   @map("action_type")
+  payload           Json?
+  enteredBy         String?  @map("entered_by")
+  clientTimestamp   DateTime @map("client_timestamp")
+  serverReceivedAt  DateTime @default(now()) @map("server_received_at")
+
+  session ScoringSession @relation(fields: [scoringSessionId], references: [id])
+  enterer User?          @relation("EnteredBy", fields: [enteredBy], references: [id])
+
+  @@unique([scoringSessionId, clientEventId])
+  @@index([scoringSessionId, clientTimestamp])
+  @@map("score_events")
+}
+
+model PlayerMatchStat {
+  fixtureId          String  @map("fixture_id")
+  clientId           String  @map("client_id")
+  statFields         Json?   @map("stat_fields")
+  contributionWeight Decimal @default(1.0) @map("contribution_weight") @db.Decimal(4, 2)
+
+  fixture Fixture @relation(fields: [fixtureId], references: [id])
+  client  Client  @relation(fields: [clientId], references: [id])
+
+  @@id([fixtureId, clientId])
+  @@map("player_match_stats")
+}
+
+model Rating {
+  clientId        String           @map("client_id")
+  sportKey         String           @map("sport_key")
+  formatType       FormatType       @map("format_type")
+  currentRating    Decimal          @map("current_rating") @db.Decimal(4, 2)
+  matchesPlayed    Int              @default(0) @map("matches_played")
+  isProvisional    Boolean          @default(true) @map("is_provisional")
+  confidence       RatingConfidence @default(low)
+  kFactorCurrent   Decimal          @map("k_factor_current") @db.Decimal(4, 2)
+  lastUpdatedAt    DateTime         @default(now()) @map("last_updated_at")
+
+  client Client @relation(fields: [clientId], references: [id])
+  sport  Sport  @relation(fields: [sportKey], references: [key])
+
+  @@id([clientId, sportKey, formatType])
+  @@map("ratings")
+}
+
+model RatingTransaction {
+  id                 String     @id @default(uuid())
+  clientId           String     @map("client_id")
+  sportKey           String     @map("sport_key")
+  formatType         String     @map("format_type")
+  // Made nullable + given override* fields: BRD 11.3 lets an Admin manually
+  // override a student's starting rating pre-first-match, with a mandatory
+  // audit trail (actor/reason) — that action has no fixture to attach to,
+  // but the original DDL required fixtureId, which would have made every
+  // override either fake a fixture or skip the audit log BRD 11.8 mandates.
+  fixtureId          String?    @map("fixture_id")
+  overrideReason     String?    @map("override_reason")
+  overriddenBy       String?    @map("overridden_by")
+  preRating          Decimal    @map("pre_rating") @db.Decimal(4, 2)
+  postRating         Decimal    @map("post_rating") @db.Decimal(4, 2)
+  expectedScore      Decimal    @map("expected_score") @db.Decimal(5, 4)
+  actualScore        Decimal    @map("actual_score") @db.Decimal(3, 2)
+  kFactorUsed        Decimal    @map("k_factor_used") @db.Decimal(4, 2)
+  contributionWeight Decimal    @default(1.0) @map("contribution_weight") @db.Decimal(4, 2)
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  client  Client   @relation(fields: [clientId], references: [id])
+  sport   Sport    @relation(fields: [sportKey], references: [key])
+  fixture Fixture? @relation(fields: [fixtureId], references: [id])
+
+  @@index([clientId, sportKey, createdAt(sort: Desc)])
+  @@map("rating_transactions")
+}
+
+model SchoolRating {
+  academyId       String   @map("academy_id")
+  sportKey        String   @map("sport_key")
+  aggregateRating Decimal? @map("aggregate_rating") @db.Decimal(4, 2)
+  computedAt      DateTime @default(now()) @map("computed_at")
+
+  academy Academy @relation(fields: [academyId], references: [id])
+  sport   Sport   @relation(fields: [sportKey], references: [key])
+
+  @@id([academyId, sportKey])
+  @@map("school_ratings")
+}
+
+// BRD 7.5 Communication Center: Chat (1:1 + group threads), Notice Board
+// (academy-wide announcements). Not in the TDD's DDL at all — modelled here
+// as a plain REST-polled thread/message pair rather than a websocket layer,
+// since the Coach/Parent apps aren't built yet and this keeps the module
+// consistent with the rest of the admin API.
+model ChatThread {
+  id        String   @id @default(uuid())
+  academyId String   @map("academy_id")
+  type      String // "direct" | "group"
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  academy  Academy            @relation(fields: [academyId], references: [id])
+  members  ChatThreadMember[]
+  messages ChatMessage[]
+
+  @@map("chat_threads")
+}
+
+model ChatThreadMember {
+  threadId String @map("thread_id")
+  userId   String @map("user_id")
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id])
+
+  @@id([threadId, userId])
+  @@map("chat_thread_members")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  threadId  String   @map("thread_id")
+  senderId  String   @map("sender_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User       @relation("SentMessages", fields: [senderId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
+model NoticeBoardPost {
+  id        String   @id @default(uuid())
+  academyId String   @map("academy_id")
+  title     String
+  content   String
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  academy Academy @relation(fields: [academyId], references: [id])
+  author  User    @relation("AuthoredNotices", fields: [createdBy], references: [id])
+
+  @@map("notice_board_posts")
+}
+
+// ─── Addendum v3 Section 4 — Grade-Wise Curriculum Engine ──────────────────
+
+model Grade {
+  id        String   @id @default(uuid())
+  academyId String   @map("academy_id")
+  name      String
+  // Drives KG < Grade 1 < ... < Grade 12 ordering — the label can be
+  // relabelled per academy (e.g. "Reception"/"Year 1") without breaking
+  // sequencing, since logic keys off sortOrder, never the name string.
+  sortOrder Int      @map("sort_order")
+
+  academy          Academy            @relation(fields: [academyId], references: [id])
+  classes          Class[]
+  timetablePeriods TimetablePeriod[]
+  curriculumTracks CurriculumTrack[]
+
+  @@unique([academyId, sortOrder])
+  @@map("grades")
+}
+
+model Timetable {
+  id         String   @id @default(uuid())
+  academyId  String   @map("academy_id")
+  termLabel  String?  @map("term_label")
+  uploadedBy String?  @map("uploaded_by")
+  status     String   @default("processing") // processing | active | error
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+  // Holds the parsed+resolved rows (incl. unresolved/conflict flags) between
+  // upload and commit — TimetablePeriod rows require non-null grade/sport FKs,
+  // so a row that can't yet be resolved can't be persisted as a real period;
+  // this JSON preview is what /timetables/:id/commit reads once the Admin
+  // has fixed any unresolved rows (Addendum v3 4.4/4.10).
+  previewData Json?   @map("preview_data")
+
+  academy Academy           @relation(fields: [academyId], references: [id])
+  uploader User?            @relation("UploadedTimetable", fields: [uploadedBy], references: [id])
+  periods  TimetablePeriod[]
+
+  @@map("timetables")
+}
+
+model TimetablePeriod {
+  id               String  @id @default(uuid())
+  timetableId      String  @map("timetable_id")
+  gradeId          String  @map("grade_id")
+  section          String
+  dayOfWeek        String  @map("day_of_week") // mon..sun, matches Class.timings convention
+  startTime        DateTime @map("start_time") @db.Time
+  endTime          DateTime @map("end_time") @db.Time
+  sportKey         String  @map("sport_key")
+  centerId         String? @map("center_id")
+  coachId          String? @map("coach_id")
+  resolvedClassId  String? @map("resolved_class_id")
+
+  timetable     Timetable @relation(fields: [timetableId], references: [id])
+  grade         Grade     @relation(fields: [gradeId], references: [id])
+  sport         Sport     @relation(fields: [sportKey], references: [key])
+  center        Center?   @relation(fields: [centerId], references: [id])
+  coach         User?     @relation("TimetableCoach", fields: [coachId], references: [id])
+  resolvedClass Class?    @relation(fields: [resolvedClassId], references: [id])
+
+  @@map("timetable_periods")
+}
+
+model CurriculumTrack {
+  id        String  @id @default(uuid())
+  academyId String  @map("academy_id")
+  sportKey  String  @map("sport_key")
+  gradeId   String  @map("grade_id")
+  title     String?
+
+  academy Academy          @relation(fields: [academyId], references: [id])
+  sport   Sport            @relation(fields: [sportKey], references: [key])
+  grade   Grade            @relation(fields: [gradeId], references: [id])
+  items   CurriculumItem[]
+  classProgress ClassSequenceProgress[]
+
+  @@unique([academyId, sportKey, gradeId])
+  @@map("curriculum_tracks")
+}
+
+model CurriculumItem {
+  id                String @id @default(uuid())
+  curriculumTrackId String @map("curriculum_track_id")
+  lessonPlanId      String @unique @map("lesson_plan_id")
+  sequenceNo        Int    @map("sequence_no")
+
+  track      CurriculumTrack @relation(fields: [curriculumTrackId], references: [id])
+  lessonPlan LessonPlan      @relation(fields: [lessonPlanId], references: [id])
+  deliveries SessionLessonDelivery[]
+
+  @@unique([curriculumTrackId, sequenceNo])
+  @@map("curriculum_items")
+}
+
+model ClassSequenceProgress {
+  classId           String   @id @map("class_id")
+  curriculumTrackId String   @map("curriculum_track_id")
+  nextSequenceNo    Int      @default(1) @map("next_sequence_no")
+  updatedAt         DateTime @default(now()) @map("updated_at")
+
+  class Class           @relation(fields: [classId], references: [id])
+  track CurriculumTrack @relation(fields: [curriculumTrackId], references: [id])
+
+  @@map("class_sequence_progress")
+}
+
+// Immutable record of what was actually taught in a session, kept even if
+// the Curriculum Track's ordering is edited later (Addendum v3 4.11 #2).
+model SessionLessonDelivery {
+  sessionId        String   @id @map("session_id")
+  curriculumItemId String?  @map("curriculum_item_id")
+  deliveredAt      DateTime @default(now()) @map("delivered_at")
+
+  session        ScheduledSession @relation(fields: [sessionId], references: [id])
+  curriculumItem CurriculumItem?  @relation(fields: [curriculumItemId], references: [id])
+
+  @@map("session_lesson_deliveries")
+}
+
+// Addendum v3 5.6 — Whistle's own SaaS pricing bands. Seeded once via
+// PlatformBillingService.onModuleInit(), matching the ScoringTemplate
+// idempotent-seed pattern. Enterprise (maxStudents: null, pricePerStudentMonth:
+// null) is intentionally unpriced — 5.3 routes that band to a sales quote
+// instead of self-serve pay/provision.
+model PricingTier {
+  id                    String   @id @default(uuid())
+  name                  String
+  minStudents           Int      @map("min_students")
+  maxStudents           Int?     @map("max_students")
+  pricePerStudentMonth  Decimal? @map("price_per_student_month") @db.Decimal(8, 2)
+  currency              String   @default("INR")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  subscriptions PlatformSubscription[]
+
+  @@map("pricing_tiers")
+}
+
+// Addendum v3 5.6/5.2 — one row per Academy. Provisioned lazily on first
+// access (mirrors the Grade-defaults backfill pattern) so academies created
+// before this addendum still get one, declared_strength seeded from their
+// live active-client count rather than left at zero.
+model PlatformSubscription {
+  id                  String    @id @default(uuid())
+  academyId           String    @unique @map("academy_id")
+  declaredStrength    Int       @map("declared_strength")
+  pricingTierId       String    @map("pricing_tier_id")
+  billingCycle        String    @default("monthly") @map("billing_cycle") // monthly | annual
+  status              String    @default("trial") // trial | active | past_due | cancelled | pending_quote
+  trialEndsAt         DateTime? @map("trial_ends_at")
+  currentPeriodStart  DateTime  @map("current_period_start") @db.Date
+  currentPeriodEnd    DateTime  @map("current_period_end") @db.Date
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  academy Academy     @relation(fields: [academyId], references: [id])
+  tier    PricingTier @relation(fields: [pricingTierId], references: [id])
+  invoices PlatformInvoice[]
+
+  @@map("platform_subscriptions")
+}
+
+// Addendum v3 5.6/5.4 — one row per billing-period close, produced by
+// PlatformBillingService.runPeriodClose(). billableStudentCount is the
+// true-up: MAX(declared_strength, actual_active_students) at close time.
+model PlatformInvoice {
+  id                            String   @id @default(uuid())
+  academyId                     String   @map("academy_id")
+  subscriptionId                String   @map("subscription_id")
+  periodStart                   DateTime @map("period_start") @db.Date
+  periodEnd                     DateTime @map("period_end") @db.Date
+  declaredStrengthSnapshot      Int      @map("declared_strength_snapshot")
+  actualActiveStudentsSnapshot  Int      @map("actual_active_students_snapshot")
+  billableStudentCount          Int      @map("billable_student_count")
+  amount                        Decimal  @db.Decimal(12, 2)
+  status                        String   @default("pending") // pending | paid | overdue
+  issuedAt                      DateTime @default(now()) @map("issued_at")
+
+  academy      Academy               @relation(fields: [academyId], references: [id])
+  subscription PlatformSubscription  @relation(fields: [subscriptionId], references: [id])
+
+  @@map("platform_invoices")
+}

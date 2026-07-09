@@ -1,0 +1,19 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+.expo/
+.expo-shared/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+firebase-debug.log
+.firebase/
+functions/lib/
+*.tsbuildinfo
+
+# Portable dev Redis binaries (machine-specific, not part of the codebase)
+.redis/

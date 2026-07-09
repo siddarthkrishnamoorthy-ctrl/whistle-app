@@ -1,0 +1,6 @@
+/* react-navigation's web screen containers paint the light-theme background
+   (#f2f2f2) over our root gradient and ignore contentStyle/ThemeProvider.
+   Neutralize exactly that color so the slate→charcoal gradient shows through. */
+#root div[style*="background-color: rgb(242, 242, 242)"] {
+  background-color: transparent !important;
+}

@@ -1,0 +1,15 @@
+{
+  "name": "whistle-app",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:admin": "pnpm --filter admin-web dev",
+    "dev:coach": "pnpm --filter coach-app start",
+    "dev:parent": "pnpm --filter parent-app start",
+    "build:shared": "pnpm --filter @whistle/shared build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
