@@ -3,6 +3,7 @@ import type { SkillLevel } from "@prisma/client";
 import { ClientsService } from "./clients.service";
 import { CreateClientDto } from "./dto/create-client.dto";
 import { UpdateClientDto } from "./dto/update-client.dto";
+import { BulkImportClientsDto } from "./dto/bulk-import.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { AcademyRequiredGuard } from "../common/guards/academy-required.guard";
@@ -31,6 +32,13 @@ export class ClientsController {
   @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateClientDto) {
     return this.clientsService.create(user.academyId as string, dto);
+  }
+
+  // Bulk student-database upload (CSV parsed client-side; up to 1000 rows).
+  @Post("bulk")
+  @Roles("admin", "account_manager")
+  bulkImport(@CurrentUser() user: AuthenticatedUser, @Body() dto: BulkImportClientsDto) {
+    return this.clientsService.bulkImport(user.academyId as string, dto);
   }
 
   @Patch(":id")

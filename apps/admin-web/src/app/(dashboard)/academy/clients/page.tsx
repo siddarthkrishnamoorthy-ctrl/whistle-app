@@ -7,6 +7,7 @@ import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, StatusPill, Table } from "@/components/ui";
 import type { Client } from "@/lib/types";
 import { NewClientModal, type CreateClientPayload } from "./new-client-modal";
+import { ImportClientsModal } from "./import-modal";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   active: "success",
@@ -22,6 +23,7 @@ function formatCurrency(amount: number) {
 
 export default function ClientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const { data: clients, loading, error, refetch } = useApiList<Client>("/clients");
 
   return (
@@ -31,12 +33,20 @@ export default function ClientsPage() {
           <h1 className="text-xl font-semibold">Clients</h1>
           <p className="text-sm text-text-secondary">{clients.length} clients</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
-        >
-          + New Client
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="rounded-full border border-accent/60 px-5 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+          >
+            ⬆ Import CSV
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
+          >
+            + New Client
+          </button>
+        </div>
       </div>
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
@@ -84,6 +94,8 @@ export default function ClientsPage() {
           refetch();
         }}
       />
+
+      <ImportClientsModal open={importOpen} onClose={() => setImportOpen(false)} onImported={refetch} />
     </div>
   );
 }

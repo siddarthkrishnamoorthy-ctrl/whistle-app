@@ -3,6 +3,7 @@ import type { SkillLevel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateLinkCode } from "../common/prisma-selects";
 import type { CreateClientDto } from "./dto/create-client.dto";
+import type { BulkImportClientsDto } from "./dto/bulk-import.dto";
 import type { UpdateClientDto } from "./dto/update-client.dto";
 
 @Injectable()
@@ -74,6 +75,39 @@ export class ClientsService {
   async update(academyId: string, id: string, dto: UpdateClientDto) {
     await this.findOneOrThrow(academyId, id);
     return this.prisma.client.update({ where: { id }, data: dto });
+  }
+
+  // Bulk student-database upload (2026-07): imports rows parsed from a CSV in
+  // the admin console. Each row goes through the same create path (so link
+  // codes and optional plan/class enrolment behave identically); failures are
+  // reported per row instead of aborting the whole file.
+  async bulkImport(academyId: string, dto: BulkImportClientsDto) {
+    const results: { row: number; name: string; ok: boolean; linkCode?: string; error?: string }[] = [];
+    for (let i = 0; i < dto.rows.length; i++) {
+      const row = dto.rows[i];
+      try {
+        const client = await this.create(academyId, {
+          name: row.name.trim(),
+          email: row.email?.trim() || undefined,
+          phone: row.phone?.trim() || undefined,
+          gender: row.gender?.trim() || undefined,
+          // CSVs carry date-only strings; Prisma DateTime needs full ISO.
+          dob: row.dob ? new Date(row.dob).toISOString() : undefined,
+          centerId: dto.centerId,
+          planId: dto.planId,
+          classId: dto.classId,
+          startDate: dto.startDate,
+        });
+        results.push({ row: i + 1, name: row.name, ok: true, linkCode: client.linkCode ?? undefined });
+      } catch (e) {
+        results.push({ row: i + 1, name: row.name, ok: false, error: e instanceof Error ? e.message : "failed" });
+      }
+    }
+    return {
+      created: results.filter((r) => r.ok).length,
+      failed: results.filter((r) => !r.ok).length,
+      results,
+    };
   }
 
   // No creation path existed anywhere for ClientSkillLevel — BRD 7.3.2 shows
