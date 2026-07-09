@@ -33,9 +33,11 @@ export class CreateEventInputDto {
   @IsIn(["match", "timed"])
   discipline?: "match" | "timed";
 
+  // single_elim = knockout; round_robin = single league round;
+  // league = double round robin (home & away) with a points table.
   @IsOptional()
-  @IsIn(["round_robin", "single_elim"])
-  format?: "round_robin" | "single_elim";
+  @IsIn(["round_robin", "single_elim", "league"])
+  format?: "round_robin" | "single_elim" | "league";
 
   @IsOptional()
   @IsIn(["place", "standards"])
@@ -76,6 +78,11 @@ export class CreateTournamentDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  // Rules & regulations free text — shown on the public page.
+  @IsOptional()
+  @IsString()
+  rules?: string;
 
   @IsArray()
   @ArrayMinSize(1)
@@ -124,6 +131,26 @@ export class QuickEntriesDto {
   @ArrayMaxSize(128)
   @IsString({ each: true })
   names!: string[];
+}
+
+// Organizer edits after creation — rules can be added or refined any time.
+export class UpdateTournamentDto {
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  rules?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  venues?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  allowAtVenuePayment?: boolean;
 }
 
 export class GenerateFixturesDto {

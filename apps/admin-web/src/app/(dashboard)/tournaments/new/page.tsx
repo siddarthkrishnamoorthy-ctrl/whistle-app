@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Field, PrimaryButton, OutlineButton, SelectField } from "@/components/ui";
+import { Card, Field, PrimaryButton, OutlineButton, SelectField, TextareaField } from "@/components/ui";
 import { tJson, tournamentSession } from "@/lib/tournament-client";
 
 interface EventDraft {
@@ -10,7 +10,7 @@ interface EventDraft {
   sportKey: string;
   kind: "individual" | "team";
   discipline: "match" | "timed";
-  format: "single_elim" | "round_robin";
+  format: "single_elim" | "round_robin" | "league";
   unit: "sec" | "m";
   entryFee: string;
   maxEntrants: string;
@@ -32,6 +32,7 @@ export default function NewTournamentPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [rules, setRules] = useState("");
   const [sports, setSports] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -76,6 +77,7 @@ export default function NewTournamentPage() {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
+          rules: rules.trim() || undefined,
           sports: sportsList.length ? sportsList : ["multi-sport"],
           startDate: new Date(startDate).toISOString(),
           endDate: new Date(endDate || startDate).toISOString(),
@@ -107,6 +109,13 @@ export default function NewTournamentPage() {
           <Field label="End date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </div>
         <Field label="Courts / venues (comma separated)" placeholder="Court 1, Court 2" value={venues} onChange={(e) => setVenues(e.target.value)} />
+        <TextareaField
+          label="Rules & regulations (shown on the public page)"
+          placeholder={"e.g.\n• Matches are best of 3 games to 11, win by 2\n• 5-minute walkover if a player is absent\n• Rally scoring; referee's decision is final\n• No refunds after fixtures are published"}
+          rows={5}
+          value={rules}
+          onChange={(e) => setRules(e.target.value)}
+        />
       </Card>
 
       <div className="flex items-center justify-between">
@@ -142,7 +151,8 @@ export default function NewTournamentPage() {
             {ev.discipline === "match" ? (
               <SelectField label="Format" value={ev.format} onChange={(e) => update(i, { format: e.target.value as EventDraft["format"] })}>
                 <option value="single_elim">Knockout (single elimination)</option>
-                <option value="round_robin">Round robin (league)</option>
+                <option value="round_robin">Round robin (everyone plays once)</option>
+                <option value="league">League (home & away, points table)</option>
               </SelectField>
             ) : (
               <SelectField label="Measured in" value={ev.unit} onChange={(e) => update(i, { unit: e.target.value as EventDraft["unit"] })}>

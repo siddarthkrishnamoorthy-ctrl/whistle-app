@@ -17,6 +17,7 @@ import type {
   RegisterEntryDto,
   ScoreMatchDto,
   TimedResultsDto,
+  UpdateTournamentDto,
 } from "./dto/tournament.dto";
 
 const SALT_ROUNDS = 10;
@@ -128,6 +129,7 @@ export class TournamentsService {
         organizerId,
         name: dto.name,
         description: dto.description,
+        rules: dto.rules,
         sports: dto.sports,
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
@@ -161,6 +163,19 @@ export class TournamentsService {
     if (!t) throw new NotFoundException("Tournament not found.");
     if (t.organizerId !== organizerId) throw new ForbiddenException("Not your tournament.");
     return t;
+  }
+
+  async update(organizerId: string, tournamentId: string, dto: UpdateTournamentDto) {
+    await this.ownTournamentOrThrow(organizerId, tournamentId);
+    return this.prisma.tournament.update({
+      where: { id: tournamentId },
+      data: {
+        description: dto.description,
+        rules: dto.rules,
+        venues: dto.venues,
+        allowAtVenuePayment: dto.allowAtVenuePayment,
+      },
+    });
   }
 
   async publish(organizerId: string, tournamentId: string) {
@@ -389,23 +404,35 @@ export class TournamentsService {
     let venueIdx = 0;
     const nextVenue = () => venues[venueIdx++ % venues.length];
 
-    if (event.format === "round_robin") {
-      // Every pair meets once; rounds via the circle method.
+    if (event.format === "round_robin" || event.format === "league") {
+      // Every pair meets once via the circle method; a league runs the whole
+      // schedule twice with home/away swapped (double round robin).
+      const legs = event.format === "league" ? 2 : 1;
       const list: (typeof ordered)[number][] = [...ordered];
       const oddBye = list.length % 2 === 1;
       const n = oddBye ? list.length + 1 : list.length;
       const rounds = n - 1;
       let matchNo = 1;
-      for (let r = 0; r < rounds; r++) {
-        for (let i = 0; i < n / 2; i++) {
-          const aIdx = (r + i) % (n - 1);
-          const bIdx = i === 0 ? n - 1 : (r + n - 1 - i) % (n - 1);
-          const a = list[aIdx];
-          const b = bIdx === n - 1 && oddBye ? undefined : list[bIdx === n - 1 ? n - 1 : bIdx];
-          if (!a || !b || a.id === b.id) continue;
-          await this.prisma.tournamentMatch.create({
-            data: { eventId, round: r + 1, matchNo: matchNo++, entryAId: a.id, entryBId: b.id, venue: nextVenue() },
-          });
+      for (let leg = 0; leg < legs; leg++) {
+        for (let r = 0; r < rounds; r++) {
+          for (let i = 0; i < n / 2; i++) {
+            const aIdx = (r + i) % (n - 1);
+            const bIdx = i === 0 ? n - 1 : (r + n - 1 - i) % (n - 1);
+            const a = list[aIdx];
+            const b = bIdx === n - 1 && oddBye ? undefined : list[bIdx === n - 1 ? n - 1 : bIdx];
+            if (!a || !b || a.id === b.id) continue;
+            const [home, away] = leg === 0 ? [a, b] : [b, a];
+            await this.prisma.tournamentMatch.create({
+              data: {
+                eventId,
+                round: leg * rounds + r + 1,
+                matchNo: matchNo++,
+                entryAId: home.id,
+                entryBId: away.id,
+                venue: nextVenue(),
+              },
+            });
+          }
         }
       }
     } else {
@@ -664,6 +691,7 @@ export class TournamentsService {
     return {
       name: full.name,
       description: full.description,
+      rules: full.rules,
       sports: full.sports,
       status: full.status,
       startDate: full.startDate,

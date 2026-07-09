@@ -50,6 +50,7 @@ interface TDetail {
   publicSlug: string;
   startDate: string;
   venues: string[];
+  rules: string | null;
   events: TEvent[];
   officials: { user: { name: string; email: string } }[];
 }
@@ -89,6 +90,7 @@ export default function ManageTournamentPage() {
   const [times, setTimes] = useState<Record<string, string>>({});
   const [phaseByEvent, setPhaseByEvent] = useState<Record<string, "heat" | "final">>({});
   const [officialEmail, setOfficialEmail] = useState("");
+  const [rulesDraft, setRulesDraft] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -210,6 +212,37 @@ export default function ManageTournamentPage() {
           </div>
         </Card>
       </div>
+
+      {/* Rules & regulations — editable any time, shown on the public page */}
+      <Card>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-semibold">Rules &amp; regulations</h2>
+          <span className="text-xs text-text-secondary">shown on the public page</span>
+        </div>
+        <textarea
+          value={rulesDraft ?? detail.rules ?? ""}
+          onChange={(e) => setRulesDraft(e.target.value)}
+          rows={5}
+          placeholder={"e.g.\n• Matches are best of 3 games to 11, win by 2\n• 5-minute walkover if a player is absent\n• Referee's decision is final\n• No refunds after fixtures are published"}
+          className="w-full rounded-md border border-border bg-surface-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+        />
+        <div className="mt-2">
+          <OutlineButton
+            disabled={busy || rulesDraft === null || rulesDraft === (detail.rules ?? "")}
+            onClick={() =>
+              act(async () => {
+                await tJson(`/tournaments/${id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify({ rules: rulesDraft }),
+                });
+                setRulesDraft(null);
+              })
+            }
+          >
+            Save rules
+          </OutlineButton>
+        </div>
+      </Card>
 
       {detail.events.map((ev) => {
         const confirmed = ev.entries.filter((e) => e.status === "confirmed");
@@ -359,7 +392,7 @@ export default function ManageTournamentPage() {
                       );
                     })}
                   </div>
-                  {ev.format === "round_robin" && (ev.standings?.length ?? 0) > 0 && (
+                  {(ev.format === "round_robin" || ev.format === "league") && (ev.standings?.length ?? 0) > 0 && (
                     <div className="mt-4">
                       <h3 className="mb-1 text-sm font-semibold">Standings</h3>
                       <ol className="space-y-0.5 text-sm">

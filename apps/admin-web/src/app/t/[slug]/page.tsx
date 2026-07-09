@@ -46,6 +46,7 @@ interface PublicEvent {
 interface PublicTournament {
   name: string;
   description: string | null;
+  rules: string | null;
   sports: string[];
   status: string;
   startDate: string;
@@ -127,6 +128,13 @@ export default function PublicTournamentPage() {
         </p>
         {data.description && <p className="text-sm text-slate-300 mt-3 max-w-2xl">{data.description}</p>}
       </header>
+
+      {data.rules && (
+        <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+          <h2 className="text-lg font-bold text-white mb-2">📋 Rules &amp; regulations</h2>
+          <p className="whitespace-pre-line text-sm text-slate-300">{data.rules}</p>
+        </section>
+      )}
 
       {/* Live now */}
       {live.length > 0 && (
@@ -222,7 +230,7 @@ export default function PublicTournamentPage() {
           )}
 
           {/* Round-robin standings */}
-          {ev.format === "round_robin" && (ev.standings?.length ?? 0) > 0 && (
+          {(ev.format === "round_robin" || ev.format === "league") && (ev.standings?.length ?? 0) > 0 && (
             <div className="mt-5">
               <h3 className="text-sm font-bold text-white mb-2">Standings</h3>
               <ol className="space-y-1 text-sm">

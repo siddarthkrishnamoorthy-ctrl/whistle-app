@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { TournamentsService } from "./tournaments.service";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -12,6 +12,7 @@ import {
   RegisterEntryDto,
   ScoreMatchDto,
   TimedResultsDto,
+  UpdateTournamentDto,
 } from "./dto/tournament.dto";
 
 interface TUser {
@@ -98,6 +99,12 @@ export class TournamentsController {
   @TournamentRoles("t_organizer")
   detail(@CurrentUser() user: TUser, @Param("id") id: string) {
     return this.service.detailForOrganizer(user.sub, id);
+  }
+
+  @Patch(":id")
+  @TournamentRoles("t_organizer")
+  update(@CurrentUser() user: TUser, @Param("id") id: string, @Body() dto: UpdateTournamentDto) {
+    return this.service.update(user.sub, id, dto);
   }
 
   @Post(":id/publish")

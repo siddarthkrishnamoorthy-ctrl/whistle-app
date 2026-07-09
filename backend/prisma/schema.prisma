@@ -1182,6 +1182,9 @@ model Tournament {
   organizerId         String   @map("organizer_id")
   name                String
   description         String?
+  // Organizer-written rules & regulations, shown on the public page and to
+  // registrants (match format, tie-breaks, code of conduct, refunds…).
+  rules               String?
   sports              String[]
   status              String   @default("draft") // draft | registration_open | in_progress | completed
   startDate           DateTime @map("start_date") @db.Date
@@ -1221,7 +1224,9 @@ model TournamentEvent {
   // "match" = head-to-head bracket/league; "timed" = recorded time/distance
   // per entrant per heat (BRD 7.4 individual timed/measured events).
   discipline       String  @default("match")
-  format           String  @default("single_elim") // round_robin | single_elim
+  // single_elim = knockout; round_robin = everyone plays everyone once;
+  // league = double round robin (home & away legs) with a points table.
+  format           String  @default("single_elim") // round_robin | single_elim | league
   // timed events: "place" (rank by result) | "standards" (vs benchmark)
   scoringMode      String? @map("scoring_mode")
   standardValue    Decimal? @map("standard_value") @db.Decimal(10, 3)
