@@ -30,6 +30,7 @@ import { PlatformBillingModule } from "./platform-billing/platform-billing.modul
 import { AssessmentsModule } from "./assessments/assessments.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { SchoolsModule } from "./schools/schools.module";
+import { TournamentsModule } from "./tournaments/tournaments.module";
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { SchoolsModule } from "./schools/schools.module";
     AssessmentsModule,
     JobsModule,
     SchoolsModule,
+    TournamentsModule,
   ],
 })
 export class AppModule {}
