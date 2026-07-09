@@ -39,6 +39,9 @@ export default function TournamentsPage() {
   const [checked, setChecked] = useState(false);
   const [mine, setMine] = useState<Mine | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // "open" = Whistle - Tournaments; "lbl" = LBL - Tournaments (same engine,
+  // separate lists — reached via the LBL sidebar section).
+  const [series, setSeries] = useState<"open" | "lbl">("open");
 
   // Login/signup form state
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -49,20 +52,22 @@ export default function TournamentsPage() {
   const [role, setRole] = useState("organizer");
   const [submitting, setSubmitting] = useState(false);
 
-  const load = useCallback(async (u: TournamentUser) => {
+  const load = useCallback(async (u: TournamentUser, s: "open" | "lbl") => {
     try {
       setError(null);
-      if (u.role === "organizer") setMine(await tJson<Mine>("/tournaments/mine"));
+      if (u.role === "organizer") setMine(await tJson<Mine>(`/tournaments/mine?series=${s}`));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load tournaments.");
     }
   }, []);
 
   useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("series") === "lbl" ? "lbl" : "open";
+    setSeries(s);
     const session = tournamentSession();
     setUser(session?.user ?? null);
     setChecked(true);
-    if (session?.user) load(session.user);
+    if (session?.user) load(session.user, s);
   }, [load]);
 
   async function submitAuth() {
@@ -80,13 +85,15 @@ export default function TournamentsPage() {
               organizationName: role === "organizer" && orgName.trim() ? orgName.trim() : undefined,
             });
       setUser(u);
-      load(u);
+      load(u, series);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
   }
+
+  const consoleTitle = series === "lbl" ? "LBL - Tournaments" : "Whistle - Tournaments";
 
   if (!checked) return null;
 
@@ -95,7 +102,7 @@ export default function TournamentsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-semibold">Whistle Tournaments</h1>
+          <h1 className="text-xl font-semibold">{consoleTitle}</h1>
           <p className="text-sm text-text-secondary">
             Standalone open tournaments — separate from your academy. Anyone can organize, officiate or play; log in
             with a tournament account (your academy login doesn&apos;t apply here).
@@ -154,7 +161,7 @@ export default function TournamentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Whistle Tournaments</h1>
+          <h1 className="text-xl font-semibold">{consoleTitle}</h1>
           <p className="text-sm text-text-secondary">
             {user.organizationName ?? user.name} · {user.role} account (standalone — no academy link)
           </p>
@@ -172,10 +179,10 @@ export default function TournamentsPage() {
           </button>
           {user.role === "organizer" && (
             <Link
-              href="/tournaments/new"
+              href={`/tournaments/new?series=${series}`}
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
             >
-              + Create Tournament
+              + Create {series === "lbl" ? "LBL " : ""}Tournament
             </Link>
           )}
         </div>

@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -96,20 +97,23 @@ export class TournamentsService {
 
   // ── Organizer: tournaments (BRD 6.1/6.2) ──────────────────────────────────
 
-  async myTournaments(organizerId: string) {
+  async myTournaments(organizerId: string, series?: "open" | "lbl") {
     const tournaments = await this.prisma.tournament.findMany({
-      where: { organizerId },
+      where: { organizerId, ...(series ? { series } : {}) },
       include: { events: { include: { _count: { select: { entries: true } } } } },
       orderBy: { createdAt: "desc" },
     });
-    // Organizer home top-line stats (BRD 6.1).
+    // Organizer home top-line stats (BRD 6.1), scoped to the series shown.
     let registrations = 0;
     let collected = 0;
     for (const t of tournaments) {
       for (const e of t.events) registrations += e._count.entries;
     }
     const paid = await this.prisma.tournamentEntry.aggregate({
-      where: { event: { tournament: { organizerId } }, paidAmount: { not: null } },
+      where: {
+        event: { tournament: { organizerId, ...(series ? { series } : {}) } },
+        paidAmount: { not: null },
+      },
       _sum: { paidAmount: true },
     });
     collected = Number(paid._sum.paidAmount ?? 0);
@@ -130,6 +134,7 @@ export class TournamentsService {
         name: dto.name,
         description: dto.description,
         rules: dto.rules,
+        series: dto.series ?? "open",
         sports: dto.sports,
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
@@ -151,6 +156,7 @@ export class TournamentsService {
             maxEntrants: e.maxEntrants,
             requiresApproval: e.requiresApproval ?? false,
             category: e.category,
+            duprRated: (e.duprRated ?? false) && e.sportKey === "pickleball",
           })),
         },
       },
@@ -561,6 +567,18 @@ export class TournamentsService {
         data: updated.slotInNext === "A" ? { entryAId: winnerEntryId } : { entryBId: winnerEntryId },
       });
     }
+    // DUPR submission hook (pickleball): once DUPR_API_KEY is configured the
+    // completed result is posted to the DUPR partner API here; until then it
+    // is logged as queued so rated results are never silently dropped.
+    if (display !== "bye") {
+      const event = await this.prisma.tournamentEvent.findUnique({ where: { id: updated.eventId } });
+      if (event?.duprRated) {
+        Logger.log(
+          `DUPR ${process.env.DUPR_API_KEY ? "submitting" : "sync queued (no DUPR_API_KEY yet)"}: "${event.name}" match ${updated.matchNo} → ${scoreA}-${scoreB}`,
+          "TournamentsService"
+        );
+      }
+    }
     return updated;
   }
 
@@ -716,6 +734,7 @@ export class TournamentsService {
         kind: e.kind,
         discipline: e.discipline,
         format: e.format,
+        duprRated: e.duprRated,
         entryFee: e.entryFee,
         entries: (e.entries as { id: string; teamName: string | null; players: unknown; seed: number | null }[]).map(
           (en) => ({

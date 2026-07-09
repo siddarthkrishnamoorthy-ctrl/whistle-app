@@ -35,6 +35,7 @@ interface TEvent {
   discipline: string;
   format: string;
   unit: string;
+  duprRated: boolean;
   entryFee: string | null;
   entries: Entry[];
   matches: Match[];
@@ -60,6 +61,7 @@ interface TDetail {
   startDate: string;
   venues: string[];
   rules: string | null;
+  series: string;
   events: TEvent[];
   officials: { user: { name: string; email: string } }[];
 }
@@ -153,8 +155,11 @@ export default function ManageTournamentPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <Link href="/tournaments" className="text-sm text-text-secondary hover:text-text-primary">
-            ← All tournaments
+          <Link
+            href={detail.series === "lbl" ? "/tournaments?series=lbl" : "/tournaments"}
+            className="text-sm text-text-secondary hover:text-text-primary"
+          >
+            ← {detail.series === "lbl" ? "LBL - Tournaments" : "Whistle - Tournaments"}
           </Link>
           <h1 className="mt-1 text-xl font-semibold">{detail.name}</h1>
           <p className="text-sm text-text-secondary">
@@ -272,7 +277,14 @@ export default function ManageTournamentPage() {
         return (
           <Card key={ev.id} className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">{ev.name}</h2>
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                {ev.name}
+                {ev.duprRated && (
+                  <span className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent">
+                    DUPR rated
+                  </span>
+                )}
+              </h2>
               <p className="text-xs text-text-secondary">
                 {ev.kind} · {ev.discipline === "timed" ? `timed (${ev.unit})` : ev.format.replace("_", " ")} ·{" "}
                 {confirmed.length} confirmed{ev.entryFee ? ` · entry ₹${ev.entryFee}` : " · free"}

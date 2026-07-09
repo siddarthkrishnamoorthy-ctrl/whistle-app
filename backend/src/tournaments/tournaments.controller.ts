@@ -85,8 +85,8 @@ export class TournamentsController {
 
   @Get("mine")
   @TournamentRoles("t_organizer")
-  myTournaments(@CurrentUser() user: TUser) {
-    return this.service.myTournaments(user.sub);
+  myTournaments(@CurrentUser() user: TUser, @Query("series") series?: string) {
+    return this.service.myTournaments(user.sub, series === "lbl" || series === "open" ? series : undefined);
   }
 
   @Get("officiating")

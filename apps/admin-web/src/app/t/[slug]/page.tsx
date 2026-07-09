@@ -35,6 +35,7 @@ interface PublicEvent {
   kind: string;
   discipline: string;
   format: string;
+  duprRated: boolean;
   entryFee: string | null;
   entries: PublicEntry[];
   matches: PublicMatch[];
@@ -184,7 +185,14 @@ export default function PublicTournamentPage() {
       {data.events.map((ev) => (
         <section key={ev.id} className="mb-10 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-            <h2 className="text-xl font-bold text-white">{ev.name}</h2>
+            <span className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-white">{ev.name}</h2>
+              {ev.duprRated && (
+                <span className="rounded-full border border-amber-400/60 bg-amber-400/10 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+                  DUPR rated
+                </span>
+              )}
+            </span>
             <span className="text-xs text-slate-400">
               {ev.sportKey} · {ev.kind} ·{" "}
               {ev.discipline === "timed" ? "timed event" : ev.format.replace("_", " ")}

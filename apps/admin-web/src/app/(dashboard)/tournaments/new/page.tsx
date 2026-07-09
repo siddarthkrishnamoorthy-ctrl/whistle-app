@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Field, PrimaryButton, OutlineButton, SelectField, TextareaField } from "@/components/ui";
 import { tJson, tournamentSession } from "@/lib/tournament-client";
@@ -38,6 +38,7 @@ interface EventDraft {
   feeMode: "free" | "paid";
   entryFee: string;
   maxEntrants: string;
+  duprRated: "no" | "yes";
 }
 
 const BLANK: EventDraft = {
@@ -50,6 +51,7 @@ const BLANK: EventDraft = {
   feeMode: "free",
   entryFee: "",
   maxEntrants: "",
+  duprRated: "no",
 };
 
 // BRD 6.2 — Create Tournament wizard: basics, events, fees, courts/venues.
@@ -64,6 +66,12 @@ export default function NewTournamentPage() {
   const [events, setEvents] = useState<EventDraft[]>([{ ...BLANK }]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Created under the console it was opened from (Whistle or LBL).
+  const [series, setSeries] = useState<"open" | "lbl">("open");
+
+  useEffect(() => {
+    setSeries(new URLSearchParams(window.location.search).get("series") === "lbl" ? "lbl" : "open");
+  }, []);
 
   if (typeof window !== "undefined" && !tournamentSession()) {
     router.replace("/tournaments");
@@ -90,6 +98,7 @@ export default function NewTournamentPage() {
           unit: e.discipline === "timed" ? e.unit : undefined,
           entryFee: e.feeMode === "paid" && e.entryFee ? Number(e.entryFee) : undefined,
           maxEntrants: e.maxEntrants ? Number(e.maxEntrants) : undefined,
+          duprRated: e.sport === "Pickleball" && e.duprRated === "yes",
         }));
       if (!eventBodies.length) throw new Error("Add at least one event.");
       if (events.some((e) => e.name.trim() && e.feeMode === "paid" && (!e.entryFee || Number(e.entryFee) <= 0))) {
@@ -103,6 +112,7 @@ export default function NewTournamentPage() {
           name: name.trim(),
           description: description.trim() || undefined,
           rules: rules.trim() || undefined,
+          series,
           sports: sportsList,
           startDate: new Date(startDate).toISOString(),
           endDate: new Date(endDate || startDate).toISOString(),
@@ -121,8 +131,11 @@ export default function NewTournamentPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Create Tournament</h1>
-        <p className="text-sm text-text-secondary">Basics, events and entry fees — publish to open registration</p>
+        <h1 className="text-xl font-semibold">Create {series === "lbl" ? "LBL " : ""}Tournament</h1>
+        <p className="text-sm text-text-secondary">
+          Basics, events and entry fees — publish to open registration
+          {series === "lbl" ? " · listed under LBL - Tournaments" : ""}
+        </p>
       </div>
 
       <Card className="space-y-3">
@@ -202,6 +215,24 @@ export default function NewTournamentPage() {
           </div>
           {ev.feeMode === "paid" && (
             <Field label="Max entrants (optional)" type="number" placeholder="32" value={ev.maxEntrants} onChange={(e) => update(i, { maxEntrants: e.target.value })} />
+          )}
+          {ev.sport === "Pickleball" && ev.discipline === "match" && (
+            <div className="rounded-lg border border-border bg-surface-alt/50 p-3">
+              <SelectField
+                label="DUPR rating (pickleball)"
+                value={ev.duprRated}
+                onChange={(e) => update(i, { duprRated: e.target.value as EventDraft["duprRated"] })}
+              >
+                <option value="no">Not DUPR rated — casual play</option>
+                <option value="yes">DUPR rated — results submitted to DUPR</option>
+              </SelectField>
+              {ev.duprRated === "yes" && (
+                <p className="mt-2 text-xs text-text-secondary">
+                  Completed match results are queued for DUPR submission and shown as &quot;DUPR rated&quot; on the
+                  public page. Live sync activates once your DUPR API key is configured on the server.
+                </p>
+              )}
+            </div>
           )}
         </Card>
       ))}

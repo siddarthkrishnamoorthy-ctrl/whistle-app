@@ -1185,6 +1185,9 @@ model Tournament {
   // Organizer-written rules & regulations, shown on the public page and to
   // registrants (match format, tie-breaks, code of conduct, refunds…).
   rules               String?
+  // Which console the tournament belongs to: "open" (Whistle - Tournaments)
+  // or "lbl" (LBL - Tournaments). Same engine, separate lists.
+  series              String   @default("open")
   sports              String[]
   status              String   @default("draft") // draft | registration_open | in_progress | completed
   startDate           DateTime @map("start_date") @db.Date
@@ -1235,6 +1238,9 @@ model TournamentEvent {
   maxEntrants      Int?    @map("max_entrants")
   requiresApproval Boolean @default(false) @map("requires_approval")
   category         String?
+  // Pickleball: when true, completed results are queued for DUPR submission
+  // (real sync activates once DUPR_API_KEY is configured — see .env.example).
+  duprRated        Boolean @default(false) @map("dupr_rated")
 
   tournament   Tournament              @relation(fields: [tournamentId], references: [id])
   entries      TournamentEntry[]

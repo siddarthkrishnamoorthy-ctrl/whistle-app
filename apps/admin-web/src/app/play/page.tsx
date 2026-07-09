@@ -21,6 +21,7 @@ interface OpenEvent {
   name: string;
   kind: string;
   discipline: string;
+  duprRated: boolean;
   entryFee: string | null;
   _count: { entries: number };
 }
@@ -98,6 +99,7 @@ export default function PlayPortal() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
+  const [rosters, setRosters] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, { a: string; b: string }>>({});
 
   const load = useCallback(async (u: TournamentUser) => {
@@ -380,37 +382,57 @@ export default function PlayPortal() {
                   return (
                     <div key={ev.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 py-2">
                       <div>
-                        <p className="text-sm font-semibold text-slate-200">{ev.name}</p>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+                          {ev.name}
+                          {ev.duprRated && (
+                            <span className="rounded-full border border-amber-400/60 bg-amber-400/10 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+                              DUPR rated
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-slate-500">
-                          {ev.kind} · {ev._count.entries} entered · {ev.entryFee ? `₹${ev.entryFee}` : "free"}
+                          {ev.kind} · {ev._count.entries} entered · {ev.entryFee ? `₹${ev.entryFee}` : "free entry"}
                         </p>
                       </div>
                       {user.role !== "official" &&
                         (already ? (
                           <span className="text-xs text-emerald-300">✓ entered</span>
                         ) : (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
                             {ev.kind === "team" && (
-                              <input
-                                className="w-36 rounded-md border border-white/15 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
-                                placeholder="Team / pair name"
-                                value={teamNames[ev.id] ?? ""}
-                                onChange={(e) => setTeamNames((p) => ({ ...p, [ev.id]: e.target.value }))}
-                              />
+                              <div className="flex flex-col gap-1.5">
+                                <input
+                                  className="w-52 rounded-md border border-white/15 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+                                  placeholder="Team / pair name *"
+                                  value={teamNames[ev.id] ?? ""}
+                                  onChange={(e) => setTeamNames((p) => ({ ...p, [ev.id]: e.target.value }))}
+                                />
+                                <input
+                                  className="w-52 rounded-md border border-white/15 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+                                  placeholder="Players, comma separated (optional)"
+                                  value={rosters[ev.id] ?? ""}
+                                  onChange={(e) => setRosters((p) => ({ ...p, [ev.id]: e.target.value }))}
+                                />
+                              </div>
                             )}
                             <button
                               disabled={busy || (ev.kind === "team" && !(teamNames[ev.id] ?? "").trim())}
-                              onClick={() =>
+                              onClick={() => {
+                                const roster = (rosters[ev.id] ?? "")
+                                  .split(",")
+                                  .map((n) => n.trim())
+                                  .filter(Boolean)
+                                  .map((n) => ({ name: n }));
                                 act(() =>
                                   tJson(`/tournaments/events/${ev.id}/register`, {
                                     method: "POST",
                                     body: JSON.stringify({
                                       teamName: ev.kind === "team" ? teamNames[ev.id].trim() : undefined,
-                                      players: [{ name: user.name }],
+                                      players: roster.length ? roster : [{ name: user.name }],
                                     }),
                                   })
-                                )
-                              }
+                                );
+                              }}
                               className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-bold text-slate-900 disabled:opacity-40"
                             >
                               Register

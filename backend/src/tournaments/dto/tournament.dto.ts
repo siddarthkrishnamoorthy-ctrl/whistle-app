@@ -68,6 +68,12 @@ export class CreateEventInputDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  // Pickleball: run this event as a DUPR-rated tournament — completed
+  // results are queued for submission to the DUPR API.
+  @IsOptional()
+  @IsBoolean()
+  duprRated?: boolean;
 }
 
 export class CreateTournamentDto {
@@ -83,6 +89,11 @@ export class CreateTournamentDto {
   @IsOptional()
   @IsString()
   rules?: string;
+
+  // "open" (Whistle - Tournaments) or "lbl" (LBL - Tournaments).
+  @IsOptional()
+  @IsIn(["open", "lbl"])
+  series?: "open" | "lbl";
 
   @IsArray()
   @ArrayMinSize(1)

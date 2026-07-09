@@ -72,11 +72,14 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "LBL Tournaments",
-    items: [{ label: "LBL Tournaments", href: "/interschool/lbl", icon: Medal }],
+    items: [
+      { label: "LBL School Events", href: "/interschool/lbl", icon: Medal },
+      { label: "LBL - Tournaments", href: "/tournaments?series=lbl", icon: Flag },
+    ],
   },
   {
     label: "Whistle Tournaments",
-    items: [{ label: "Open Tournaments", href: "/tournaments", icon: Flag }],
+    items: [{ label: "Whistle - Tournaments", href: "/tournaments", icon: Flag }],
   },
   {
     label: "Match Center",
