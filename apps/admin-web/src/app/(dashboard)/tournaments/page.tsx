@@ -191,8 +191,15 @@ export default function TournamentsPage() {
       {error && <Card className="text-sm text-danger">{error}</Card>}
 
       {user.role !== "organizer" ? (
-        <Card>
-          <EmptyState message="This console is for organizers. Officials score from the manage page link an organizer shares; players register from the public tournament pages." />
+        <Card className="space-y-2">
+          <EmptyState message="This console is for organizers only." />
+          <p className="text-center text-sm text-text-secondary">
+            You&apos;re logged in as {user.role === "official" ? "an official" : "a player"} — your{" "}
+            {user.role === "official" ? "scoring console" : "registrations"} live on the public portal:{" "}
+            <a href="/play" className="font-semibold text-accent hover:underline">
+              open /play →
+            </a>
+          </p>
         </Card>
       ) : (
         <>

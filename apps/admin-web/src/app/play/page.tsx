@@ -221,14 +221,30 @@ export default function PlayPortal() {
                 After signing up, give the organizer this email — they appoint you, and your scoring console appears here.
               </p>
             )}
+            {mode === "login" && (
+              <p className="text-xs text-slate-500">
+                One login for players and officials — your account remembers the role you chose at signup. Officials see
+                their scoring console right after logging in.
+              </p>
+            )}
           </div>
         </section>
       ) : (
         <>
           <div className="mb-6 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
-            <p className="text-sm">
-              <span className="font-semibold text-white">{user.name}</span>{" "}
-              <span className="text-slate-400">· {user.role === "official" ? "official" : "player"}</span>
+            <p className="flex items-center gap-2 text-sm">
+              <span className="font-semibold text-white">{user.name}</span>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${
+                  user.role === "official"
+                    ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
+                    : user.role === "organizer"
+                      ? "border-purple-400/60 bg-purple-400/10 text-purple-300"
+                      : "border-emerald-400/50 bg-emerald-400/10 text-emerald-300"
+                }`}
+              >
+                {user.role === "registrant" ? "player" : user.role}
+              </span>
             </p>
             <button
               onClick={() => {
@@ -239,9 +255,19 @@ export default function PlayPortal() {
               }}
               className="text-sm text-slate-400 hover:text-white"
             >
-              Log out
+              Not you? Log out
             </button>
           </div>
+
+          {user.role === "organizer" && (
+            <div className="mb-6 rounded-xl border border-purple-400/30 bg-purple-400/5 px-4 py-3 text-sm text-slate-300">
+              You&apos;re logged in with an <span className="font-semibold text-purple-300">organizer</span> account —
+              this page is the player &amp; official portal. Create and manage your tournaments from the{" "}
+              <a href="/tournaments" className="font-semibold text-amber-300 hover:underline">
+                Whistle admin console →
+              </a>
+            </div>
+          )}
 
           {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
 
