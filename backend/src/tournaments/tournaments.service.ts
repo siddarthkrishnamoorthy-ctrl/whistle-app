@@ -165,6 +165,17 @@ export class TournamentsService {
     return t;
   }
 
+  // Tournaments this user is appointed to score — powers the public
+  // official's scoring console (officials never see the admin panel).
+  async officiating(userId: string) {
+    const appointments = await this.prisma.tournamentOfficial.findMany({ where: { userId } });
+    const tournaments = [];
+    for (const a of appointments) {
+      tournaments.push(await this.fullTournament(a.tournamentId, false));
+    }
+    return tournaments;
+  }
+
   async update(organizerId: string, tournamentId: string, dto: UpdateTournamentDto) {
     await this.ownTournamentOrThrow(organizerId, tournamentId);
     return this.prisma.tournament.update({

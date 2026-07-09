@@ -127,6 +127,14 @@ export default function PublicTournamentPage() {
           {data.venues.length > 0 && <> · {data.venues.join(", ")}</>}
         </p>
         {data.description && <p className="text-sm text-slate-300 mt-3 max-w-2xl">{data.description}</p>}
+        {data.status === "registration_open" && (
+          <a
+            href="/play"
+            className="mt-4 inline-block rounded-full bg-amber-400 px-6 py-2 text-sm font-bold text-slate-900 hover:opacity-90"
+          >
+            Register to play →
+          </a>
+        )}
       </header>
 
       {data.rules && (

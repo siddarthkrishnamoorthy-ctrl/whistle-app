@@ -138,6 +138,12 @@ export default function TournamentsPage() {
             <p className="text-xs text-text-secondary">
               Demo organizer: organizer@tourney.test / whistle123
             </p>
+            <p className="text-xs text-text-secondary">
+              Players and officials don&apos;t sign up here — send them the public portal:{" "}
+              <a href="/play" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                /play
+              </a>
+            </p>
           </div>
         </Card>
       </div>

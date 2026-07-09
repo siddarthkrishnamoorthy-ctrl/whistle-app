@@ -89,6 +89,12 @@ export class TournamentsController {
     return this.service.myTournaments(user.sub);
   }
 
+  @Get("officiating")
+  @TournamentRoles("t_official", "t_organizer")
+  officiating(@CurrentUser() user: TUser) {
+    return this.service.officiating(user.sub);
+  }
+
   @Post()
   @TournamentRoles("t_organizer")
   create(@CurrentUser() user: TUser, @Body() dto: CreateTournamentDto) {
