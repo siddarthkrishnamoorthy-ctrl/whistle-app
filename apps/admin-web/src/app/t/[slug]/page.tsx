@@ -38,7 +38,16 @@ interface PublicEvent {
   entryFee: string | null;
   entries: PublicEntry[];
   matches: PublicMatch[];
-  standings?: { entryId: string; name: string; played: number; won: number; lost: number; points: number }[];
+  standings?: {
+    entryId: string;
+    name: string;
+    played: number;
+    won: number;
+    lost: number;
+    points: number;
+    scoreFor: number;
+    scoreAgainst: number;
+  }[];
   heatRanking?: { rank: number; name: string; value: number; unit: string; heat: number }[];
   finalRanking?: { rank: number; name: string; value: number; unit: string }[];
 }
@@ -240,20 +249,55 @@ export default function PublicTournamentPage() {
           {/* Round-robin standings */}
           {(ev.format === "round_robin" || ev.format === "league") && (ev.standings?.length ?? 0) > 0 && (
             <div className="mt-5">
-              <h3 className="text-sm font-bold text-white mb-2">Standings</h3>
-              <ol className="space-y-1 text-sm">
-                {ev.standings!.map((row, i) => (
-                  <li key={row.entryId} className="flex justify-between border-b border-white/5 py-1">
-                    <span>
-                      <span className="text-slate-500 mr-2">{i + 1}.</span>
-                      {row.name}
-                    </span>
-                    <span className="text-slate-400">
-                      {row.won}W–{row.lost}L · {row.points} pts
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <h3 className="text-sm font-bold text-white mb-2">🏆 Points table</h3>
+              <div className="overflow-x-auto rounded-xl border border-white/10">
+                <table className="w-full min-w-[440px] text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.06] text-left text-xs uppercase tracking-wide text-slate-400">
+                      <th className="px-3 py-2 w-10">#</th>
+                      <th className="px-3 py-2">{ev.kind === "team" ? "Team" : "Player"}</th>
+                      <th className="px-3 py-2 text-center" title="Played">P</th>
+                      <th className="px-3 py-2 text-center" title="Won">W</th>
+                      <th className="px-3 py-2 text-center" title="Lost">L</th>
+                      <th className="px-3 py-2 text-center" title="Score difference">+/−</th>
+                      <th className="px-3 py-2 text-center" title="Points">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ev.standings!.map((row, i) => {
+                      const diff = row.scoreFor - row.scoreAgainst;
+                      return (
+                        <tr
+                          key={row.entryId}
+                          className={`border-b border-white/5 last:border-0 ${
+                            i === 0 ? "bg-amber-400/10" : i % 2 === 1 ? "bg-white/[0.02]" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-2">
+                            {i === 0 ? (
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-slate-900">
+                                1
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">{i + 1}</span>
+                            )}
+                          </td>
+                          <td className={`px-3 py-2 ${i === 0 ? "font-bold text-amber-300" : "font-medium text-slate-200"}`}>
+                            {row.name}
+                          </td>
+                          <td className="px-3 py-2 text-center text-slate-400">{row.played}</td>
+                          <td className="px-3 py-2 text-center text-slate-200">{row.won}</td>
+                          <td className="px-3 py-2 text-center text-slate-400">{row.lost}</td>
+                          <td className={`px-3 py-2 text-center ${diff > 0 ? "text-emerald-300" : diff < 0 ? "text-red-400" : "text-slate-500"}`}>
+                            {diff > 0 ? `+${diff}` : diff}
+                          </td>
+                          <td className="px-3 py-2 text-center font-bold text-white">{row.points}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

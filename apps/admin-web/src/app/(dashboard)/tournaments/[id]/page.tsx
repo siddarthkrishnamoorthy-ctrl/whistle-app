@@ -38,7 +38,16 @@ interface TEvent {
   entryFee: string | null;
   entries: Entry[];
   matches: Match[];
-  standings?: { entryId: string; name: string; won: number; lost: number; points: number }[];
+  standings?: {
+    entryId: string;
+    name: string;
+    played: number;
+    won: number;
+    lost: number;
+    points: number;
+    scoreFor: number;
+    scoreAgainst: number;
+  }[];
   heatRanking?: { rank: number; entryId: string; name: string; value: number; unit: string; heat: number }[];
   finalRanking?: { rank: number; entryId: string; name: string; value: number; unit: string }[];
 }
@@ -67,6 +76,19 @@ function entryName(entries: Entry[], id: string | null): string {
   if (!id) return "TBD";
   const e = entries.find((x) => x.id === id);
   return e ? (e.teamName ?? e.players[0]?.name ?? "—") : "TBD";
+}
+
+// Accepts a pasted/typed list (one name per line, or commas) or a .csv/.txt
+// file. For CSV rows only the first cell is the name; a header row like
+// "Name, Phone" is skipped automatically.
+function parseNameList(text: string): string[] {
+  const names = text
+    .split(/\r?\n/)
+    .flatMap((line) => (line.includes(",") && !line.match(/^[^,]+,\s*$/) ? [line.split(/[,;\t]/)[0]] : line.split(/[;\t]/)))
+    .map((n) => n.replace(/^["']|["']$/g, "").trim())
+    .filter(Boolean);
+  if (names.length && /^(name|player|team|participant)s?$/i.test(names[0])) names.shift();
+  return [...new Set(names)];
 }
 
 const ENTRY_TONE: Record<string, "success" | "warning" | "neutral" | "danger"> = {
@@ -289,29 +311,64 @@ export default function ManageTournamentPage() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-3 flex gap-2">
-                <input
+              {/* Add participants: type/paste a list, or upload a .csv/.txt file */}
+              <div className="mt-3 rounded-lg border border-border bg-surface-alt/50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Add {ev.kind === "team" ? "teams" : "players"}
+                  </span>
+                  <label className="cursor-pointer text-xs font-semibold text-accent hover:underline">
+                    ⬆ Upload list (.csv / .txt)
+                    <input
+                      type="file"
+                      accept=".csv,.txt,.tsv,text/csv,text/plain"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const names = parseNameList(String(reader.result ?? ""));
+                          setQuickNames((p) => ({
+                            ...p,
+                            [ev.id]: [(p[ev.id] ?? "").trim(), names.join("\n")].filter(Boolean).join("\n"),
+                          }));
+                        };
+                        reader.readAsText(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <textarea
                   value={quickNames[ev.id] ?? ""}
                   onChange={(e) => setQuickNames((p) => ({ ...p, [ev.id]: e.target.value }))}
-                  placeholder="Quick add (comma separated): name1, name2, …"
-                  className="flex-1 rounded-md border border-border bg-surface-alt px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+                  rows={3}
+                  placeholder={"Write one name per line (or comma separated):\nRahul S\nPriya M, Anil K"}
+                  className="w-full rounded-md border border-border bg-surface-alt px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
                 />
-                <OutlineButton
-                  disabled={busy}
-                  onClick={() => {
-                    const names = (quickNames[ev.id] ?? "").split(",").map((n) => n.trim()).filter(Boolean);
-                    if (!names.length) return;
-                    act(async () => {
-                      await tJson(`/tournaments/events/${ev.id}/quick-entries`, {
-                        method: "POST",
-                        body: JSON.stringify({ names }),
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-text-secondary">
+                    {parseNameList(quickNames[ev.id] ?? "").length} {ev.kind === "team" ? "teams" : "players"} ready — added as
+                    confirmed entries
+                  </span>
+                  <OutlineButton
+                    disabled={busy || parseNameList(quickNames[ev.id] ?? "").length === 0}
+                    onClick={() => {
+                      const names = parseNameList(quickNames[ev.id] ?? "");
+                      if (!names.length) return;
+                      act(async () => {
+                        await tJson(`/tournaments/events/${ev.id}/quick-entries`, {
+                          method: "POST",
+                          body: JSON.stringify({ names }),
+                        });
+                        setQuickNames((p) => ({ ...p, [ev.id]: "" }));
                       });
-                      setQuickNames((p) => ({ ...p, [ev.id]: "" }));
-                    });
-                  }}
-                >
-                  Add
-                </OutlineButton>
+                    }}
+                  >
+                    Add all
+                  </OutlineButton>
+                </div>
               </div>
             </div>
 
@@ -394,19 +451,53 @@ export default function ManageTournamentPage() {
                   </div>
                   {(ev.format === "round_robin" || ev.format === "league") && (ev.standings?.length ?? 0) > 0 && (
                     <div className="mt-4">
-                      <h3 className="mb-1 text-sm font-semibold">Standings</h3>
-                      <ol className="space-y-0.5 text-sm">
-                        {ev.standings!.map((row, i) => (
-                          <li key={row.entryId} className="flex justify-between">
-                            <span className="text-text-primary">
-                              {i + 1}. {row.name}
-                            </span>
-                            <span className="text-text-secondary">
-                              {row.won}W–{row.lost}L · {row.points} pts
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
+                      <h3 className="mb-2 text-sm font-semibold">Points table</h3>
+                      <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full min-w-[420px] text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-surface-alt/60 text-left text-xs uppercase tracking-wide text-text-secondary">
+                              <th className="px-3 py-2 w-10">#</th>
+                              <th className="px-3 py-2">{ev.kind === "team" ? "Team" : "Player"}</th>
+                              <th className="px-3 py-2 text-center">P</th>
+                              <th className="px-3 py-2 text-center">W</th>
+                              <th className="px-3 py-2 text-center">L</th>
+                              <th className="px-3 py-2 text-center">+/−</th>
+                              <th className="px-3 py-2 text-center">Pts</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ev.standings!.map((row, i) => {
+                              const diff = row.scoreFor - row.scoreAgainst;
+                              return (
+                                <tr
+                                  key={row.entryId}
+                                  className={`border-b border-border/50 last:border-0 ${i === 0 ? "bg-accent/10" : ""}`}
+                                >
+                                  <td className="px-3 py-2">
+                                    {i === 0 ? (
+                                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-text">
+                                        1
+                                      </span>
+                                    ) : (
+                                      <span className="text-text-secondary">{i + 1}</span>
+                                    )}
+                                  </td>
+                                  <td className={`px-3 py-2 ${i === 0 ? "font-semibold text-accent" : "font-medium text-text-primary"}`}>
+                                    {row.name}
+                                  </td>
+                                  <td className="px-3 py-2 text-center text-text-secondary">{row.played}</td>
+                                  <td className="px-3 py-2 text-center text-text-primary">{row.won}</td>
+                                  <td className="px-3 py-2 text-center text-text-secondary">{row.lost}</td>
+                                  <td className={`px-3 py-2 text-center ${diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-text-secondary"}`}>
+                                    {diff > 0 ? `+${diff}` : diff}
+                                  </td>
+                                  <td className="px-3 py-2 text-center font-bold text-text-primary">{row.points}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>

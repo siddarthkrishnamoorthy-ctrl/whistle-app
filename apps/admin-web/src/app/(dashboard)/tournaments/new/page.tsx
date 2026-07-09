@@ -5,24 +5,49 @@ import { useRouter } from "next/navigation";
 import { Card, Field, PrimaryButton, OutlineButton, SelectField, TextareaField } from "@/components/ui";
 import { tJson, tournamentSession } from "@/lib/tournament-client";
 
+// Sport catalogue for the open tournament module (broader than the academy
+// taxonomy — pickleball, squash, chess etc. are common open-tournament sports).
+const SPORT_OPTIONS = [
+  "Badminton",
+  "Pickleball",
+  "Tennis",
+  "Table Tennis",
+  "Squash",
+  "Cricket",
+  "Football",
+  "Basketball",
+  "Volleyball",
+  "Throwball",
+  "Hockey",
+  "Kabaddi",
+  "Athletics (Track & Field)",
+  "Swimming",
+  "Chess",
+  "Carrom",
+] as const;
+
+const sportKeyOf = (label: string) => label.toLowerCase().replace(/\s*\(.*\)/, "").replace(/\s+/g, "-");
+
 interface EventDraft {
   name: string;
-  sportKey: string;
+  sport: string;
   kind: "individual" | "team";
   discipline: "match" | "timed";
   format: "single_elim" | "round_robin" | "league";
   unit: "sec" | "m";
+  feeMode: "free" | "paid";
   entryFee: string;
   maxEntrants: string;
 }
 
 const BLANK: EventDraft = {
   name: "",
-  sportKey: "",
+  sport: "Badminton",
   kind: "individual",
   discipline: "match",
   format: "single_elim",
   unit: "sec",
+  feeMode: "free",
   entryFee: "",
   maxEntrants: "",
 };
@@ -33,7 +58,6 @@ export default function NewTournamentPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [rules, setRules] = useState("");
-  const [sports, setSports] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [venues, setVenues] = useState("");
@@ -59,26 +83,27 @@ export default function NewTournamentPage() {
         .filter((e) => e.name.trim())
         .map((e) => ({
           name: e.name.trim(),
-          sportKey: (e.sportKey.trim() || "multi-sport").toLowerCase(),
+          sportKey: sportKeyOf(e.sport),
           kind: e.kind,
           discipline: e.discipline,
           format: e.format,
           unit: e.discipline === "timed" ? e.unit : undefined,
-          entryFee: e.entryFee ? Number(e.entryFee) : undefined,
+          entryFee: e.feeMode === "paid" && e.entryFee ? Number(e.entryFee) : undefined,
           maxEntrants: e.maxEntrants ? Number(e.maxEntrants) : undefined,
         }));
       if (!eventBodies.length) throw new Error("Add at least one event.");
-      const sportsList = sports
-        .split(",")
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean);
+      if (events.some((e) => e.name.trim() && e.feeMode === "paid" && (!e.entryFee || Number(e.entryFee) <= 0))) {
+        throw new Error("Paid events need an entry fee amount — or switch them to free entry.");
+      }
+      // The tournament's sports list is derived from its events.
+      const sportsList = [...new Set(eventBodies.map((e) => e.sportKey))];
       const created = await tJson<{ id: string }>("/tournaments", {
         method: "POST",
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
           rules: rules.trim() || undefined,
-          sports: sportsList.length ? sportsList : ["multi-sport"],
+          sports: sportsList,
           startDate: new Date(startDate).toISOString(),
           endDate: new Date(endDate || startDate).toISOString(),
           venues: venues.split(",").map((v) => v.trim()).filter(Boolean),
@@ -103,7 +128,6 @@ export default function NewTournamentPage() {
       <Card className="space-y-3">
         <Field label="Tournament name *" placeholder="e.g. Whistle Pickleball Open 2026" value={name} onChange={(e) => setName(e.target.value)} />
         <Field label="Description" placeholder="Short blurb shown on the public page" value={description} onChange={(e) => setDescription(e.target.value)} />
-        <Field label="Sports (comma separated)" placeholder="pickleball, badminton" value={sports} onChange={(e) => setSports(e.target.value)} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Start date *" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           <Field label="End date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
@@ -135,7 +159,13 @@ export default function NewTournamentPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Event name *" placeholder="Pickleball Men's Doubles" value={ev.name} onChange={(e) => update(i, { name: e.target.value })} />
-            <Field label="Sport" placeholder="pickleball" value={ev.sportKey} onChange={(e) => update(i, { sportKey: e.target.value })} />
+            <SelectField label="Sport" value={ev.sport} onChange={(e) => update(i, { sport: e.target.value })}>
+              {SPORT_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </SelectField>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <SelectField label="Entry type" value={ev.kind} onChange={(e) => update(i, { kind: e.target.value as EventDraft["kind"] })}>
@@ -160,9 +190,19 @@ export default function NewTournamentPage() {
                 <option value="m">Distance (metres — highest wins)</option>
               </SelectField>
             )}
-            <Field label="Entry fee ₹ (blank = free)" type="number" value={ev.entryFee} onChange={(e) => update(i, { entryFee: e.target.value })} />
-            <Field label="Max entrants" type="number" value={ev.maxEntrants} onChange={(e) => update(i, { maxEntrants: e.target.value })} />
+            <SelectField label="Entry" value={ev.feeMode} onChange={(e) => update(i, { feeMode: e.target.value as EventDraft["feeMode"] })}>
+              <option value="free">Free entry</option>
+              <option value="paid">Paid entry</option>
+            </SelectField>
+            {ev.feeMode === "paid" ? (
+              <Field label="Entry fee ₹ *" type="number" placeholder="500" value={ev.entryFee} onChange={(e) => update(i, { entryFee: e.target.value })} />
+            ) : (
+              <Field label="Max entrants (optional)" type="number" placeholder="32" value={ev.maxEntrants} onChange={(e) => update(i, { maxEntrants: e.target.value })} />
+            )}
           </div>
+          {ev.feeMode === "paid" && (
+            <Field label="Max entrants (optional)" type="number" placeholder="32" value={ev.maxEntrants} onChange={(e) => update(i, { maxEntrants: e.target.value })} />
+          )}
         </Card>
       ))}
 
