@@ -61,14 +61,6 @@ export default function LoginScreen() {
             Sign up
           </Link>
         </View>
-
-        {/* Standalone Tournament module — open to everyone, no academy account */}
-        <View style={{ marginTop: 28, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 20 }}>
-          <PrimaryButton title="🏆  WHISTLE TOURNAMENTS" onPress={() => router.push("/tournament/login")} />
-          <Text style={{ color: colors.textMuted, fontSize: 11, textAlign: "center", marginTop: 8 }}>
-            Host or join open tournaments — no academy account needed
-          </Text>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

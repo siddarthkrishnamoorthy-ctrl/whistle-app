@@ -7,6 +7,7 @@ import {
   CalendarRange,
   ClipboardList,
   Dumbbell,
+  Flag,
   GraduationCap,
   Inbox,
   Layers,
@@ -72,6 +73,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "LBL Tournaments",
     items: [{ label: "LBL Tournaments", href: "/interschool/lbl", icon: Medal }],
+  },
+  {
+    label: "Whistle Tournaments",
+    items: [{ label: "Open Tournaments", href: "/tournaments", icon: Flag }],
   },
   {
     label: "Match Center",

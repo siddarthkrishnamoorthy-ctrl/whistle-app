@@ -49,10 +49,6 @@ export default function RootLayout() {
           <Stack.Screen name="events/new" options={{ title: "Host Match" }} />
           <Stack.Screen name="events/[id]" options={{ title: "Match Center" }} />
           <Stack.Screen name="fixtures/[id]" options={{ title: "Fixture" }} />
-          <Stack.Screen name="tournament/login" options={{ headerShown: false }} />
-          <Stack.Screen name="tournament/home" options={{ headerShown: false }} />
-          <Stack.Screen name="tournament/new" options={{ title: "Create Tournament" }} />
-          <Stack.Screen name="tournament/[id]" options={{ title: "Manage Tournament" }} />
         </Stack>
         </ThemeProvider>
       </LinearGradient>
