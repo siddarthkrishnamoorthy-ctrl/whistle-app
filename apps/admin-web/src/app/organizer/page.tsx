@@ -179,7 +179,7 @@ export default function TournamentsPage() {
           </button>
           {user.role === "organizer" && (
             <Link
-              href={`/tournaments/new?series=${series}`}
+              href={`/organizer/new?series=${series}`}
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
             >
               + Create {series === "lbl" ? "LBL " : ""}Tournament
@@ -249,7 +249,7 @@ export default function TournamentsPage() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/tournaments/${t.id}`} className="text-sm font-semibold text-accent hover:underline">
+                    <Link href={`/organizer/${t.id}`} className="text-sm font-semibold text-accent hover:underline">
                       Manage →
                     </Link>
                   </td>

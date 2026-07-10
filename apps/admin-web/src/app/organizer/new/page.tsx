@@ -74,7 +74,7 @@ export default function NewTournamentPage() {
   }, []);
 
   if (typeof window !== "undefined" && !tournamentSession()) {
-    router.replace("/tournaments");
+    router.replace("/organizer");
   }
 
   function update(i: number, patch: Partial<EventDraft>) {
@@ -121,7 +121,7 @@ export default function NewTournamentPage() {
         }),
       });
       if (publish) await tJson(`/tournaments/${created.id}/publish`, { method: "POST" });
-      router.replace(`/tournaments/${created.id}`);
+      router.replace(`/organizer/${created.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create tournament.");
       setSubmitting(false);

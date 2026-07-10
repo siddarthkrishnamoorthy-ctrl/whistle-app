@@ -74,7 +74,9 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Tournaments",
-    items: [{ label: "Whistle - Tournaments", href: "/tournaments", icon: Flag }],
+    // Opens the standalone organizer portal — its own tournament login,
+    // shareable with external organizers who have no academy account.
+    items: [{ label: "Whistle - Tournaments", href: "/organizer", icon: Flag }],
   },
   {
     label: "Match Center",

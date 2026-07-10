@@ -128,7 +128,7 @@ export default function ManageTournamentPage() {
 
   useEffect(() => {
     if (!tournamentSession()) {
-      router.replace("/tournaments");
+      router.replace("/organizer");
       return;
     }
     load();
@@ -156,7 +156,7 @@ export default function ManageTournamentPage() {
       <div className="flex items-start justify-between">
         <div>
           <Link
-            href={detail.series === "lbl" ? "/tournaments?series=lbl" : "/tournaments"}
+            href={detail.series === "lbl" ? "/organizer?series=lbl" : "/organizer"}
             className="text-sm text-text-secondary hover:text-text-primary"
           >
             ← {detail.series === "lbl" ? "LBL - Tournaments" : "Whistle - Tournaments"}

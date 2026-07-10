@@ -63,11 +63,35 @@ interface OffMatch {
   scoreDisplay: string | null;
 }
 
+interface OffEvent {
+  id: string;
+  name: string;
+  sportKey: string;
+  kind: string;
+  discipline: string;
+  format: string;
+  entries: OffEntry[];
+  matches: OffMatch[];
+  standings?: {
+    entryId: string;
+    name: string;
+    played: number;
+    won: number;
+    lost: number;
+    points: number;
+    scoreFor: number;
+    scoreAgainst: number;
+  }[];
+}
+
 interface OffTournament {
   id: string;
   name: string;
-  events: { id: string; name: string; sportKey: string; discipline: string; entries: OffEntry[]; matches: OffMatch[] }[];
+  venues: string[];
+  events: OffEvent[];
 }
+
+type ConsoleTab = "score" | "fixtures" | "standings" | "results";
 
 // Mirrors the backend's per-sport final-score rules so referees get instant
 // feedback; the API enforces the same rules server-side.
@@ -138,6 +162,7 @@ export default function PlayPortal() {
   const [scores, setScores] = useState<Record<string, { a: string; b: string }>>({});
   const [matchErrors, setMatchErrors] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [consoleTab, setConsoleTab] = useState<Record<string, ConsoleTab>>({});
 
   const load = useCallback(async (u: TournamentUser) => {
     try {
@@ -300,7 +325,7 @@ export default function PlayPortal() {
             <div className="mb-6 rounded-xl border border-purple-400/30 bg-purple-400/5 px-4 py-3 text-sm text-slate-300">
               You&apos;re logged in with an <span className="font-semibold text-purple-300">organizer</span> account —
               this page is the player &amp; official portal. Create and manage your tournaments from the{" "}
-              <a href="/tournaments" className="font-semibold text-amber-300 hover:underline">
+              <a href="/organizer" className="font-semibold text-amber-300 hover:underline">
                 Whistle admin console →
               </a>
             </div>
@@ -336,86 +361,256 @@ export default function PlayPortal() {
                       <span className={`text-slate-300 transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
                     </span>
                   </button>
-                  {open && (
-                  <div className="px-5 pb-5">
-                  {t.events
-                    .filter((ev) => ev.discipline === "match")
-                    .map((ev) => (
-                      <div key={ev.id} className="mt-3">
-                        <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">{ev.name}</p>
-                        {ev.matches
-                          .filter((m) => m.status !== "completed" && m.entryAId && m.entryBId)
-                          .map((m) => {
-                            const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
+                  {open && (() => {
+                    const tab = consoleTab[t.id] ?? "score";
+                    const matchEvents = t.events.filter((ev) => ev.discipline === "match");
+                    const TABS: { key: ConsoleTab; label: string }[] = [
+                      { key: "score", label: `⚡ Score${pending ? ` (${pending})` : ""}` },
+                      { key: "fixtures", label: "📋 Fixtures" },
+                      { key: "standings", label: "🏆 Standings" },
+                      { key: "results", label: "✓ Results" },
+                    ];
+                    return (
+                      <div className="px-5 pb-5">
+                        {/* Console menu */}
+                        <div className="mb-4 flex flex-wrap gap-2 border-b border-white/10 pb-3">
+                          {TABS.map((tb) => (
+                            <button
+                              key={tb.key}
+                              onClick={() => setConsoleTab((p) => ({ ...p, [t.id]: tb.key }))}
+                              className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${
+                                tab === tb.key
+                                  ? "bg-amber-400 text-slate-900"
+                                  : "border border-white/15 text-slate-300 hover:border-amber-400/50"
+                              }`}
+                            >
+                              {tb.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* SCORE — scoreboard cards for matches awaiting a result */}
+                        {tab === "score" &&
+                          matchEvents.map((ev) => {
+                            const toScore = ev.matches.filter((m) => m.status !== "completed" && m.entryAId && m.entryBId);
+                            if (!toScore.length) return null;
                             return (
-                              <div key={m.id} className="flex flex-wrap items-center gap-2 border-t border-white/5 py-2 text-sm">
-                                <span className="min-w-[180px] flex-1 text-slate-200">
-                                  R{m.round}: {offEntryName(ev.entries, m.entryAId)} vs {offEntryName(ev.entries, m.entryBId)}
-                                  {m.venue ? <span className="text-slate-500"> · {m.venue}</span> : null}
-                                  {m.status === "live" && <span className="ml-2 text-red-400">● live</span>}
-                                </span>
-                                {(["a", "b"] as const).map((side) => (
-                                  <input
-                                    key={side}
-                                    type="number"
-                                    value={s[side]}
-                                    onChange={(e) => setScores((p) => ({ ...p, [m.id]: { ...s, [side]: e.target.value } }))}
-                                    className="w-14 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-center text-white focus:border-amber-400 focus:outline-none"
-                                  />
-                                ))}
-                                <button
-                                  disabled={busy}
-                                  onClick={() =>
-                                    act(() =>
-                                      tJson(`/tournaments/matches/${m.id}/score`, {
-                                        method: "POST",
-                                        body: JSON.stringify({ scoreA: Number(s.a) || 0, scoreB: Number(s.b) || 0, final: false }),
-                                      })
-                                    )
-                                  }
-                                  className="rounded-md border border-amber-400/60 px-3 py-1 text-xs font-bold text-amber-300"
-                                >
-                                  Live
-                                </button>
-                                <button
-                                  disabled={busy}
-                                  onClick={() => {
-                                    const a = Number(s.a) || 0;
-                                    const b = Number(s.b) || 0;
-                                    const invalid = validateFinalScore(ev.sportKey, a, b);
-                                    if (invalid) {
-                                      setMatchErrors((p) => ({ ...p, [m.id]: invalid }));
-                                      return;
-                                    }
-                                    setMatchErrors((p) => {
-                                      const next = { ...p };
-                                      delete next[m.id];
-                                      return next;
-                                    });
-                                    act(() =>
-                                      tJson(`/tournaments/matches/${m.id}/score`, {
-                                        method: "POST",
-                                        body: JSON.stringify({ scoreA: a, scoreB: b, final: true }),
-                                      })
+                              <div key={ev.id} className="mb-5">
+                                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{ev.name}</p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  {toScore.map((m) => {
+                                    const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
+                                    return (
+                                      <div key={m.id} className="rounded-xl border border-white/10 bg-slate-900/40 p-4">
+                                        <div className="mb-3 flex items-center justify-between text-[11px] text-slate-500">
+                                          <span>
+                                            Round {m.round} · Match {m.matchNo}
+                                            {m.venue ? ` · ${m.venue}` : ""}
+                                          </span>
+                                          {m.status === "live" && (
+                                            <span className="animate-pulse font-bold text-red-400">● LIVE</span>
+                                          )}
+                                        </div>
+                                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                          <p className="truncate text-sm font-semibold text-white">
+                                            {offEntryName(ev.entries, m.entryAId)}
+                                          </p>
+                                          <span className="text-xs text-slate-600">vs</span>
+                                          <p className="truncate text-right text-sm font-semibold text-white">
+                                            {offEntryName(ev.entries, m.entryBId)}
+                                          </p>
+                                          <input
+                                            type="number"
+                                            value={s.a}
+                                            onChange={(e) => setScores((p) => ({ ...p, [m.id]: { ...s, a: e.target.value } }))}
+                                            className="h-12 w-full rounded-lg border border-white/15 bg-white/5 text-center text-2xl font-extrabold text-amber-300 focus:border-amber-400 focus:outline-none"
+                                          />
+                                          <span className="text-center text-lg font-bold text-slate-600">:</span>
+                                          <input
+                                            type="number"
+                                            value={s.b}
+                                            onChange={(e) => setScores((p) => ({ ...p, [m.id]: { ...s, b: e.target.value } }))}
+                                            className="h-12 w-full rounded-lg border border-white/15 bg-white/5 text-center text-2xl font-extrabold text-amber-300 focus:border-amber-400 focus:outline-none"
+                                          />
+                                        </div>
+                                        <div className="mt-3 flex gap-2">
+                                          <button
+                                            disabled={busy}
+                                            onClick={() =>
+                                              act(() =>
+                                                tJson(`/tournaments/matches/${m.id}/score`, {
+                                                  method: "POST",
+                                                  body: JSON.stringify({ scoreA: Number(s.a) || 0, scoreB: Number(s.b) || 0, final: false }),
+                                                })
+                                              )
+                                            }
+                                            className="flex-1 rounded-lg border border-amber-400/60 py-2 text-xs font-bold text-amber-300 hover:bg-amber-400/10"
+                                          >
+                                            Update live
+                                          </button>
+                                          <button
+                                            disabled={busy}
+                                            onClick={() => {
+                                              const a = Number(s.a) || 0;
+                                              const b = Number(s.b) || 0;
+                                              const invalid = validateFinalScore(ev.sportKey, a, b);
+                                              if (invalid) {
+                                                setMatchErrors((p) => ({ ...p, [m.id]: invalid }));
+                                                return;
+                                              }
+                                              setMatchErrors((p) => {
+                                                const next = { ...p };
+                                                delete next[m.id];
+                                                return next;
+                                              });
+                                              act(() =>
+                                                tJson(`/tournaments/matches/${m.id}/score`, {
+                                                  method: "POST",
+                                                  body: JSON.stringify({ scoreA: a, scoreB: b, final: true }),
+                                                })
+                                              );
+                                            }}
+                                            className="flex-1 rounded-lg bg-amber-400 py-2 text-xs font-bold text-slate-900 hover:opacity-90"
+                                          >
+                                            Confirm final
+                                          </button>
+                                        </div>
+                                        {matchErrors[m.id] && (
+                                          <p className="mt-2 text-xs text-red-400">⚠ {matchErrors[m.id]}</p>
+                                        )}
+                                      </div>
                                     );
-                                  }}
-                                  className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-slate-900"
-                                >
-                                  Final
-                                </button>
-                                {matchErrors[m.id] && (
-                                  <span className="w-full text-xs text-red-400">⚠ {matchErrors[m.id]}</span>
-                                )}
+                                  })}
+                                </div>
                               </div>
                             );
                           })}
-                        {ev.matches.filter((m) => m.status !== "completed" && m.entryAId && m.entryBId).length === 0 && (
-                          <p className="text-xs text-slate-500">No matches waiting for a score.</p>
+                        {tab === "score" && pending === 0 && (
+                          <p className="text-sm text-slate-500">All caught up — no matches waiting for a score. 🎉</p>
                         )}
+
+                        {/* FIXTURES — full schedule by round */}
+                        {tab === "fixtures" &&
+                          matchEvents.map((ev) => (
+                            <div key={ev.id} className="mb-5">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{ev.name}</p>
+                              <div className="overflow-hidden rounded-xl border border-white/10">
+                                {ev.matches.map((m, i) => (
+                                  <div
+                                    key={m.id}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm ${i % 2 ? "bg-white/[0.02]" : ""}`}
+                                  >
+                                    <span className="w-8 shrink-0 text-xs font-bold text-slate-500">R{m.round}</span>
+                                    <span className="flex-1 truncate text-slate-200">
+                                      {offEntryName(ev.entries, m.entryAId)}{" "}
+                                      <span className="text-slate-600">vs</span> {offEntryName(ev.entries, m.entryBId)}
+                                    </span>
+                                    <span className="hidden text-xs text-slate-500 sm:inline">{m.venue ?? ""}</span>
+                                    <span
+                                      className={`w-20 shrink-0 text-right text-xs font-bold ${
+                                        m.status === "live"
+                                          ? "text-red-400"
+                                          : m.status === "completed"
+                                            ? "text-slate-500"
+                                            : "text-emerald-300"
+                                      }`}
+                                    >
+                                      {m.status === "completed" ? `${m.scoreA}–${m.scoreB}` : m.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+
+                        {/* STANDINGS — points tables for league/round-robin events */}
+                        {tab === "standings" &&
+                          (matchEvents.some((ev) => (ev.standings?.length ?? 0) > 0 && ev.format !== "single_elim") ? (
+                            matchEvents
+                              .filter((ev) => (ev.standings?.length ?? 0) > 0 && ev.format !== "single_elim")
+                              .map((ev) => (
+                                <div key={ev.id} className="mb-5">
+                                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{ev.name}</p>
+                                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                                    <table className="w-full min-w-[420px] text-sm">
+                                      <thead>
+                                        <tr className="border-b border-white/10 bg-white/[0.06] text-left text-xs uppercase text-slate-400">
+                                          <th className="px-3 py-2 w-10">#</th>
+                                          <th className="px-3 py-2">{ev.kind === "team" ? "Team" : "Player"}</th>
+                                          <th className="px-3 py-2 text-center">P</th>
+                                          <th className="px-3 py-2 text-center">W</th>
+                                          <th className="px-3 py-2 text-center">L</th>
+                                          <th className="px-3 py-2 text-center">+/−</th>
+                                          <th className="px-3 py-2 text-center">Pts</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {ev.standings!.map((row, i) => {
+                                          const diff = row.scoreFor - row.scoreAgainst;
+                                          return (
+                                            <tr key={row.entryId} className={`border-b border-white/5 last:border-0 ${i === 0 ? "bg-amber-400/10" : ""}`}>
+                                              <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                              <td className={`px-3 py-2 ${i === 0 ? "font-bold text-amber-300" : "text-slate-200"}`}>{row.name}</td>
+                                              <td className="px-3 py-2 text-center text-slate-400">{row.played}</td>
+                                              <td className="px-3 py-2 text-center text-slate-200">{row.won}</td>
+                                              <td className="px-3 py-2 text-center text-slate-400">{row.lost}</td>
+                                              <td className={`px-3 py-2 text-center ${diff > 0 ? "text-emerald-300" : diff < 0 ? "text-red-400" : "text-slate-500"}`}>
+                                                {diff > 0 ? `+${diff}` : diff}
+                                              </td>
+                                              <td className="px-3 py-2 text-center font-bold text-white">{row.points}</td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              ))
+                          ) : (
+                            <p className="text-sm text-slate-500">
+                              No points tables here — knockout brackets live under Fixtures and Results.
+                            </p>
+                          ))}
+
+                        {/* RESULTS — completed matches */}
+                        {tab === "results" &&
+                          (matchEvents.some((ev) => ev.matches.some((m) => m.status === "completed")) ? (
+                            matchEvents.map((ev) => {
+                              const done = ev.matches.filter((m) => m.status === "completed");
+                              if (!done.length) return null;
+                              return (
+                                <div key={ev.id} className="mb-5">
+                                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">{ev.name}</p>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    {done.map((m) => (
+                                      <div key={m.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm">
+                                        <p className="mb-1 text-[11px] text-slate-500">
+                                          Round {m.round}
+                                          {m.venue ? ` · ${m.venue}` : ""}
+                                        </p>
+                                        <p>
+                                          <span className={m.winnerEntryId === m.entryAId ? "font-bold text-amber-300" : "text-slate-300"}>
+                                            {offEntryName(ev.entries, m.entryAId)}
+                                          </span>
+                                          <span className="mx-2 font-mono font-bold text-white">
+                                            {m.scoreDisplay === "bye" ? "bye" : `${m.scoreA}–${m.scoreB}`}
+                                          </span>
+                                          <span className={m.winnerEntryId === m.entryBId ? "font-bold text-amber-300" : "text-slate-300"}>
+                                            {offEntryName(ev.entries, m.entryBId)}
+                                          </span>
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-sm text-slate-500">No completed matches yet.</p>
+                          ))}
                       </div>
-                    ))}
-                  </div>
-                  )}
+                    );
+                  })()}
                 </div>
                 );
               })}
