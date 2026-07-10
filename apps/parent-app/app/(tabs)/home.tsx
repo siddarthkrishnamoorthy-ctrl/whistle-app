@@ -1,4 +1,4 @@
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -79,9 +79,16 @@ export default function HomeScreen() {
             <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "700" }}>{user?.name ?? "Parent"}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
-          <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Image
+            source={require("../../assets/whistle-logo.png")}
+            style={{ width: 34, height: 31 }}
+            resizeMode="contain"
+          />
+          <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
+            <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View>

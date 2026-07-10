@@ -123,10 +123,12 @@ export class ScheduleService {
       distanceM = Math.round(
         haversineMeters(checkin.lat, checkin.lng, Number(center.geoLat), Number(center.geoLng))
       );
-      const radius = center.geoRadiusM ?? 500;
+      // Staff attendance policy (2026-07): check-in counts only within 100 m
+      // of the center pin — a wider center radius never loosens this.
+      const radius = Math.min(center.geoRadiusM ?? 100, 100);
       if (distanceM > radius) {
         throw new BadRequestException(
-          `You're ~${distanceM}m from ${center.name}. Move within ${radius}m of the venue to start the session.`
+          `You're ~${distanceM}m from ${center.name}. Attendance requires being within ${radius}m of the venue.`
         );
       }
     } else if (geofenced && checkin?.lat != null && checkin?.lng != null) {

@@ -25,14 +25,14 @@ export default function StaffUsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Staff</h1>
-          <p className="text-sm text-text-secondary">{staff.length} staff members</p>
+          <h1 className="text-xl font-semibold">Users</h1>
+          <p className="text-sm text-text-secondary">{staff.length} users</p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
           className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
         >
-          + Add Staff
+          + Add User
         </button>
       </div>
 

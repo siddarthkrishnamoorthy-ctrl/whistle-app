@@ -95,8 +95,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Users",
     items: [
-      { label: "Staff", href: "/staff/users", icon: UserCog },
-      { label: "Staff Attendance", href: "/staff/attendance", icon: UserCheck },
+      { label: "Users", href: "/staff/users", icon: UserCog },
+      { label: "User Attendance", href: "/staff/attendance", icon: UserCheck },
       { label: "Salary", href: "/staff/salary", icon: Wallet },
     ],
   },

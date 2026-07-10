@@ -125,6 +125,8 @@ export default function PublicTournamentPage() {
       {/* Header */}
       <header className="mb-8">
         <div className="flex items-center gap-3 mb-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/whistle-logo.png" alt="Whistle" className="h-9 w-auto" />
           <span className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</span>
           <span className="text-xs px-2 py-0.5 rounded-full border border-emerald-400/40 text-emerald-300">
             {STATUS_LABEL[data.status] ?? data.status}

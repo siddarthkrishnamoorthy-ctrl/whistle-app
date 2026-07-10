@@ -60,11 +60,12 @@ export function validateFinalScore(sportKey: string, scoreA: number, scoreB: num
   if (!rule) return null; // open-scoring sport — any decisive score is fine
   const winner = Math.max(scoreA, scoreB);
   const loser = Math.min(scoreA, scoreB);
-  // Small numbers read as sets/games won (e.g. 2-0, 3-1).
+  // Small numbers read as sets/games won: winner takes 2 (best of 3) up to
+  // floor(maxSets/2)+1 (e.g. 3 in a best of 5), loser has fewer.
   if (winner <= rule.maxSets && winner <= 7) {
-    const needed = Math.floor(rule.maxSets / 2) + 1;
-    if (winner < needed || loser >= needed) {
-      return `As a sets result, the winner needs ${needed} sets (best of ${rule.maxSets}) — e.g. ${needed}-${Math.max(0, needed - 1)}.`;
+    const maxNeeded = Math.floor(rule.maxSets / 2) + 1;
+    if (winner < 2 || winner > maxNeeded || loser >= winner) {
+      return `As a sets result, the winner takes 2–${maxNeeded} sets with fewer for the loser — e.g. 2-0 or ${maxNeeded}-${maxNeeded - 1}.`;
     }
     return null;
   }

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { Image, ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
@@ -70,9 +70,16 @@ export default function HomeScreen() {
             <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "700" }}>{user?.name ?? "Coach"}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
-          <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Image
+            source={require("../../assets/whistle-logo.png")}
+            style={{ width: 34, height: 31 }}
+            resizeMode="contain"
+          />
+          <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
+            <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {!user?.academyId && (

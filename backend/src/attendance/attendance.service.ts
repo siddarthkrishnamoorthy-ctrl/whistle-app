@@ -34,4 +34,42 @@ export class AttendanceService {
       attendanceRate,
     };
   }
+
+  // Location-verified staff attendance: every session start records where the
+  // coach checked in; the app enforces the 100 m fence, this log proves it.
+  async staffLog(academyId: string, days: number) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sessions = await this.prisma.scheduledSession.findMany({
+      where: {
+        sessionDate: { gte: since },
+        status: { in: ["ongoing", "completed"] },
+        class: { center: { academyId } },
+      },
+      orderBy: { sessionDate: "desc" },
+      take: 200,
+      include: {
+        class: {
+          select: {
+            title: true,
+            center: { select: { name: true, geoLat: true } },
+            coach: { select: { user: { select: { id: true, name: true } } } },
+          },
+        },
+      },
+    });
+    return sessions.map((s) => ({
+      id: s.id,
+      date: s.sessionDate,
+      startTime: s.startTime,
+      classTitle: s.class?.title ?? "—",
+      center: s.class?.center?.name ?? "—",
+      centerHasPin: s.class?.center?.geoLat != null,
+      user: s.class?.coach?.user ?? null,
+      status: s.status,
+      distanceM: s.checkinDistanceM,
+      withinFence: s.checkinDistanceM != null ? s.checkinDistanceM <= 100 : null,
+      biometric: s.checkinBiometric,
+    }));
+  }
 }

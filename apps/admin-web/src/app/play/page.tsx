@@ -113,9 +113,9 @@ function validateFinalScore(sportKey: string, a: number, b: number): string | nu
   const winner = Math.max(a, b);
   const loser = Math.min(a, b);
   if (winner <= rule.maxSets && winner <= 7) {
-    const needed = Math.floor(rule.maxSets / 2) + 1;
-    if (winner < needed || loser >= needed) {
-      return `As sets, the winner needs ${needed} (best of ${rule.maxSets}) — e.g. ${needed}-${Math.max(0, needed - 1)}.`;
+    const maxNeeded = Math.floor(rule.maxSets / 2) + 1;
+    if (winner < 2 || winner > maxNeeded || loser >= winner) {
+      return `As sets, the winner takes 2–${maxNeeded} with fewer for the loser — e.g. 2-0 or ${maxNeeded}-${maxNeeded - 1}.`;
     }
     return null;
   }
@@ -224,6 +224,8 @@ export default function PlayPortal() {
   return (
     <main className="min-h-screen px-4 py-10 md:px-10 max-w-3xl mx-auto text-slate-200">
       <header className="mb-8 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-14 w-auto" />
         <p className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</p>
         <h1 className="text-3xl font-extrabold text-white mt-1">Play or officiate</h1>
         <p className="text-sm text-slate-400 mt-2">

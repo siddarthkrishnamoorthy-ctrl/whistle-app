@@ -44,16 +44,29 @@ export function SelectField({
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm text-text-secondary">{label}</span>
-      <select
-        {...props}
-        className={clsx(
-          "w-full rounded-md border border-border bg-surface-alt px-3.5 py-2.5 text-text-primary",
-          "focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent",
-          props.className
-        )}
-      >
-        {children}
-      </select>
+      <span className="relative block">
+        <select
+          {...props}
+          className={clsx(
+            // appearance-none kills the mismatched native arrow; the padding
+            // reserves room for our chevron so long labels truncate cleanly
+            // instead of running under it.
+            "w-full appearance-none truncate rounded-lg border border-border bg-surface-alt py-2.5 pl-3.5 pr-10 text-text-primary",
+            "transition-colors hover:border-white/30 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent",
+            props.className
+          )}
+        >
+          {children}
+        </select>
+        <svg
+          aria-hidden
+          viewBox="0 0 20 20"
+          fill="none"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary"
+        >
+          <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
     </label>
   );
 }

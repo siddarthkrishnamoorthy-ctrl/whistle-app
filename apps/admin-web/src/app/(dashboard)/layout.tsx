@@ -25,6 +25,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  // The desktop console is for Admins and Account Managers only. Coaches,
+  // referees, parents etc. have their own surfaces (mobile apps, /play,
+  // /organizer) — they never see the admin sidebar.
+  if (user.role !== "admin" && user.role !== "account_manager") {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="max-w-md rounded-2xl border border-border bg-white/[0.04] p-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-4 h-12 w-auto" />
+          <h1 className="text-lg font-semibold text-text-primary">This console is for Admins &amp; Account Managers</h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            You&apos;re signed in as <span className="font-semibold text-text-primary">{user.role.replace("_", " ")}</span>.
+            Coaches use the Whistle Coach app, parents the Parent app, tournament organizers the{" "}
+            <a href="/organizer" className="text-accent hover:underline">
+              organizer portal
+            </a>{" "}
+            and officials/players{" "}
+            <a href="/play" className="text-accent hover:underline">
+              /play
+            </a>
+            .
+          </p>
+          <button
+            onClick={() => signOut().then(() => router.replace("/login"))}
+            className="mt-5 rounded-full bg-accent px-6 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
+          >
+            Switch account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-white/[0.03] backdrop-blur-xl">

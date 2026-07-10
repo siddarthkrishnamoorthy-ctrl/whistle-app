@@ -17,4 +17,12 @@ export class AttendanceController {
   summary(@CurrentUser() user: AuthenticatedUser, @Query("date") date: string, @Query("centerId") centerId?: string) {
     return this.attendanceService.summary(user.academyId as string, date, centerId);
   }
+
+  // Staff attendance log: each session start doubles as the coach's
+  // check-in — location-verified within 100 m of the center pin.
+  @Get("staff")
+  @Roles("admin", "account_manager")
+  staffLog(@CurrentUser() user: AuthenticatedUser, @Query("days") days?: string) {
+    return this.attendanceService.staffLog(user.academyId as string, Math.min(Number(days) || 14, 90));
+  }
 }

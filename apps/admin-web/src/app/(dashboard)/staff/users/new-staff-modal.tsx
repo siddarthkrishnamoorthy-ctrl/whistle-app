@@ -115,7 +115,7 @@ export function NewStaffModal({
       });
       reset();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add staff member.");
+      setError(err instanceof Error ? err.message : "Could not add user.");
     } finally {
       setSubmitting(false);
     }
@@ -128,8 +128,8 @@ export function NewStaffModal({
         reset();
         onClose();
       }}
-      title="Add Staff"
-      subtitle="Invite a coach, manager or admin"
+      title="Add User"
+      subtitle="Invite a coach, manager, referee or admin"
       wide
       footer={
         <ModalFooter
@@ -138,7 +138,7 @@ export function NewStaffModal({
             onClose();
           }}
           onSubmit={handleSubmit}
-          submitLabel="Add Staff"
+          submitLabel="Add User"
           submitting={submitting}
         />
       }
