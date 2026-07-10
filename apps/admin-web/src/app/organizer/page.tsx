@@ -100,20 +100,15 @@ export default function TournamentsPage() {
   // ── Gate: the tournament module has its own open user master ──
   if (!user) {
     return (
-      <div className="grid min-h-[70vh] items-center gap-10 lg:grid-cols-2">
-        {/* Brand panel — logo on the left of the login screen */}
-        <div className="flex flex-col items-center justify-center text-center lg:border-r lg:border-border lg:pr-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/whistle-logo.png" alt="Whistle" className="mb-5 h-24 w-auto lg:h-32" />
-          <div className="text-3xl font-bold tracking-tight text-accent">Whistle</div>
-          <div className="mt-1 text-sm text-text-muted">By School of Sports</div>
-          <h1 className="mt-6 text-xl font-semibold">{consoleTitle}</h1>
-          <p className="mt-2 max-w-sm text-sm text-text-secondary">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl font-semibold">{consoleTitle}</h1>
+          <p className="text-sm text-text-secondary">
             Standalone open tournaments — separate from your academy. Anyone can organize, officiate or play; log in
             with a tournament account (your academy login doesn&apos;t apply here).
           </p>
         </div>
-        <Card className="w-full max-w-md justify-self-center lg:justify-self-start">
+        <Card className="max-w-md">
           <div className="mb-4 flex gap-2">
             {(["login", "signup"] as const).map((m) => (
               <button

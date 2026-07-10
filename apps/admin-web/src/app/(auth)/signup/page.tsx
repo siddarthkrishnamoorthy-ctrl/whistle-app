@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { apiFetch } from "@/lib/api-client";
 import { Field, PrimaryButton, OutlineButton } from "@/components/ui";
-import { AuthSplit } from "@/components/auth-split";
 import type { PricingTier } from "@/lib/types";
 
 export default function SignupPage() {
@@ -60,8 +59,13 @@ export default function SignupPage() {
   }
 
   return (
-    <AuthSplit tagline="Set up your academy on Whistle — pricing scales with your student strength.">
-      <div className="w-full rounded-lg border border-border bg-surface p-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-8">
+        <div className="mb-8 text-center">
+          <div className="mb-1 text-2xl font-bold tracking-tight text-accent">Whistle</div>
+          <div className="text-xs text-text-muted">By School of Sports</div>
+        </div>
+
         {apiUnreachable && (
           <p className="mb-4 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
             Can&apos;t reach the API. Make sure the backend is running (pnpm --filter backend dev).
@@ -168,6 +172,6 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
-    </AuthSplit>
+    </div>
   );
 }

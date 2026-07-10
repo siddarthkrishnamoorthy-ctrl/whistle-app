@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Field, PrimaryButton } from "@/components/ui";
-import { AuthSplit } from "@/components/auth-split";
 
 export default function LoginPage() {
   const { signIn, apiUnreachable } = useAuth();
@@ -31,8 +30,15 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthSplit tagline="One platform for your academy — classes, coaching content, assessments, tournaments and more.">
-      <div className="w-full rounded-lg border border-border bg-surface p-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-8">
+        <div className="mb-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-16 w-auto" />
+          <div className="mb-1 text-2xl font-bold tracking-tight text-accent">Whistle</div>
+          <div className="text-xs text-text-muted">By School of Sports</div>
+        </div>
+
         <h1 className="mb-1 text-xl font-semibold">Welcome Back</h1>
         <p className="mb-6 text-sm text-text-secondary">Login to continue your journey</p>
 
@@ -81,6 +87,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </AuthSplit>
+    </div>
   );
 }
