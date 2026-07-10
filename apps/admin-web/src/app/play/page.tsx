@@ -66,7 +66,42 @@ interface OffMatch {
 interface OffTournament {
   id: string;
   name: string;
-  events: { id: string; name: string; discipline: string; entries: OffEntry[]; matches: OffMatch[] }[];
+  events: { id: string; name: string; sportKey: string; discipline: string; entries: OffEntry[]; matches: OffMatch[] }[];
+}
+
+// Mirrors the backend's per-sport final-score rules so referees get instant
+// feedback; the API enforces the same rules server-side.
+const GAME_SCORE_RULES: Record<string, { target: number; winBy: number; cap?: number; maxSets: number }> = {
+  badminton: { target: 21, winBy: 2, cap: 30, maxSets: 3 },
+  pickleball: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
+  "table-tennis": { target: 11, winBy: 2, cap: 21, maxSets: 7 },
+  squash: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
+  tennis: { target: 6, winBy: 2, cap: 7, maxSets: 5 },
+  volleyball: { target: 25, winBy: 2, maxSets: 5 },
+  throwball: { target: 25, winBy: 2, maxSets: 5 },
+};
+
+function validateFinalScore(sportKey: string, a: number, b: number): string | null {
+  if (a < 0 || b < 0) return "Scores cannot be negative.";
+  if (a === b) return "A match needs a winner — enter a decider.";
+  const rule = GAME_SCORE_RULES[sportKey];
+  if (!rule) return null;
+  const winner = Math.max(a, b);
+  const loser = Math.min(a, b);
+  if (winner <= rule.maxSets && winner <= 7) {
+    const needed = Math.floor(rule.maxSets / 2) + 1;
+    if (winner < needed || loser >= needed) {
+      return `As sets, the winner needs ${needed} (best of ${rule.maxSets}) — e.g. ${needed}-${Math.max(0, needed - 1)}.`;
+    }
+    return null;
+  }
+  const capped = rule.cap != null && winner === rule.cap;
+  const atTarget = winner === rule.target && winner - loser >= rule.winBy;
+  const deuce = winner > rule.target && (rule.cap == null || winner < rule.cap) && winner - loser === rule.winBy;
+  if (capped || atTarget || deuce) return null;
+  return `Not a valid ${sportKey.replace("-", " ")} score: first to ${rule.target}, win by ${rule.winBy}${
+    rule.cap ? `, cap ${rule.cap}` : ""
+  } — or enter sets won (e.g. 2-0).`;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -101,6 +136,8 @@ export default function PlayPortal() {
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
   const [rosters, setRosters] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, { a: string; b: string }>>({});
+  const [matchErrors, setMatchErrors] = useState<Record<string, string>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async (u: TournamentUser) => {
     try {
@@ -280,9 +317,27 @@ export default function PlayPortal() {
                   No appointments yet — ask the organizer to appoint {user.email} from their manage page.
                 </p>
               )}
-              {officiating.map((t) => (
-                <div key={t.id} className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                  <h3 className="font-bold text-white">{t.name}</h3>
+              {officiating.map((t, ti) => {
+                const pending = t.events.flatMap((ev) =>
+                  ev.matches.filter((m) => m.status !== "completed" && m.entryAId && m.entryBId)
+                ).length;
+                const open = expanded[t.id] ?? ti === 0;
+                return (
+                <div key={t.id} className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04]">
+                  <button
+                    onClick={() => setExpanded((p) => ({ ...p, [t.id]: !open }))}
+                    className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-white/[0.03]"
+                  >
+                    <span className="font-bold text-white">{t.name}</span>
+                    <span className="flex items-center gap-3 text-xs text-slate-400">
+                      <span className={pending > 0 ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 font-bold text-amber-300" : ""}>
+                        {pending} match{pending === 1 ? "" : "es"} to score
+                      </span>
+                      <span className={`text-slate-300 transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+                    </span>
+                  </button>
+                  {open && (
+                  <div className="px-5 pb-5">
                   {t.events
                     .filter((ev) => ev.discipline === "match")
                     .map((ev) => (
@@ -324,18 +379,33 @@ export default function PlayPortal() {
                                 </button>
                                 <button
                                   disabled={busy}
-                                  onClick={() =>
+                                  onClick={() => {
+                                    const a = Number(s.a) || 0;
+                                    const b = Number(s.b) || 0;
+                                    const invalid = validateFinalScore(ev.sportKey, a, b);
+                                    if (invalid) {
+                                      setMatchErrors((p) => ({ ...p, [m.id]: invalid }));
+                                      return;
+                                    }
+                                    setMatchErrors((p) => {
+                                      const next = { ...p };
+                                      delete next[m.id];
+                                      return next;
+                                    });
                                     act(() =>
                                       tJson(`/tournaments/matches/${m.id}/score`, {
                                         method: "POST",
-                                        body: JSON.stringify({ scoreA: Number(s.a) || 0, scoreB: Number(s.b) || 0, final: true }),
+                                        body: JSON.stringify({ scoreA: a, scoreB: b, final: true }),
                                       })
-                                    )
-                                  }
+                                    );
+                                  }}
                                   className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-slate-900"
                                 >
                                   Final
                                 </button>
+                                {matchErrors[m.id] && (
+                                  <span className="w-full text-xs text-red-400">⚠ {matchErrors[m.id]}</span>
+                                )}
                               </div>
                             );
                           })}
@@ -344,8 +414,11 @@ export default function PlayPortal() {
                         )}
                       </div>
                     ))}
+                  </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </section>
           )}
 

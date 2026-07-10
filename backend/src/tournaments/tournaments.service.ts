@@ -40,6 +40,44 @@ function slugify(name: string): string {
   );
 }
 
+// Final-score sanity rules per sport. Racket/net sports must end on a valid
+// game score (reach the target, win by 2, hard cap) — OR be entered as sets
+// won (small numbers like 2-0 / 3-1 / 3-2). Open-scoring sports (football,
+// cricket, basketball…) accept any decisive non-negative score.
+const GAME_SCORE_RULES: Record<string, { target: number; winBy: number; cap?: number; maxSets: number }> = {
+  badminton: { target: 21, winBy: 2, cap: 30, maxSets: 3 },
+  pickleball: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
+  "table-tennis": { target: 11, winBy: 2, cap: 21, maxSets: 7 },
+  squash: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
+  tennis: { target: 6, winBy: 2, cap: 7, maxSets: 5 },
+  volleyball: { target: 25, winBy: 2, maxSets: 5 },
+  throwball: { target: 25, winBy: 2, maxSets: 5 },
+};
+
+export function validateFinalScore(sportKey: string, scoreA: number, scoreB: number): string | null {
+  if (scoreA < 0 || scoreB < 0) return "Scores cannot be negative.";
+  const rule = GAME_SCORE_RULES[sportKey];
+  if (!rule) return null; // open-scoring sport — any decisive score is fine
+  const winner = Math.max(scoreA, scoreB);
+  const loser = Math.min(scoreA, scoreB);
+  // Small numbers read as sets/games won (e.g. 2-0, 3-1).
+  if (winner <= rule.maxSets && winner <= 7) {
+    const needed = Math.floor(rule.maxSets / 2) + 1;
+    if (winner < needed || loser >= needed) {
+      return `As a sets result, the winner needs ${needed} sets (best of ${rule.maxSets}) — e.g. ${needed}-${Math.max(0, needed - 1)}.`;
+    }
+    return null;
+  }
+  // Otherwise it's the points of a single game.
+  const capped = rule.cap != null && winner === rule.cap;
+  const atTarget = winner === rule.target && winner - loser >= rule.winBy;
+  const deuce = winner > rule.target && (rule.cap == null || winner < rule.cap) && winner - loser === rule.winBy;
+  if (capped || atTarget || deuce) return null;
+  return `Not a valid ${sportKey.replace("-", " ")} game score: first to ${rule.target}, win by ${rule.winBy}${
+    rule.cap ? `, capped at ${rule.cap}` : ""
+  } — or enter sets won (e.g. 2-0).`;
+}
+
 // Deterministic-enough shuffle for random seeding.
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -542,6 +580,10 @@ export class TournamentsService {
       });
     }
     if (dto.scoreA === dto.scoreB) throw new BadRequestException("A knockout/league match needs a winner — enter a decider.");
+    // Per-sport final-score validation (BRD 7.2) — a random number can no
+    // longer close a match.
+    const invalid = validateFinalScore(match.event.sportKey, dto.scoreA, dto.scoreB);
+    if (invalid) throw new BadRequestException(invalid);
     return this.completeMatchInternal(matchId, dto.scoreA, dto.scoreB, dto.scoreDisplay, userId);
   }
 

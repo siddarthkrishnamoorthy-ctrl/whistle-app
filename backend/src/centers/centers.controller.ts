@@ -20,13 +20,13 @@ export class CentersController {
   }
 
   @Post()
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateCenterDto) {
     return this.centersService.create(user.academyId as string, dto);
   }
 
   @Patch(":id")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   update(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateCenterDto) {
     return this.centersService.update(user.academyId as string, id, dto);
   }

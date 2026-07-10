@@ -6,12 +6,13 @@ import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, ListRow, Pill, colors } from "@/components/ui";
 import { formatDate, formatTime, type ClassSummary, type ScheduledSession } from "@whistle/shared";
 
-// Delivery mode per class: the class's school setting wins, else the
-// academy-level default from Settings. A coach with classes at two schools
-// can see the calendar view for one and the grade sequence for the other.
+// Delivery mode per class: the mode chosen at class creation wins, then the
+// school setting, then the academy default. A coach with two classes can see
+// the calendar view for one and the grade sequence for the other.
 type AssignmentMode = "calendar" | "grade_sequence";
 
 type ClassRow = ClassSummary & {
+  lessonPlanAssignmentMode?: AssignmentMode | null;
   school?: { id: string; name: string; lessonPlanAssignmentMode?: AssignmentMode | null } | null;
 };
 
@@ -66,7 +67,7 @@ export default function LessonsScreen() {
           (c) => c.coach?.userId === user.id
         );
         const modeFor = (c: ClassRow): AssignmentMode =>
-          (c.school?.lessonPlanAssignmentMode as AssignmentMode) ?? academyMode;
+          c.lessonPlanAssignmentMode ?? (c.school?.lessonPlanAssignmentMode as AssignmentMode) ?? academyMode;
         const calendarClassIds = new Set(myClasses.filter((c) => modeFor(c) === "calendar").map((c) => c.id));
         const sequenceClasses = myClasses.filter((c) => modeFor(c) === "grade_sequence");
 

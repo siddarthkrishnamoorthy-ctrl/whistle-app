@@ -24,14 +24,16 @@ export class ClassesController {
     return this.classesService.findOneOrThrow(user.academyId as string, id);
   }
 
+  // Account managers act as the school's admin (2026-07): they create and
+  // schedule classes, choosing the lesson-plan mode at creation.
   @Post()
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateClassDto) {
     return this.classesService.create(user.academyId as string, dto);
   }
 
   @Patch(":id")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   update(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateClassDto) {
     return this.classesService.update(user.academyId as string, id, dto);
   }

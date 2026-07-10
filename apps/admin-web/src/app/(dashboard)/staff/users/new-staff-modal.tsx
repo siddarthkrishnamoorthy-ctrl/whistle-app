@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal, ModalFooter } from "@/components/modal";
 import { Field, SelectField } from "@/components/ui";
 import { useApiList } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth-context";
 import type { Center, Sport, StaffProfile } from "@/lib/types";
 import type { SalaryBasis, StaffRole } from "@whistle/shared";
 
@@ -53,6 +54,13 @@ export function NewStaffModal({
   const { data: sports } = useApiList<Sport>("/sports");
   const { data: centers } = useApiList<Center>("/centers");
   const { data: staff } = useApiList<StaffProfile>("/staff");
+  const { user } = useAuth();
+  // Account managers act as the school admin: they onboard coaches/referees
+  // with default access only — no admin creation, no module-wise assignment.
+  const isAccountManager = user?.role === "account_manager";
+  const availableRoles = isAccountManager
+    ? ROLES.filter((r) => ["coach", "referee"].includes(r.key))
+    : ROLES;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -151,7 +159,7 @@ export function NewStaffModal({
       <div>
         <span className="mb-1.5 block text-sm text-text-secondary">Role *</span>
         <div className="grid grid-cols-2 gap-2">
-          {ROLES.map((r) => (
+          {availableRoles.map((r) => (
             <button
               key={r.key}
               type="button"
@@ -184,6 +192,12 @@ export function NewStaffModal({
         </div>
       </div>
 
+      {isAccountManager ? (
+        <p className="rounded-md border border-border bg-surface-alt/60 px-3 py-2 text-xs text-text-secondary">
+          New staff get the default access for their role. Module-wise access can only be assigned by the academy
+          admin.
+        </p>
+      ) : (
       <div>
         <span className="mb-1.5 block text-sm text-text-secondary">
           Module access <span className="text-text-muted">(leave empty for everything the role allows)</span>
@@ -207,6 +221,7 @@ export function NewStaffModal({
           ))}
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <SelectField label="Center" value={centerId} onChange={(e) => setCenterId(e.target.value)}>

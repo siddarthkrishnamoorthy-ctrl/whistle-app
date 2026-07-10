@@ -60,3 +60,14 @@ a {
 button:active {
   transform: scale(0.98);
 }
+
+/* Native <select> popups ignore the dark theme on Windows and render white
+   text on a white list — force readable colors on the option list itself. */
+select {
+  color-scheme: dark;
+}
+select option,
+select optgroup {
+  background-color: #141a28;
+  color: #f1f5f9;
+}

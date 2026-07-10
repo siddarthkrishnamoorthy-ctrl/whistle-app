@@ -339,6 +339,11 @@ model Class {
   // Partner school this class is run for (2026-07). Drives the per-school
   // lesson-plan scheduling mode in the coach app.
   schoolId  String?     @map("school_id")
+  // How this class's coaches receive lesson plans (2026-07, product item 6/7):
+  // "calendar" = plans attached to scheduled sessions; "grade_sequence" =
+  // grade-wise sequential curriculum flow. Set at class creation; falls back
+  // to the school's mode, then the academy default, when null.
+  lessonPlanAssignmentMode String? @map("lesson_plan_assignment_mode")
 
   center            Center             @relation(fields: [centerId], references: [id])
   sport             Sport              @relation(fields: [sportKey], references: [key])

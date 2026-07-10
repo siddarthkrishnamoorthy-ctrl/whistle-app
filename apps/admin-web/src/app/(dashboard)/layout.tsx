@@ -68,8 +68,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
         <div className="border-t border-border p-4">
           <div className="rounded-md border border-admin-action/40 bg-admin-action/10 p-3 text-xs text-text-secondary">
-            <span className="font-semibold text-admin-action">Admin · Full Access</span>
-            <p className="mt-1">You can manage academies, plans, staff, students, classes and reports.</p>
+            <span className="font-semibold text-admin-action">
+              {user?.role === "account_manager" ? "Account Manager · School Admin" : "Admin · Full Access"}
+            </span>
+            <p className="mt-1">
+              {user?.role === "account_manager"
+                ? "You can manage students, classes, centers and coaches with default access."
+                : "You can manage academies, plans, staff, students, classes and reports."}
+            </p>
           </div>
         </div>
       </aside>

@@ -135,17 +135,9 @@ export default function SettingsPage() {
             onChange={setAllowMakeupSessions}
             tone="admin"
           />
-          <SelectField
-            label="Lesson plan assignment for coaches"
-            value={lessonPlanAssignmentMode}
-            onChange={(e) => setLessonPlanAssignmentMode(e.target.value as "calendar" | "grade_sequence")}
-          >
-            <option value="calendar">Via scheduled class calendar</option>
-            <option value="grade_sequence">Grade-wise sequential curriculum</option>
-          </SelectField>
           <p className="text-xs text-text-muted">
-            Controls what coaches see in their app's Lessons tab: lesson plans attached to each scheduled session, or
-            the grade-wise curriculum sequence you define under Curriculum.
+            Lesson plan scheduling (calendar vs grade-wise sequential) is chosen per class when you create it on the
+            Classes page — it decides what each class&apos;s coach sees in the Lessons tab.
           </p>
         </Card>
       )}

@@ -28,6 +28,7 @@ export interface CreateClassPayload {
   gradeId?: string;
   section?: string;
   schoolId?: string;
+  lessonPlanAssignmentMode?: "calendar" | "grade_sequence";
 }
 
 interface SchoolOption {
@@ -64,6 +65,7 @@ export function NewClassModal({
   const [gradeId, setGradeId] = useState("");
   const [section, setSection] = useState("");
   const [schoolId, setSchoolId] = useState("");
+  const [lessonPlanMode, setLessonPlanMode] = useState<"calendar" | "grade_sequence">("calendar");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +81,7 @@ export function NewClassModal({
     setGradeId("");
     setSection("");
     setSchoolId("");
+    setLessonPlanMode("calendar");
     setError(null);
   }
 
@@ -106,6 +109,7 @@ export function NewClassModal({
         gradeId: gradeId || undefined,
         section: section || undefined,
         schoolId: schoolId || undefined,
+        lessonPlanAssignmentMode: lessonPlanMode,
       });
       reset();
     } catch (err) {
@@ -195,6 +199,15 @@ export function NewClassModal({
             </option>
           ))}
         </SelectField>
+        <SelectField
+          label="Lesson plan scheduling for this class *"
+          value={lessonPlanMode}
+          onChange={(e) => setLessonPlanMode(e.target.value as "calendar" | "grade_sequence")}
+        >
+          <option value="calendar">Via class calendar — coach sees plans on scheduled sessions</option>
+          <option value="grade_sequence">Grade-wise sequential — coach follows the curriculum order</option>
+        </SelectField>
+
         <SelectField label="School (partner school class)" value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>
           <option value="">No school — academy class</option>
           {schools.map((s) => (

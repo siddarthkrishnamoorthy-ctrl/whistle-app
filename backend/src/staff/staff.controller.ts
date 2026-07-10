@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { StaffService } from "./staff.service";
 import { CreateStaffDto } from "./dto/create-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
@@ -31,9 +31,18 @@ export class StaffController {
     return this.staffService.findOneOrThrow(user.academyId as string, userId);
   }
 
+  // Account managers act as the school's admin on the desktop app: they can
+  // onboard coaches (and referees) with DEFAULT access, but only a full admin
+  // can grant module-wise access or create admin/manager accounts.
   @Post()
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateStaffDto) {
+    if (user.role === "account_manager") {
+      if (!["coach", "head_coach", "referee"].includes(dto.role)) {
+        throw new ForbiddenException("Account managers can only add coaches and referees.");
+      }
+      dto.moduleAccess = []; // default access — no module-wise assignment
+    }
     return this.staffService.create(user.academyId as string, dto);
   }
 

@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   Mail,
+  MapPin,
   Medal,
   MessagesSquare,
   Receipt,
@@ -51,6 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Enquiries", href: "/academy/enquiries", icon: Inbox },
       { label: "Clients", href: "/academy/clients", icon: Users },
       { label: "Schools", href: "/academy/schools", icon: Building2 },
+      { label: "Centers", href: "/academy/centers", icon: MapPin },
       { label: "Attendance", href: "/academy/attendance", icon: UserCheck },
     ],
   },
@@ -71,14 +73,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "LBL Tournaments",
-    items: [
-      { label: "LBL School Events", href: "/interschool/lbl", icon: Medal },
-      { label: "LBL - Tournaments", href: "/tournaments?series=lbl", icon: Flag },
-    ],
-  },
-  {
-    label: "Whistle Tournaments",
+    label: "Tournaments",
     items: [{ label: "Whistle - Tournaments", href: "/tournaments", icon: Flag }],
   },
   {

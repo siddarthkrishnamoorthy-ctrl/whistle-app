@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import type { ClassMode, SkillLevel } from "@prisma/client";
 import { ClassTimingDto } from "./class-timing.dto";
 
@@ -52,4 +52,10 @@ export class CreateClassDto {
   @IsOptional()
   @IsString()
   schoolId?: string;
+
+  // How coaches receive this class's lesson plans (product item 6/7):
+  // set at class creation; overrides school/academy defaults.
+  @IsOptional()
+  @IsIn(["calendar", "grade_sequence"])
+  lessonPlanAssignmentMode?: "calendar" | "grade_sequence";
 }
