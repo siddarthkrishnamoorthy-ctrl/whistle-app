@@ -303,7 +303,7 @@ export class TournamentsService {
 
   // ── Registration (BRD 6.3/6.4) ────────────────────────────────────────────
 
-  // Open tournaments any registrant can browse.
+  // Open tournaments any registrant can browse — newest first.
   browseOpen() {
     return this.prisma.tournament.findMany({
       where: { status: "registration_open" },
@@ -311,7 +311,7 @@ export class TournamentsService {
         organizer: { select: { name: true, organizationName: true } },
         events: { include: { _count: { select: { entries: true } } } },
       },
-      orderBy: { startDate: "asc" },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -839,5 +839,175 @@ export class TournamentsService {
         finalRanking: e.finalRanking,
       })),
     };
+  }
+
+  // ── Awards + cross-organizer leaderboard (public, no auth) ────────────────
+
+  // Best performers of one tournament, derived purely from recorded scores
+  // and standings: per-event champion/runner-up, overall best player/team,
+  // and for cricket the individual honors from the ball-by-ball log.
+  async awards(slug: string) {
+    const t = await this.prisma.tournament.findUnique({ where: { publicSlug: slug } });
+    if (!t) throw new NotFoundException("Tournament not found.");
+    const events = await this.prisma.tournamentEvent.findMany({
+      where: { tournamentId: t.id, discipline: "match" },
+      include: { entries: { where: { status: "confirmed" } }, matches: true },
+    });
+
+    type Agg = { name: string; played: number; won: number; lost: number; points: number; scoreFor: number; scoreAgainst: number };
+    const overall = new Map<string, Agg>();
+    const nameOf = (e: { teamName: string | null; players: unknown } | undefined) =>
+      e ? (e.teamName ?? (e.players as { name: string }[])[0]?.name ?? "—") : null;
+
+    const perEvent = [];
+    for (const ev of events) {
+      const rows = await this.standings(ev.id);
+      if (!rows.length) continue;
+      // Champion: knockout → winner of the final; league/round robin → table
+      // top — but only once results exist, never off an unplayed table.
+      let champion = rows[0]?.played > 0 ? rows[0].name : null;
+      let runnerUp = champion && rows[1]?.played > 0 ? rows[1].name : null;
+      if (ev.format === "single_elim") {
+        const final = ev.matches
+          .filter((m) => m.status === "completed" && !m.nextMatchId)
+          .sort((a, b) => b.round - a.round)[0];
+        if (final?.winnerEntryId) {
+          const loserId = final.winnerEntryId === final.entryAId ? final.entryBId : final.entryAId;
+          champion = nameOf(ev.entries.find((e) => e.id === final.winnerEntryId)) ?? champion;
+          runnerUp = nameOf(ev.entries.find((e) => e.id === loserId)) ?? runnerUp;
+        }
+      }
+      let cricket:
+        | { topScorer: { name: string; runs: number } | null; topWicketTaker: { name: string; wickets: number } | null }
+        | undefined;
+      if (ev.sportKey === "cricket") {
+        const deliveries = await this.prisma.cricketDelivery.findMany({
+          where: { matchId: { in: ev.matches.map((m) => m.id) } },
+        });
+        const runs = new Map<string, number>();
+        const wkts = new Map<string, number>();
+        for (const d of deliveries) {
+          runs.set(d.batter, (runs.get(d.batter) ?? 0) + d.runsOffBat);
+          // Run outs are not credited to the bowler.
+          if (d.isWicket && d.wicketType && d.wicketType !== "run_out") {
+            wkts.set(d.bowler, (wkts.get(d.bowler) ?? 0) + 1);
+          }
+        }
+        const top = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1])[0];
+        const ts = top(runs);
+        const tw = top(wkts);
+        cricket = {
+          topScorer: ts && ts[1] > 0 ? { name: ts[0], runs: ts[1] } : null,
+          topWicketTaker: tw ? { name: tw[0], wickets: tw[1] } : null,
+        };
+      }
+      perEvent.push({ eventId: ev.id, eventName: ev.name, sportKey: ev.sportKey, champion, runnerUp, cricket });
+      for (const r of rows) {
+        const cur = overall.get(r.name) ?? { name: r.name, played: 0, won: 0, lost: 0, points: 0, scoreFor: 0, scoreAgainst: 0 };
+        cur.played += r.played;
+        cur.won += r.won;
+        cur.lost += r.lost;
+        cur.points += r.points;
+        cur.scoreFor += r.scoreFor;
+        cur.scoreAgainst += r.scoreAgainst;
+        overall.set(r.name, cur);
+      }
+    }
+
+    const played = [...overall.values()].filter((r) => r.played > 0);
+    const best = (cmp: (a: Agg, b: Agg) => number) => (played.length ? [...played].sort(cmp)[0] : null);
+    return {
+      tournament: t.name,
+      perEvent,
+      overall: {
+        bestPlayer: best(
+          (a, b) => b.won - a.won || b.points - a.points || b.scoreFor - b.scoreAgainst - (a.scoreFor - a.scoreAgainst)
+        ),
+        bestAttack: best((a, b) => b.scoreFor - a.scoreFor),
+        bestDefense: best((a, b) => a.scoreAgainst - b.scoreAgainst || b.played - a.played),
+      },
+    };
+  }
+
+  // Sport-wise career table across ALL tournaments and organizers — the
+  // public dashboard anyone can view without an account. Individuals are
+  // keyed by their tournament account (stable across organizers); teams by
+  // normalized team name.
+  async globalLeaderboard(sportKey?: string) {
+    const sportsAgg = await this.prisma.tournamentEvent.groupBy({
+      by: ["sportKey"],
+      where: { discipline: "match" },
+    });
+    const sports = sportsAgg.map((s) => s.sportKey).sort();
+    const sport = sportKey && sports.includes(sportKey) ? sportKey : sports[0];
+    if (!sport) return { sports: [], sportKey: null, rows: [] };
+
+    const events = await this.prisma.tournamentEvent.findMany({
+      where: { discipline: "match", sportKey: sport },
+      include: {
+        tournament: { select: { id: true } },
+        entries: { where: { status: "confirmed" } },
+        matches: { where: { status: "completed" } },
+      },
+    });
+
+    type Row = {
+      name: string;
+      played: number;
+      won: number;
+      lost: number;
+      points: number;
+      scoreFor: number;
+      scoreAgainst: number;
+      tournaments: Set<string>;
+    };
+    const rows = new Map<string, Row>();
+    for (const ev of events) {
+      const byId = new Map(ev.entries.map((e) => [e.id, e]));
+      const rowFor = (entryId: string | null) => {
+        const e = entryId ? byId.get(entryId) : undefined;
+        if (!e) return null;
+        const display = e.teamName ?? (e.players as { name: string }[])[0]?.name ?? "—";
+        const key = e.teamName || !e.registrantId ? `n:${display.trim().toLowerCase()}` : `u:${e.registrantId}`;
+        if (!rows.has(key)) {
+          rows.set(key, { name: display, played: 0, won: 0, lost: 0, points: 0, scoreFor: 0, scoreAgainst: 0, tournaments: new Set() });
+        }
+        const r = rows.get(key)!;
+        r.tournaments.add(ev.tournament.id);
+        return r;
+      };
+      for (const m of ev.matches) {
+        if (m.scoreDisplay === "bye") continue;
+        const a = rowFor(m.entryAId);
+        const b = rowFor(m.entryBId);
+        if (a) { a.played++; a.scoreFor += m.scoreA; a.scoreAgainst += m.scoreB; }
+        if (b) { b.played++; b.scoreFor += m.scoreB; b.scoreAgainst += m.scoreA; }
+        if (m.winnerEntryId) {
+          const w = rowFor(m.winnerEntryId);
+          if (w) { w.won++; w.points += 2; }
+          const l = m.winnerEntryId === m.entryAId ? b : a;
+          if (l) l.lost++;
+        }
+      }
+    }
+
+    const out = [...rows.values()]
+      .filter((r) => r.played > 0)
+      .map((r) => ({
+        name: r.name,
+        played: r.played,
+        won: r.won,
+        lost: r.lost,
+        points: r.points,
+        scoreFor: r.scoreFor,
+        scoreAgainst: r.scoreAgainst,
+        tournaments: r.tournaments.size,
+        winPct: Math.round((r.won / r.played) * 100),
+      }))
+      .sort(
+        (a, b) =>
+          b.points - a.points || b.winPct - a.winPct || b.scoreFor - b.scoreAgainst - (a.scoreFor - a.scoreAgainst)
+      );
+    return { sports, sportKey: sport, rows: out.slice(0, 100) };
   }
 }

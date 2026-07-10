@@ -16,6 +16,18 @@ const FORMATS = [
   { key: "team", label: "Team" },
 ] as const;
 
+// Sports that are only ever played as teams — the format picker is skipped
+// and Team is chosen automatically for these.
+const TEAM_ONLY_SPORTS = new Set([
+  "football",
+  "cricket",
+  "volleyball",
+  "throwball",
+  "kabaddi",
+  "hockey",
+  "basketball",
+]);
+
 function MultiChips<T extends string>({
   options,
   values,
@@ -54,6 +66,7 @@ function MultiChips<T extends string>({
 
 export default function HostEventScreen() {
   const [sports, setSports] = useState<Sport[]>([]);
+  const sportLabelOf = (key: string) => sports.find((s) => s.key === key)?.name ?? key;
   const [name, setName] = useState("");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [formatType, setFormatType] = useState<(typeof FORMATS)[number]["key"]>("individual");
@@ -70,6 +83,13 @@ export default function HostEventScreen() {
 
   const toggle = (list: string[], set: (v: string[]) => void) => (v: string) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+
+  // Team-only sports (football, cricket…) lock the format to Team; the
+  // Singles/Doubles options only appear for racket-style sports.
+  const teamOnly = selectedSports.length > 0 && selectedSports.every((s) => TEAM_ONLY_SPORTS.has(s));
+  useEffect(() => {
+    if (teamOnly) setFormatType("team");
+  }, [teamOnly]);
 
   const valid =
     name.trim().length >= 2 &&
@@ -111,11 +131,29 @@ export default function HostEventScreen() {
 
       <Card>
         <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 10 }}>Format</Text>
-        <ChipRow
-          options={FORMATS.map((f) => ({ key: f.key, label: f.label }))}
-          value={formatType}
-          onChange={(v) => setFormatType(v as typeof formatType)}
-        />
+        {teamOnly ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View
+              style={{
+                backgroundColor: colors.accent,
+                borderRadius: 999,
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+              }}
+            >
+              <Text style={{ color: colors.accentText, fontSize: 13, fontWeight: "600" }}>Team</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 12, flex: 1 }}>
+              {selectedSports.map(sportLabelOf).join(", ")} is a team sport — format picked automatically.
+            </Text>
+          </View>
+        ) : (
+          <ChipRow
+            options={FORMATS.map((f) => ({ key: f.key, label: f.label }))}
+            value={formatType}
+            onChange={(v) => setFormatType(v as typeof formatType)}
+          />
+        )}
       </Card>
 
       <Card>

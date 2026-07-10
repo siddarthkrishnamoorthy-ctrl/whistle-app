@@ -42,9 +42,22 @@ export class TournamentAuthController {
 export class TournamentPublicController {
   constructor(private service: TournamentsService) {}
 
+  // Cross-organizer sport-wise player/team dashboard. Declared before the
+  // :slug catch-all so "leaderboard" never resolves as a slug.
+  @Get("leaderboard")
+  leaderboard(@Query("sportKey") sportKey?: string) {
+    return this.service.globalLeaderboard(sportKey);
+  }
+
   @Get(":slug")
   publicPage(@Param("slug") slug: string) {
     return this.service.publicPage(slug);
+  }
+
+  // Best player + category honors of one tournament, from scores/standings.
+  @Get(":slug/awards")
+  awards(@Param("slug") slug: string) {
+    return this.service.awards(slug);
   }
 }
 

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ClipboardList,
   Megaphone,
+  Search,
   Ticket,
   Trophy,
   Users,
@@ -167,6 +168,7 @@ export default function PlayPortal() {
 
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [role, setRole] = useState("registrant");
+  const [tournamentSearch, setTournamentSearch] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -348,6 +350,25 @@ export default function PlayPortal() {
 
           {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
 
+          {/* Find a tournament + the public rankings dashboard */}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="flex min-w-56 flex-1 items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3">
+              <Search size={14} className="text-slate-500" />
+              <input
+                value={tournamentSearch}
+                onChange={(e) => setTournamentSearch(e.target.value)}
+                placeholder="Search tournaments…"
+                className="w-full bg-transparent py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none"
+              />
+            </div>
+            <a
+              href="/rankings"
+              className="flex items-center gap-1.5 rounded-full border border-amber-400/50 px-4 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10"
+            >
+              <Trophy size={13} /> Player rankings
+            </a>
+          </div>
+
           {/* Official scoring console */}
           {user.role === "official" && (
             <section className="mb-8">
@@ -359,7 +380,9 @@ export default function PlayPortal() {
                   No appointments yet — ask the organizer to appoint {user.email} from their manage page.
                 </p>
               )}
-              {officiating.map((t, ti) => {
+              {officiating
+                .filter((t) => !tournamentSearch.trim() || t.name.toLowerCase().includes(tournamentSearch.trim().toLowerCase()))
+                .map((t, ti) => {
                 const pending = t.events.flatMap((ev) =>
                   ev.matches.filter((m) => m.status !== "completed" && m.entryAId && m.entryBId)
                 ).length;
@@ -706,7 +729,9 @@ export default function PlayPortal() {
               <Megaphone size={18} className="text-amber-300" /> Open for registration
             </h2>
             {open.length === 0 && <p className="text-sm text-slate-500">Nothing open right now — check back soon.</p>}
-            {open.map((t) => (
+            {open
+              .filter((t) => !tournamentSearch.trim() || t.name.toLowerCase().includes(tournamentSearch.trim().toLowerCase()))
+              .map((t) => (
               <div key={t.id} className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="flex items-center gap-2 font-bold text-white">

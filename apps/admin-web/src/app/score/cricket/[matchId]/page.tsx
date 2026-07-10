@@ -177,6 +177,13 @@ export default function CricketScoringPage() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-4 py-6 text-slate-200">
       <header className="mb-4 flex items-center gap-3">
+        {/* Way back to the console this match was opened from */}
+        <button
+          onClick={() => (window.history.length > 1 ? window.history.back() : (window.location.href = "/play"))}
+          className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-bold text-slate-300 hover:border-amber-400/50 hover:text-white"
+        >
+          ← Back
+        </button>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/whistle-logo.png" alt="Whistle" className="h-9 w-auto" />
         <div>

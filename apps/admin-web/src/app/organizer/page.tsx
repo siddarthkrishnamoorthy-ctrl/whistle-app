@@ -45,6 +45,8 @@ export default function TournamentsPage() {
   // separate lists — reached via the LBL sidebar section).
   const [series, setSeries] = useState<"open" | "lbl">("open");
 
+  const [search, setSearch] = useState("");
+
   // Login/signup form state
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
@@ -225,13 +227,25 @@ export default function TournamentsPage() {
             </div>
           )}
 
+          {mine && mine.tournaments.length > 0 && (
+            <Field
+              label=""
+              placeholder="Search tournaments…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          )}
+
           {!mine || mine.tournaments.length === 0 ? (
             <Card>
               <EmptyState message="No tournaments yet — create your first one." />
             </Card>
           ) : (
             <Table columns={["Tournament", "Sports", "Events", "Entries", "Status", "Public page", ""]}>
-              {mine.tournaments.map((t) => (
+              {mine.tournaments
+                .filter((t) => !search.trim() || t.name.toLowerCase().includes(search.trim().toLowerCase()))
+                .map((t) => (
                 <tr key={t.id}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 font-medium text-text-primary">

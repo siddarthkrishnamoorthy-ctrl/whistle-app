@@ -79,9 +79,29 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Completed",
 };
 
+interface Awards {
+  perEvent: {
+    eventId: string;
+    eventName: string;
+    sportKey: string;
+    champion: string | null;
+    runnerUp: string | null;
+    cricket?: {
+      topScorer: { name: string; runs: number } | null;
+      topWicketTaker: { name: string; wickets: number } | null;
+    };
+  }[];
+  overall: {
+    bestPlayer: { name: string; won: number; played: number } | null;
+    bestAttack: { name: string; scoreFor: number } | null;
+    bestDefense: { name: string; scoreAgainst: number; played: number } | null;
+  };
+}
+
 export default function PublicTournamentPage() {
   const { slug } = useParams<{ slug: string }>();
   const [data, setData] = useState<PublicTournament | null>(null);
+  const [awards, setAwards] = useState<Awards | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -90,6 +110,11 @@ export default function PublicTournamentPage() {
       if (!res.ok) throw new Error("Tournament not found.");
       setData(await res.json());
       setError(null);
+      // Honors board — computed from scores/standings, refreshed with them.
+      fetch(`${API_URL}/tournaments/public/${slug}/awards`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setAwards)
+        .catch(() => undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load tournament.");
     }
@@ -125,13 +150,20 @@ export default function PublicTournamentPage() {
     <main className="min-h-screen px-4 py-10 md:px-10 max-w-5xl mx-auto text-slate-200">
       {/* Header */}
       <header className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="mb-2 flex flex-wrap items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/whistle-logo.png" alt="Whistle" className="h-9 w-auto" />
           <span className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</span>
           <span className="text-xs px-2 py-0.5 rounded-full border border-emerald-400/40 text-emerald-300">
             {STATUS_LABEL[data.status] ?? data.status}
           </span>
+          <span className="flex-1" />
+          <a href="/play" className="text-xs text-amber-300 hover:underline">
+            🏠 Tournaments home
+          </a>
+          <a href="/rankings" className="text-xs text-amber-300 hover:underline">
+            🏆 Player rankings
+          </a>
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-white">{data.name}</h1>
         <p className="text-sm text-slate-400 mt-2">
@@ -154,6 +186,61 @@ export default function PublicTournamentPage() {
         <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <h2 className="text-lg font-bold text-white mb-2">📋 Rules &amp; regulations</h2>
           <p className="whitespace-pre-line text-sm text-slate-300">{data.rules}</p>
+        </section>
+      )}
+
+      {/* Honors board — best performers from real scores & standings */}
+      {awards && (awards.overall.bestPlayer || awards.perEvent.some((e) => e.champion)) && (
+        <section className="mb-10 rounded-2xl border border-amber-400/25 bg-amber-400/[0.04] p-5">
+          <h2 className="mb-3 text-lg font-bold text-white">🏅 Tournament honors</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {awards.overall.bestPlayer && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-[11px] uppercase tracking-wider text-amber-400/80">Best player / team</p>
+                <p className="mt-1 font-bold text-amber-300">{awards.overall.bestPlayer.name}</p>
+                <p className="text-xs text-slate-400">
+                  {awards.overall.bestPlayer.won} wins in {awards.overall.bestPlayer.played} matches
+                </p>
+              </div>
+            )}
+            {awards.overall.bestAttack && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-[11px] uppercase tracking-wider text-amber-400/80">Best attack</p>
+                <p className="mt-1 font-bold text-white">{awards.overall.bestAttack.name}</p>
+                <p className="text-xs text-slate-400">{awards.overall.bestAttack.scoreFor} scored</p>
+              </div>
+            )}
+            {awards.overall.bestDefense && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-[11px] uppercase tracking-wider text-amber-400/80">Best defense</p>
+                <p className="mt-1 font-bold text-white">{awards.overall.bestDefense.name}</p>
+                <p className="text-xs text-slate-400">only {awards.overall.bestDefense.scoreAgainst} conceded</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {awards.perEvent
+              .filter((e) => e.champion)
+              .map((e) => (
+                <p key={e.eventId} className="text-sm text-slate-300">
+                  <span className="text-slate-500">{e.eventName}:</span>{" "}
+                  <span className="font-semibold text-amber-300">🏆 {e.champion}</span>
+                  {e.runnerUp && <span className="text-slate-400"> · runner-up {e.runnerUp}</span>}
+                  {e.cricket?.topScorer && (
+                    <span className="text-slate-400">
+                      {" "}
+                      · 🏏 most runs {e.cricket.topScorer.name} ({e.cricket.topScorer.runs})
+                    </span>
+                  )}
+                  {e.cricket?.topWicketTaker && (
+                    <span className="text-slate-400">
+                      {" "}
+                      · most wickets {e.cricket.topWicketTaker.name} ({e.cricket.topWicketTaker.wickets})
+                    </span>
+                  )}
+                </p>
+              ))}
+          </div>
         </section>
       )}
 
