@@ -7,7 +7,6 @@ import {
   CalendarRange,
   ClipboardList,
   Dumbbell,
-  ExternalLink,
   Flag,
   GraduationCap,
   Inbox,
@@ -75,12 +74,9 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Tournaments",
-    items: [
-      // Admin creates tournaments here, then hands them to an organizer.
-      { label: "Whistle - Tournaments", href: "/tournaments", icon: Flag },
-      // Standalone portal for the organizers who run them (shareable URL).
-      { label: "Organizer Portal", href: "/organizer", icon: ExternalLink },
-    ],
+    // Admin creates tournaments here, then hands them over; organizers run
+    // them at the standalone /organizer URL (shared directly, not in nav).
+    items: [{ label: "Whistle - Tournaments", href: "/tournaments", icon: Flag }],
   },
   {
     label: "Match Center",
