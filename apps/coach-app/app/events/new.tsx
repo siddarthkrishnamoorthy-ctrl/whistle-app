@@ -71,6 +71,7 @@ export default function HostEventScreen() {
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [formatType, setFormatType] = useState<(typeof FORMATS)[number]["key"]>("individual");
   const [ageBands, setAgeBands] = useState<string[]>([]);
+  const [maxTeams, setMaxTeams] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -104,7 +105,15 @@ export default function HostEventScreen() {
     try {
       const event = await apiJson<{ id: string }>("/interschool/events", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), sports: selectedSports, formatType, ageBands, startDate, endDate }),
+        body: JSON.stringify({
+          name: name.trim(),
+          sports: selectedSports,
+          formatType,
+          ageBands,
+          startDate,
+          endDate,
+          maxTeams: maxTeams.trim() ? Number(maxTeams) : undefined,
+        }),
       });
       // Publish right away so network academies can discover it.
       await apiJson(`/interschool/events/${event.id}/publish`, { method: "POST", body: JSON.stringify({}) });
@@ -163,6 +172,20 @@ export default function HostEventScreen() {
           values={ageBands}
           onToggle={toggle(ageBands, setAgeBands)}
         />
+      </Card>
+
+      <Card>
+        <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 12 }}>Team slots</Text>
+        <Field
+          label="Number of teams (optional)"
+          value={maxTeams}
+          onChangeText={setMaxTeams}
+          keyboardType="number-pad"
+          placeholder="e.g. 4 — joining closes when full"
+        />
+        <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+          You count as one team. When the last slot fills and rosters are in, fixtures generate automatically.
+        </Text>
       </Card>
 
       <Card>

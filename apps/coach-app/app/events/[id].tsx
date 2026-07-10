@@ -1,14 +1,36 @@
-import { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, ListRow, LoadingView, Pill, colors } from "@/components/ui";
+import { Card, EmptyState, ListRow, LoadingView, Pill, PrimaryButton, colors } from "@/components/ui";
 import { formatDate, type Fixture, type InterschoolEvent } from "@whistle/shared";
 
 type EventDetail = InterschoolEvent & {
   hostAcademy?: { id: string; name: string };
   fixtures?: Fixture[];
+  invitations?: { status: string; invitedAcademy?: { id: string; name: string } }[];
+  maxTeams?: number | null;
 };
+
+interface EventMessage {
+  id: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+  academy: { id: string; name: string };
+}
+
+interface StandingsRow {
+  academyId: string;
+  name: string;
+  played: number;
+  won: number;
+  lost: number;
+  drawn: number;
+  points: number;
+}
 
 const EVENT_TONE = { draft: "neutral", scheduled: "info", live: "warning", completed: "success", closed: "success" } as const;
 const FIXTURE_TONE = {
@@ -19,29 +41,109 @@ const FIXTURE_TONE = {
   completed: "success",
   abandoned: "danger",
 } as const;
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
+  const [standings, setStandings] = useState<{ sportKey: string; rows: StandingsRow[] }[]>([]);
+  const [messages, setMessages] = useState<EventMessage[] | null>(null);
+  const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const chatScroll = useRef<ScrollView | null>(null);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    const ev = await apiJson<EventDetail>(`/interschool/events/${id}`).catch(() => null);
+    setEvent(ev);
+    if (ev) {
+      apiJson<{ standings: { sportKey: string; rows: StandingsRow[] }[] }>(`/interschool/events/${id}/standings`)
+        .then((s) => setStandings(s.standings))
+        .catch(() => setStandings([]));
+      // Chat only opens for members — a 403 just means "not joined yet".
+      apiJson<EventMessage[]>(`/interschool/events/${id}/messages`)
+        .then(setMessages)
+        .catch(() => setMessages(null));
+    }
+  }, [id]);
 
   useEffect(() => {
-    if (!id) return;
-    apiJson<EventDetail>(`/interschool/events/${id}`)
-      .then(setEvent)
-      .catch(() => setEvent(null))
-      .finally(() => setLoading(false));
-  }, [id]);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   if (loading) return <LoadingView />;
   if (!event) return <EmptyState message="Event not found." />;
+
+  const isHost = event.hostAcademy?.id === user?.academyId;
+  const joinedTeams = 1 + (event.invitations?.filter((i) => i.status === "accepted").length ?? 0);
+  const iAmMember =
+    isHost || event.invitations?.some((i) => i.status === "accepted" && i.invitedAcademy?.id === user?.academyId);
+  const slotsLeft = event.maxTeams != null ? Math.max(0, event.maxTeams - joinedTeams) : null;
+  const chatOpen = event.status !== "closed";
+
+  async function join() {
+    setBusy(true);
+    try {
+      const res = await apiJson<{ teamsJoined: number; autoFixtures?: { created: number } | null }>(
+        `/interschool/events/${id}/join`,
+        { method: "POST", body: JSON.stringify({}) }
+      );
+      await load();
+      if (res.autoFixtures?.created) {
+        Alert.alert("You're in!", `All team slots are filled — ${res.autoFixtures.created} fixtures were generated.`);
+      }
+    } catch (e) {
+      Alert.alert("Couldn't join", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function generateFixtures() {
+    setBusy(true);
+    try {
+      const res = await apiJson<{ created: number; skipped: { sportKey: string; reason: string }[] }>(
+        `/interschool/events/${id}/fixtures`,
+        { method: "POST", body: JSON.stringify({}) }
+      );
+      await load();
+      const notes = res.skipped.map((s) => `${s.sportKey}: ${s.reason}`).join("\n");
+      Alert.alert(
+        res.created ? `${res.created} fixtures generated` : "No fixtures generated",
+        notes || "Round robin is ready — every team plays every team."
+      );
+    } catch (e) {
+      Alert.alert("Couldn't generate", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function send() {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft("");
+    try {
+      const msg = await apiJson<EventMessage>(`/interschool/events/${id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body: text }),
+      });
+      setMessages((prev) => [...(prev ?? []), msg]);
+      setTimeout(() => chatScroll.current?.scrollToEnd({ animated: true }), 50);
+    } catch (e) {
+      Alert.alert("Couldn't send", e instanceof Error ? e.message : "Please try again.");
+    }
+  }
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "700" }}>{event.name}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
           <Pill tone={EVENT_TONE[event.status as keyof typeof EVENT_TONE] ?? "neutral"}>{event.status}</Pill>
+          {isHost ? <Pill tone="warning">hosting</Pill> : iAmMember ? <Pill tone="success">joined</Pill> : null}
           {event.hostAcademy ? (
             <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Hosted by {event.hostAcademy.name}</Text>
           ) : null}
@@ -61,14 +163,82 @@ export default function EventDetailScreen() {
             Pay to join{event.pricePerHead != null ? ` · ₹${Number(event.pricePerHead)} per head` : ""}
           </Text>
         ) : null}
+        {/* Team slots */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+          <Ionicons name="people-outline" size={16} color={colors.accent} />
+          <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600" }}>
+            {joinedTeams}
+            {event.maxTeams != null ? ` of ${event.maxTeams}` : ""} team{joinedTeams === 1 ? "" : "s"} in
+          </Text>
+          {slotsLeft != null && (
+            <Text style={{ color: slotsLeft > 0 ? colors.textMuted : colors.success, fontSize: 12 }}>
+              {slotsLeft > 0 ? `· ${slotsLeft} slot${slotsLeft === 1 ? "" : "s"} left` : "· full — fixtures auto-generate"}
+            </Text>
+          )}
+        </View>
+        {!iAmMember && event.status === "scheduled" && (slotsLeft == null || slotsLeft > 0) && (
+          <View style={{ marginTop: 12 }}>
+            <PrimaryButton title={busy ? "Joining…" : "Join this event"} onPress={join} disabled={busy} />
+          </View>
+        )}
+        {isHost && (
+          <View style={{ marginTop: 12 }}>
+            <PrimaryButton
+              title={busy ? "Working…" : "Generate fixtures (round robin)"}
+              onPress={generateFixtures}
+              disabled={busy}
+            />
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
+              Builds every-team-plays-every-team fixtures for each sport whose rosters are in.
+            </Text>
+          </View>
+        )}
       </Card>
+
+      {/* Standings — from completed fixture results */}
+      {standings.some((s) => s.rows.length > 0) && (
+        <View>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
+            Standings
+          </Text>
+          {standings.map((s) => (
+            <Card key={s.sportKey} style={{ marginBottom: 8 }}>
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700", marginBottom: 8, textTransform: "capitalize" }}>
+                {s.sportKey.replace(/[-_]/g, " ")}
+              </Text>
+              <View style={{ flexDirection: "row", marginBottom: 6 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 11, flex: 1 }}>TEAM</Text>
+                {["P", "W", "L", "PTS"].map((h) => (
+                  <Text key={h} style={{ color: colors.textMuted, fontSize: 11, width: 34, textAlign: "center" }}>
+                    {h}
+                  </Text>
+                ))}
+              </View>
+              {s.rows.map((r, i) => (
+                <View key={r.academyId} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 5 }}>
+                  <Text style={{ color: i === 0 ? colors.accent : colors.textPrimary, fontSize: 13, flex: 1, fontWeight: i === 0 ? "700" : "400" }}>
+                    {MEDALS[i] ? `${MEDALS[i]} ` : `${i + 1}. `}
+                    {r.name}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, width: 34, textAlign: "center" }}>{r.played}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, width: 34, textAlign: "center" }}>{r.won}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, width: 34, textAlign: "center" }}>{r.lost}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, width: 34, textAlign: "center", fontWeight: "700" }}>
+                    {r.points}
+                  </Text>
+                </View>
+              ))}
+            </Card>
+          ))}
+        </View>
+      )}
 
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
           Fixtures {event.fixtures?.length ? `(${event.fixtures.length})` : ""}
         </Text>
         {!event.fixtures || event.fixtures.length === 0 ? (
-          <EmptyState message="No fixtures scheduled yet." />
+          <EmptyState message="No fixtures yet — they appear when the host generates them or all team slots fill." />
         ) : (
           <View style={{ gap: 8 }}>
             {event.fixtures.map((f) => (
@@ -89,6 +259,93 @@ export default function EventDetailScreen() {
           </View>
         )}
       </View>
+
+      {/* Team chat — members only, locks when the event closes */}
+      {messages !== null && (
+        <View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <Ionicons name="chatbubbles-outline" size={16} color={colors.accent} />
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Team chat</Text>
+            {!chatOpen && <Pill tone="neutral">closed</Pill>}
+          </View>
+          <Card>
+            <ScrollView
+              ref={chatScroll}
+              style={{ maxHeight: 260 }}
+              onContentSizeChange={() => chatScroll.current?.scrollToEnd({ animated: false })}
+            >
+              {messages.length === 0 ? (
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                  No messages yet — say hello to the other teams!
+                </Text>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {messages.map((m) => {
+                    const mine = m.academy.id === user?.academyId;
+                    return (
+                      <View
+                        key={m.id}
+                        style={{
+                          alignSelf: mine ? "flex-end" : "flex-start",
+                          maxWidth: "85%",
+                          backgroundColor: mine ? "rgba(245,185,63,0.15)" : colors.surface,
+                          borderWidth: 1,
+                          borderColor: mine ? "rgba(245,185,63,0.35)" : colors.border,
+                          borderRadius: 12,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Text style={{ color: mine ? colors.accent : colors.textSecondary, fontSize: 11, fontWeight: "700" }}>
+                          {m.senderName} · {m.academy.name}
+                        </Text>
+                        <Text style={{ color: colors.textPrimary, fontSize: 13, marginTop: 2 }}>{m.body}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </ScrollView>
+            {chatOpen ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 }}>
+                <TextInput
+                  value={draft}
+                  onChangeText={setDraft}
+                  placeholder="Message the teams…"
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    flex: 1,
+                    color: colors.textPrimary,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.surface,
+                    borderRadius: 999,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                  }}
+                  onSubmitEditing={send}
+                />
+                <TouchableOpacity
+                  onPress={send}
+                  disabled={!draft.trim()}
+                  style={{
+                    backgroundColor: draft.trim() ? colors.accent : colors.surface,
+                    borderRadius: 999,
+                    padding: 10,
+                  }}
+                >
+                  <Ionicons name="send" size={16} color={draft.trim() ? colors.accentText : colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 10 }}>
+                The event has ended — the chat is read-only now.
+              </Text>
+            )}
+          </Card>
+        </View>
+      )}
     </ScrollView>
   );
 }

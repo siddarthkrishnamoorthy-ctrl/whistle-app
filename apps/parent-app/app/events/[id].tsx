@@ -8,7 +8,21 @@ import { formatDate, type Fixture, type InterschoolEvent } from "@whistle/shared
 type EventDetail = InterschoolEvent & {
   hostAcademy?: { id: string; name: string };
   fixtures?: Fixture[];
+  invitations?: { status: string }[];
+  maxTeams?: number | null;
 };
+
+interface StandingsRow {
+  academyId: string;
+  name: string;
+  played: number;
+  won: number;
+  lost: number;
+  drawn: number;
+  points: number;
+}
+
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 const EVENT_TONE = { draft: "neutral", scheduled: "info", live: "warning", completed: "success", closed: "success" } as const;
 const FIXTURE_TONE = {
@@ -23,6 +37,7 @@ const FIXTURE_TONE = {
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [event, setEvent] = useState<EventDetail | null>(null);
+  const [standings, setStandings] = useState<{ sportKey: string; rows: StandingsRow[] }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +46,9 @@ export default function EventDetailScreen() {
       .then(setEvent)
       .catch(() => setEvent(null))
       .finally(() => setLoading(false));
+    apiJson<{ standings: { sportKey: string; rows: StandingsRow[] }[] }>(`/interschool/events/${id}/standings`)
+      .then((s) => setStandings(s.standings))
+      .catch(() => setStandings([]));
   }, [id]);
 
   if (loading) return <LoadingView />;
@@ -56,7 +74,51 @@ export default function EventDetailScreen() {
           {event.sports.join(", ")} · {event.formatType}
           {event.ageBands?.length ? ` · ${event.ageBands.join(", ")}` : ""}
         </Text>
+        {event.invitations && (
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
+            👥 {1 + event.invitations.filter((i) => i.status === "accepted").length}
+            {event.maxTeams != null ? ` of ${event.maxTeams}` : ""} teams playing
+          </Text>
+        )}
       </Card>
+
+      {/* Event standings — from confirmed match results */}
+      {standings.some((s) => s.rows.length > 0) && (
+        <View>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
+            Standings
+          </Text>
+          {standings.map((s) => (
+            <Card key={s.sportKey} style={{ marginBottom: 8 }}>
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700", marginBottom: 8, textTransform: "capitalize" }}>
+                {s.sportKey.replace(/[-_]/g, " ")}
+              </Text>
+              <View style={{ flexDirection: "row", marginBottom: 6 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 11, flex: 1 }}>TEAM</Text>
+                {["P", "W", "L", "PTS"].map((h) => (
+                  <Text key={h} style={{ color: colors.textMuted, fontSize: 11, width: 34, textAlign: "center" }}>
+                    {h}
+                  </Text>
+                ))}
+              </View>
+              {s.rows.map((r, i) => (
+                <View key={r.academyId} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 5 }}>
+                  <Text style={{ color: i === 0 ? colors.accent : colors.textPrimary, fontSize: 13, flex: 1, fontWeight: i === 0 ? "700" : "400" }}>
+                    {MEDALS[i] ? `${MEDALS[i]} ` : `${i + 1}. `}
+                    {r.name}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, width: 34, textAlign: "center" }}>{r.played}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, width: 34, textAlign: "center" }}>{r.won}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, width: 34, textAlign: "center" }}>{r.lost}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, width: 34, textAlign: "center", fontWeight: "700" }}>
+                    {r.points}
+                  </Text>
+                </View>
+              ))}
+            </Card>
+          ))}
+        </View>
+      )}
 
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>

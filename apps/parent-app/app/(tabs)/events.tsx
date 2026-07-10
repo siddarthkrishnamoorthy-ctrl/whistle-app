@@ -181,8 +181,11 @@ export default function EventsScreen() {
           {/* Whistle Standings — the leaderboard for the child's sport */}
           {leaders.length > 0 && (
             <View>
-              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>
                 Whistle Standings
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 8 }}>
+                Overall ranking — DUPR-style rating earned across every match played
               </Text>
               <Card>
                 {leaders.map((l, i) => (

@@ -185,6 +185,7 @@ model Academy {
   platformInvoices    PlatformInvoice[]
   schools             School[]
   lblRegistrations    LblRegistration[]
+  eventMessages       EventMessage[]
 
   @@map("academies")
 }
@@ -690,6 +691,10 @@ model InterschoolEvent {
   // nominated at the event level, before any fixture exists.
   payToJoin      Boolean     @default(false) @map("pay_to_join")
   pricePerHead   Decimal?    @map("price_per_head") @db.Decimal(10, 2)
+  // Match Center (2026-07): the host lists the event for a set number of
+  // teams. Joining closes at the cap, and fixtures auto-generate once the
+  // last team's roster is in.
+  maxTeams       Int?        @map("max_teams")
   // LBL tournament flag (2026-07): LBL events are open for self-service
   // school registration per sport (with payment) instead of invitations.
   isLbl          Boolean     @default(false) @map("is_lbl")
@@ -699,8 +704,28 @@ model InterschoolEvent {
   rosters     EventRoster[]
   fixtures    Fixture[]
   lblRegistrations LblRegistration[]
+  messages    EventMessage[]
 
   @@map("interschool_events")
+}
+
+// Match Center team chat (2026-07): once a school joins an event, its
+// coaches and the host can message each other; the thread locks when the
+// event closes (matches over).
+model EventMessage {
+  id         String   @id @default(uuid())
+  eventId    String   @map("event_id")
+  academyId  String   @map("academy_id")
+  userId     String   @map("user_id")
+  senderName String   @map("sender_name")
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  event   InterschoolEvent @relation(fields: [eventId], references: [id])
+  academy Academy          @relation(fields: [academyId], references: [id])
+
+  @@index([eventId, createdAt])
+  @@map("event_messages")
 }
 
 // LBL tournament registration (2026-07): a school registering for one sport

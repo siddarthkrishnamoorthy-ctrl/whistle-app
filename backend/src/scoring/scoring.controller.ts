@@ -83,7 +83,9 @@ export class ScoringController {
   }
 
   @Post("fixtures/:id/manual-result")
-  @Roles("admin", "head_coach", "account_manager", "referee")
+  // "coach" included (2026-07): Match Center hosts are usually coaches — a
+  // coach-entered interschool result still waits for the opponent's approval.
+  @Roles("admin", "head_coach", "coach", "account_manager", "referee")
   manualResult(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: CompleteSessionDto) {
     return this.scoringService.enterManualResult(user.academyId as string, id, dto, {
       userId: user.sub,

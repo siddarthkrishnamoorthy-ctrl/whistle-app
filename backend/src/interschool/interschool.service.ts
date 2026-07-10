@@ -102,11 +102,21 @@ export class InterschoolService {
               { invitations: { some: { invitedAcademyId: academyId, status: "accepted" as const } } },
             ],
           };
-    const events = await this.prisma.interschoolEvent.findMany({
+    const rawEvents = await this.prisma.interschoolEvent.findMany({
       where,
-      include: { hostAcademy: { select: { id: true, name: true } }, _count: { select: { fixtures: true, invitations: true } } },
+      include: {
+        hostAcademy: { select: { id: true, name: true } },
+        invitations: { select: { status: true, invitedAcademyId: true } },
+        _count: { select: { fixtures: true, invitations: true } },
+      },
       orderBy: { startDate: "desc" },
     });
+    // Team slots: host + accepted schools, against the listing's maxTeams cap.
+    const events = rawEvents.map(({ invitations, ...e }) => ({
+      ...e,
+      teamsJoined: 1 + invitations.filter((i) => i.status === "accepted").length,
+      myAcademyJoined: invitations.some((i) => i.invitedAcademyId === academyId && i.status === "accepted"),
+    }));
     // Discovery is ranked by distance from the coach's own center pin
     // (2026-07): nearest host first; hosts with no pinned center sort last.
     if (scope === "discover" && userId) {
@@ -206,9 +216,205 @@ export class InterschoolService {
         payToJoin: dto.payToJoin ?? false,
         pricePerHead: dto.pricePerHead,
         isLbl: dto.isLbl ?? false,
+        maxTeams: dto.maxTeams,
         status: "draft",
       },
     });
+  }
+
+  // ── Match Center: join, chat, fixtures, standings (2026-07) ──────────────
+
+  // A discovered event can be joined directly (no invitation needed) while
+  // slots remain — the host counts as one team against maxTeams.
+  async joinEvent(academyId: string, eventId: string) {
+    const event = await this.prisma.interschoolEvent.findUnique({
+      where: { id: eventId },
+      include: { invitations: true },
+    });
+    if (!event) throw new NotFoundException("Event not found.");
+    if (event.hostAcademyId === academyId) throw new BadRequestException("You are hosting this event.");
+    if (event.status !== "scheduled") throw new BadRequestException("This event is not open for joining.");
+
+    const existing = event.invitations.find((i) => i.invitedAcademyId === academyId);
+    if (existing?.status === "accepted") {
+      return { joined: true, alreadyJoined: true, teamsJoined: this.teamCount(event.invitations), maxTeams: event.maxTeams };
+    }
+    const teams = this.teamCount(event.invitations);
+    if (event.maxTeams != null && teams >= event.maxTeams) {
+      throw new BadRequestException(`Event is full — all ${event.maxTeams} team slots are taken.`);
+    }
+
+    await this.prisma.eventInvitation.upsert({
+      where: { eventId_invitedAcademyId: { eventId, invitedAcademyId: academyId } },
+      update: { status: "accepted" },
+      create: { eventId, invitedAcademyId: academyId, status: "accepted" },
+    });
+    const teamsJoined = teams + 1;
+    // Last slot filled → try building the fixtures right away (skips any
+    // sport whose rosters aren't in yet; retried after each nomination).
+    let autoFixtures = null;
+    if (event.maxTeams != null && teamsJoined >= event.maxTeams) {
+      autoFixtures = await this.generateEventFixtures(eventId).catch(() => null);
+    }
+    return { joined: true, teamsJoined, maxTeams: event.maxTeams, autoFixtures };
+  }
+
+  // Host + every accepted school = one team each.
+  private teamCount(invitations: { status: string }[]) {
+    return 1 + invitations.filter((i) => i.status === "accepted").length;
+  }
+
+  // Host-triggered fixture generation for Match Center events (the "generate
+  // fixtures" button) — the auto path calls the internal builder directly.
+  async generateFixtures(academyId: string, eventId: string) {
+    const { event, isHost } = await this.assertEventMember(academyId, eventId);
+    if (!isHost) throw new ForbiddenException("Only the host academy can generate fixtures.");
+    if (event.isLbl) return this.generateLblFixtures(academyId, eventId);
+    return this.generateEventFixtures(eventId);
+  }
+
+  // Round robin per sport among the host + joined schools. A sport is only
+  // built once every participating school has nominated a roster for it —
+  // until then it's reported in `skipped` with the reason.
+  private async generateEventFixtures(eventId: string) {
+    const event = await this.prisma.interschoolEvent.findUnique({
+      where: { id: eventId },
+      include: { invitations: { where: { status: "accepted" } } },
+    });
+    if (!event) throw new NotFoundException("Event not found.");
+
+    const participantIds = [event.hostAcademyId, ...event.invitations.map((i) => i.invitedAcademyId)];
+    const created: string[] = [];
+    const skipped: { sportKey: string; reason: string }[] = [];
+
+    for (const sportKey of event.sports) {
+      const existing = await this.prisma.fixture.count({ where: { eventId, sportKey } });
+      if (existing > 0) {
+        skipped.push({ sportKey, reason: "fixtures already generated" });
+        continue;
+      }
+      if (participantIds.length < 2) {
+        skipped.push({ sportKey, reason: "needs at least 2 teams" });
+        continue;
+      }
+      const rosters = new Map<string, string[]>();
+      for (const aId of participantIds) {
+        const entries = await this.prisma.eventRoster.findMany({ where: { eventId, sportKey, academyId: aId } });
+        rosters.set(aId, entries.map((e) => e.clientId));
+      }
+      const missing = participantIds.filter((aId) => (rosters.get(aId) ?? []).length === 0);
+      if (missing.length > 0) {
+        skipped.push({ sportKey, reason: `waiting for rosters from ${missing.length} team(s)` });
+        continue;
+      }
+      for (let i = 0; i < participantIds.length; i++) {
+        for (let j = i + 1; j < participantIds.length; j++) {
+          const fixture = await this.prisma.fixture.create({
+            data: {
+              eventId,
+              sportKey,
+              formatType: event.formatType,
+              entrantA: rosters.get(participantIds[i]) ?? [],
+              entrantB: rosters.get(participantIds[j]) ?? [],
+              matchType: "interschool",
+              status: "scheduled",
+              scheduledAt: event.startDate,
+            },
+          });
+          created.push(fixture.id);
+        }
+      }
+    }
+    return { created: created.length, skipped };
+  }
+
+  // Team chat: host + joined schools message each other; the thread locks
+  // once the event closes (matches over).
+  async listMessages(academyId: string, eventId: string) {
+    await this.assertEventMember(academyId, eventId);
+    return this.prisma.eventMessage.findMany({
+      where: { eventId },
+      include: { academy: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+    });
+  }
+
+  async postMessage(academyId: string, userId: string, eventId: string, body: string) {
+    const { event } = await this.assertEventMember(academyId, eventId);
+    if (event.status === "closed") {
+      throw new BadRequestException("This event has ended — the team chat is closed.");
+    }
+    const text = (body ?? "").trim();
+    if (!text) throw new BadRequestException("Message cannot be empty.");
+    if (text.length > 1000) throw new BadRequestException("Message is too long (1000 characters max).");
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    return this.prisma.eventMessage.create({
+      data: { eventId, academyId, userId, senderName: user?.name ?? "Coach", body: text },
+      include: { academy: { select: { id: true, name: true } } },
+    });
+  }
+
+  // Per-event points table from completed fixtures, per sport. Sides map back
+  // to schools through the event rosters. Open to every academy role — this
+  // is what parents see in their Match Center view.
+  async eventStandings(eventId: string) {
+    const event = await this.prisma.interschoolEvent.findUnique({
+      where: { id: eventId },
+      select: { id: true, name: true, sports: true, status: true },
+    });
+    if (!event) throw new NotFoundException("Event not found.");
+    const [fixtures, rosters] = await Promise.all([
+      this.prisma.fixture.findMany({ where: { eventId, status: "completed" } }),
+      this.prisma.eventRoster.findMany({ where: { eventId }, select: { clientId: true, academyId: true } }),
+    ]);
+    const academyOf = new Map(rosters.map((r) => [r.clientId, r.academyId]));
+    const academyIds = [...new Set(rosters.map((r) => r.academyId))];
+    const academies = await this.prisma.academy.findMany({
+      where: { id: { in: academyIds } },
+      select: { id: true, name: true },
+    });
+    const nameOf = new Map(academies.map((a) => [a.id, a.name]));
+
+    type Row = { academyId: string; name: string; played: number; won: number; lost: number; drawn: number; points: number };
+    const tables = new Map<string, Map<string, Row>>();
+    for (const f of fixtures) {
+      const summary = f.resultSummary as { winnerSide?: "A" | "B" | "draw" } | null;
+      if (!summary?.winnerSide) continue;
+      const aAcademy = academyOf.get(f.entrantA[0] ?? "");
+      const bAcademy = academyOf.get(f.entrantB[0] ?? "");
+      if (!aAcademy || !bAcademy) continue;
+      if (!tables.has(f.sportKey)) tables.set(f.sportKey, new Map());
+      const table = tables.get(f.sportKey)!;
+      const rowFor = (id: string): Row => {
+        if (!table.has(id)) {
+          table.set(id, { academyId: id, name: nameOf.get(id) ?? "School", played: 0, won: 0, lost: 0, drawn: 0, points: 0 });
+        }
+        return table.get(id)!;
+      };
+      const a = rowFor(aAcademy);
+      const b = rowFor(bAcademy);
+      a.played++;
+      b.played++;
+      if (summary.winnerSide === "draw") {
+        a.drawn++; b.drawn++; a.points++; b.points++;
+      } else {
+        const winner = summary.winnerSide === "A" ? a : b;
+        const loser = summary.winnerSide === "A" ? b : a;
+        winner.won++;
+        winner.points += 2;
+        loser.lost++;
+      }
+    }
+    return {
+      eventId: event.id,
+      eventName: event.name,
+      status: event.status,
+      standings: [...tables.entries()].map(([sportKey, table]) => ({
+        sportKey,
+        rows: [...table.values()].sort((x, y) => y.points - x.points || y.won - x.won),
+      })),
+    };
   }
 
   // ── LBL Tournaments (2026-07) ────────────────────────────────────────────
@@ -499,7 +705,7 @@ export class InterschoolService {
     }
     const eligible = baseEligible && paymentOk;
 
-    return this.prisma.eventRoster.upsert({
+    const roster = await this.prisma.eventRoster.upsert({
       where: { eventId_clientId_sportKey: { eventId, clientId: dto.clientId, sportKey: dto.sportKey } },
       create: {
         eventId,
@@ -513,6 +719,17 @@ export class InterschoolService {
       update: { eligibilityStatus: eligible ? "eligible" : "ineligible", consentConfirmed: consentOk, invoiceId },
       include: { invoice: true },
     });
+
+    // Match Center: when the event is full (maxTeams reached), each roster
+    // nomination re-tries fixture generation — the moment the last team's
+    // roster lands, the fixtures appear without the host lifting a finger.
+    if (event.maxTeams != null && !event.isLbl) {
+      const accepted = await this.prisma.eventInvitation.count({ where: { eventId, status: "accepted" } });
+      if (1 + accepted >= event.maxTeams) {
+        await this.generateEventFixtures(eventId).catch(() => undefined);
+      }
+    }
+    return roster;
   }
 
   async removeRosterEntry(academyId: string, eventId: string, rosterId: string) {

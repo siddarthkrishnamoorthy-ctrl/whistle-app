@@ -96,7 +96,9 @@ export class InterschoolController {
   }
 
   @Post("events/:id/close")
-  @Roles("admin", "head_coach")
+  // "coach" included (2026-07): Match Center hosts are usually coaches, and
+  // the service already restricts closing to the HOST academy.
+  @Roles("admin", "head_coach", "coach")
   close(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.interschoolService.closeEvent(user.academyId as string, id);
   }
@@ -131,6 +133,39 @@ export class InterschoolController {
   @Get("events/:id/leaderboard")
   leaderboard(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.interschoolService.eventLeaderboard(user.academyId as string, id);
+  }
+
+  // ── Match Center: join, chat, fixtures, standings (2026-07) ──────────────
+
+  @Post("events/:id/join")
+  @Roles("admin", "head_coach", "coach")
+  join(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.interschoolService.joinEvent(user.academyId as string, id);
+  }
+
+  @Post("events/:id/fixtures")
+  @Roles("admin", "head_coach", "coach")
+  generateFixtures(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.interschoolService.generateFixtures(user.academyId as string, id);
+  }
+
+  @Get("events/:id/messages")
+  @Roles("admin", "head_coach", "coach")
+  messages(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.interschoolService.listMessages(user.academyId as string, id);
+  }
+
+  @Post("events/:id/messages")
+  @Roles("admin", "head_coach", "coach")
+  postMessage(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body("body") body: string) {
+    return this.interschoolService.postMessage(user.academyId as string, user.sub, id, body);
+  }
+
+  // Standings are open to every academy role — this powers the parent app's
+  // Match Center view (fixtures, results and the event points table).
+  @Get("events/:id/standings")
+  standings(@Param("id") id: string) {
+    return this.interschoolService.eventStandings(id);
   }
 
   // ── LBL Tournaments (2026-07) — self-service school registration ─────────

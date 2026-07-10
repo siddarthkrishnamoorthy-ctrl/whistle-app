@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
 import type { FixtureStatus, MatchType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RatingService } from "../rating/rating.service";
@@ -21,6 +21,8 @@ export interface ResultEnteredBy {
 
 @Injectable()
 export class ScoringService implements OnModuleInit {
+  private readonly logger = new Logger(ScoringService.name);
+
   constructor(
     private prisma: PrismaService,
     private ratingService: RatingService
@@ -313,9 +315,14 @@ export class ScoringService implements OnModuleInit {
         status: needsConfirmation ? "pending_confirmation" : "completed",
       },
     });
-    // Practice matches never rate; everything else rates when final.
+    // Practice matches never rate; everything else rates when final. A
+    // rating failure (e.g. a player without a Skill Level — BRD 11.8 keeps
+    // them out of the rating network) must not undo or block the confirmed
+    // result: the match and standings stand, the rating is simply skipped.
     if (!needsConfirmation && fixture.matchType !== "practice") {
-      await this.recalculateRating(updated.id);
+      await this.recalculateRating(updated.id).catch((e) =>
+        this.logger.warn(`Rating skipped for fixture ${updated.id}: ${e instanceof Error ? e.message : e}`)
+      );
     }
     return updated;
   }
@@ -344,7 +351,10 @@ export class ScoringService implements OnModuleInit {
       },
     });
     if (allConfirmed) {
-      await this.recalculateRating(fixtureId);
+      // Same rule as finalizeResult: unrated players never block the result.
+      await this.recalculateRating(fixtureId).catch((e) =>
+        this.logger.warn(`Rating skipped for fixture ${fixtureId}: ${e instanceof Error ? e.message : e}`)
+      );
     }
     return updated;
   }

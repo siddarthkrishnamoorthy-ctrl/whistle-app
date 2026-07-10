@@ -44,4 +44,11 @@ export class CreateEventDto {
   @IsOptional()
   @IsBoolean()
   isLbl?: boolean;
+
+  // Match Center (2026-07): list the event for a set number of teams —
+  // joining closes at the cap and fixtures auto-generate once rosters are in.
+  @IsOptional()
+  @IsNumber()
+  @Min(2)
+  maxTeams?: number;
 }

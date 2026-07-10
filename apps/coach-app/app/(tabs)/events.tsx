@@ -12,6 +12,10 @@ type EventRow = InterschoolEvent & {
   // Discovery is ranked by distance from the coach's center pin (2026-07).
   distanceKm?: number | null;
   nearestVenue?: string | null;
+  // Match Center team slots (2026-07).
+  teamsJoined?: number;
+  maxTeams?: number | null;
+  myAcademyJoined?: boolean;
 };
 
 interface LblRegistration {
@@ -47,6 +51,11 @@ function EventList({ events, emptyMessage }: { events: EventRow[]; emptyMessage:
             `${formatDate(e.startDate)} – ${formatDate(e.endDate)}`,
             e.sports.join(", "),
             e.hostAcademy ? `Host: ${e.hostAcademy.name}` : undefined,
+            e.teamsJoined != null
+              ? `👥 ${e.teamsJoined}${e.maxTeams != null ? `/${e.maxTeams}` : ""} teams${
+                  e.maxTeams != null && e.teamsJoined >= e.maxTeams ? " · full" : e.myAcademyJoined ? " · joined" : ""
+                }`
+              : undefined,
             e.distanceKm != null ? `📍 ≈${e.distanceKm} km away${e.nearestVenue ? ` (${e.nearestVenue})` : ""}` : undefined,
           ]
             .filter(Boolean)
