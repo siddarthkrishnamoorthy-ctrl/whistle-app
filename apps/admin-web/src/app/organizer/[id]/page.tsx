@@ -114,6 +114,9 @@ export default function ManageTournamentPage() {
   const [scores, setScores] = useState<Record<string, { a: string; b: string }>>({});
   const [times, setTimes] = useState<Record<string, string>>({});
   const [phaseByEvent, setPhaseByEvent] = useState<Record<string, "heat" | "final">>({});
+  // Each event manages entries, fixtures, scoring and standings — collapsed
+  // by default (first event open) so multi-event tournaments stay scannable.
+  const [openEvents, setOpenEvents] = useState<Record<string, boolean>>({});
   const [officialEmail, setOfficialEmail] = useState("");
   const [rulesDraft, setRulesDraft] = useState<string | null>(null);
 
@@ -272,26 +275,37 @@ export default function ManageTournamentPage() {
         </div>
       </Card>
 
-      {detail.events.map((ev) => {
+      {detail.events.map((ev, evIdx) => {
         const confirmed = ev.entries.filter((e) => e.status === "confirmed");
         const phase = phaseByEvent[ev.id] ?? "heat";
+        const open = openEvents[ev.id] ?? evIdx === 0;
         return (
           <Card key={ev.id} className="space-y-4">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                {ev.name}
-                {ev.duprRated && (
-                  <span className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent">
-                    DUPR rated
-                  </span>
-                )}
-              </h2>
-              <p className="text-xs text-text-secondary">
-                {ev.kind} · {ev.discipline === "timed" ? `timed (${ev.unit})` : ev.format.replace("_", " ")} ·{" "}
-                {confirmed.length} confirmed{ev.entryFee ? ` · entry ₹${ev.entryFee}` : " · free"}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setOpenEvents((p) => ({ ...p, [ev.id]: !open }))}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-semibold">
+                  {ev.name}
+                  {ev.duprRated && (
+                    <span className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent">
+                      DUPR rated
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-text-secondary">
+                  {ev.kind} · {ev.discipline === "timed" ? `timed (${ev.unit})` : ev.format.replace("_", " ")} ·{" "}
+                  {ev.entries.length} entries ({confirmed.length} confirmed) · {ev.matches.length} matches
+                  {ev.entryFee ? ` · entry ₹${ev.entryFee}` : " · free"}
+                </p>
+              </div>
+              <span className={`text-text-muted transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+            </button>
 
+            {open && (
+            <>
             {/* Entries + quick add */}
             <div>
               <h3 className="mb-2 text-sm font-semibold">Entries ({ev.entries.length})</h3>
@@ -599,6 +613,8 @@ export default function ManageTournamentPage() {
                   </div>
                 ) : null}
               </div>
+            )}
+            </>
             )}
           </Card>
         );

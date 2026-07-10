@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useChildren } from "@/lib/children-context";
 import { apiJson } from "@/lib/api-client";
@@ -27,6 +27,28 @@ export default function ChildScreen() {
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [fitness, setFitness] = useState<FitnessTestHistory[]>([]);
+  const [showAllPlans, setShowAllPlans] = useState(false);
+  const [showAllDrills, setShowAllDrills] = useState(false);
+
+  // Only surface content for the sports the child actually trains in —
+  // the academy-wide bank covers a dozen sports and would drown the page.
+  const childSports = useMemo(
+    () =>
+      new Set(
+        (selectedChild?.enrollments ?? [])
+          .map((e) => e.class?.sportKey)
+          .filter((k): k is string => Boolean(k))
+      ),
+    [selectedChild]
+  );
+  const relevantPlans = useMemo(
+    () => (childSports.size ? lessonPlans.filter((lp) => !lp.sportKey || childSports.has(lp.sportKey)) : lessonPlans),
+    [lessonPlans, childSports]
+  );
+  const relevantDrills = useMemo(
+    () => (childSports.size ? drills.filter((d) => childSports.has(d.sportKey)) : drills),
+    [drills, childSports]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -135,13 +157,13 @@ export default function ChildScreen() {
 
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
-          Lesson plans
+          Lesson plans{childSports.size > 0 ? ` — ${[...childSports].join(", ")}` : ""}
         </Text>
-        {lessonPlans.length === 0 ? (
-          <EmptyState message="The academy hasn't published lesson plans yet." />
+        {relevantPlans.length === 0 ? (
+          <EmptyState message="No lesson plans published for their sport yet." />
         ) : (
           <View style={{ gap: 8 }}>
-            {lessonPlans.slice(0, 3).map((lp) => (
+            {(showAllPlans ? relevantPlans : relevantPlans.slice(0, 3)).map((lp) => (
               <Card key={lp.id}>
                 <Text style={{ color: colors.textPrimary, fontWeight: "600" }}>{lp.title}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
@@ -150,6 +172,13 @@ export default function ChildScreen() {
                 </Text>
               </Card>
             ))}
+            {relevantPlans.length > 3 && (
+              <TouchableOpacity onPress={() => setShowAllPlans((v) => !v)}>
+                <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "center", paddingVertical: 4 }}>
+                  {showAllPlans ? "Show less" : `Show all ${relevantPlans.length} plans`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -158,11 +187,11 @@ export default function ChildScreen() {
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
           Drills they practice
         </Text>
-        {drills.length === 0 ? (
-          <EmptyState message="No drills in the academy's drill bank yet." />
+        {relevantDrills.length === 0 ? (
+          <EmptyState message="No drills for their sport in the drill bank yet." />
         ) : (
           <View style={{ gap: 8 }}>
-            {drills.slice(0, 5).map((d) => (
+            {(showAllDrills ? relevantDrills : relevantDrills.slice(0, 5)).map((d) => (
               <Card key={d.id}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                   <Text style={{ color: colors.textPrimary, fontWeight: "600", flex: 1 }}>{d.title}</Text>
@@ -175,6 +204,13 @@ export default function ChildScreen() {
                 </Text>
               </Card>
             ))}
+            {relevantDrills.length > 5 && (
+              <TouchableOpacity onPress={() => setShowAllDrills((v) => !v)}>
+                <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "center", paddingVertical: 4 }}>
+                  {showAllDrills ? "Show less" : `Show all ${relevantDrills.length} drills`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>

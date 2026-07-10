@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Text, TextInput, TouchableOpacity, View, type TextInputProps, type ViewProps } from "react-native";
+import { ScrollView, Text, TextInput, TouchableOpacity, View, type TextInputProps, type ViewProps } from "react-native";
 import { colors } from "@whistle/shared";
 
 // Glass card treatment shared by Card/ListRow: translucent white fill over
@@ -186,13 +186,17 @@ export function ChipRow<T extends string>({
   options,
   value,
   onChange,
+  scroll,
 }: {
   options: { key: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
+  // Long option lists (e.g. every student in the academy) become a wall of
+  // wrapped chips — render those as a single horizontally scrollable row.
+  scroll?: boolean;
 }) {
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+  const chips = (
+    <View style={{ flexDirection: "row", flexWrap: scroll ? "nowrap" : "wrap", gap: 8 }}>
       {options.map((opt) => {
         const active = value === opt.key;
         return (
@@ -219,6 +223,12 @@ export function ChipRow<T extends string>({
         );
       })}
     </View>
+  );
+  if (!scroll) return chips;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 8 }}>
+      {chips}
+    </ScrollView>
   );
 }
 

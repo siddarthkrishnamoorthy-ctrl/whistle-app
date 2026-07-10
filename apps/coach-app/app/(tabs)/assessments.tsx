@@ -121,6 +121,7 @@ export default function AssessmentsScreen() {
         <>
           <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Drill assessments</Text>
           <ChipRow
+            scroll
             options={clients.map((c) => ({ key: c.id, label: c.name }))}
             value={selectedClientId ?? ""}
             onChange={setSelectedClientId}

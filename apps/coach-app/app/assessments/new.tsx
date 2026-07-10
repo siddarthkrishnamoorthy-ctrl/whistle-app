@@ -115,6 +115,7 @@ export default function RecordAssessmentScreen() {
       <View>
         <Step n={1} title="Student" />
         <ChipRow
+          scroll
           options={clients.map((c) => ({ key: c.id, label: c.name }))}
           value={clientId}
           onChange={setClientId}
