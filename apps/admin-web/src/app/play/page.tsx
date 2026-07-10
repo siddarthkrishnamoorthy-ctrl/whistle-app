@@ -222,19 +222,33 @@ export default function PlayPortal() {
     "w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none";
 
   return (
-    <main className="min-h-screen px-4 py-10 md:px-10 max-w-3xl mx-auto text-slate-200">
-      <header className="mb-8 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-14 w-auto" />
-        <p className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</p>
-        <h1 className="text-3xl font-extrabold text-white mt-1">Play or officiate</h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Open to everyone — no academy account needed. Register for events, pay your entry fee, and follow results.
-        </p>
-      </header>
+    <main className={`min-h-screen px-4 py-10 md:px-10 ${user ? "max-w-3xl" : "max-w-5xl"} mx-auto text-slate-200`}>
+      {user && (
+        <header className="mb-8 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-14 w-auto" />
+          <p className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</p>
+          <h1 className="text-3xl font-extrabold text-white mt-1">Play or officiate</h1>
+          <p className="text-sm text-slate-400 mt-2">
+            Open to everyone — no academy account needed. Register for events, pay your entry fee, and follow results.
+          </p>
+        </header>
+      )}
 
       {!user ? (
-        <section className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+        <div className="grid min-h-[80vh] items-center gap-10 md:grid-cols-2">
+          {/* Brand panel — logo on the left of the login screen */}
+          <div className="flex flex-col items-center text-center md:border-r md:border-white/10 md:pr-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/whistle-logo.png" alt="Whistle" className="mb-4 h-24 w-auto md:h-32" />
+            <p className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</p>
+            <h1 className="mt-1 text-3xl font-extrabold text-white">Play or officiate</h1>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">
+              Open to everyone — no academy account needed. Register for events, pay your entry fee, and follow
+              results.
+            </p>
+          </div>
+          <section className="w-full max-w-md justify-self-center rounded-2xl border border-white/10 bg-white/[0.04] p-6 md:justify-self-start">
           <div className="mb-4 flex gap-2">
             {(["signup", "login"] as const).map((m) => (
               <button
@@ -292,7 +306,8 @@ export default function PlayPortal() {
               </p>
             )}
           </div>
-        </section>
+          </section>
+        </div>
       ) : (
         <>
           <div className="mb-6 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
