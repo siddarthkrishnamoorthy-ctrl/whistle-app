@@ -24,6 +24,19 @@ const SIDES = [
 // Roles that can run live scoring / enter results (matches backend guards).
 const SCORING_ROLES = ["admin", "head_coach", "coach", "account_manager"];
 
+// Format hints from the shared per-sport score engine (backend
+// common/game-score-rules.ts) — the API enforces the same rules.
+const SCORE_HINTS: Record<string, string> = {
+  badminton: "Badminton: sets to 21, win by 2, cap 30 — e.g. 21-15, 18-21, 21-19",
+  pickleball: "Pickleball: sets to 11, win by 2, cap 21 — e.g. 11-8, 9-11, 11-6",
+  "table-tennis": "Table tennis: sets to 11, win by 2 — e.g. 11-7, 11-9, 8-11, 11-5",
+  table_tennis: "Table tennis: sets to 11, win by 2 — e.g. 11-7, 11-9, 8-11, 11-5",
+  squash: "Squash: sets to 11, win by 2 — e.g. 11-9, 11-7",
+  tennis: "Tennis: sets to 6, win by 2, tiebreak at 7 — e.g. 6-4, 7-5",
+  volleyball: "Volleyball: sets to 25, win by 2 — e.g. 25-20, 23-25, 25-18",
+  throwball: "Throwball: sets to 25, win by 2 — e.g. 25-20, 25-22",
+};
+
 interface SetScore {
   a: number;
   b: number;
@@ -339,6 +352,9 @@ export default function FixtureDetailScreen() {
               />
               <View style={{ height: 12 }} />
               <Field label="Score" value={scoreDisplay} onChangeText={setScoreDisplay} placeholder="e.g. 21-15, 18-21, 21-19" />
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 10 }}>
+                {SCORE_HINTS[fixture.sportKey] ?? "Enter the final score, e.g. 3-1 — sets separated by commas."}
+              </Text>
               <PrimaryButton
                 title={saving ? "Saving…" : "Save result"}
                 onPress={submitManual}

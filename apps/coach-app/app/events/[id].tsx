@@ -4,7 +4,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, ListRow, LoadingView, Pill, PrimaryButton, colors } from "@/components/ui";
+import { Card, ChipRow, EmptyState, ListRow, LoadingView, Pill, PrimaryButton, colors } from "@/components/ui";
 import { formatDate, type Fixture, type InterschoolEvent } from "@whistle/shared";
 
 type EventDetail = InterschoolEvent & {
@@ -52,6 +52,9 @@ export default function EventDetailScreen() {
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  // Same console layout as the tournament module: one tab open at a time
+  // keeps the screen calm however many fixtures or messages pile up.
+  const [tab, setTab] = useState<"score" | "fixtures" | "standings" | "chat">("fixtures");
   const chatScroll = useRef<ScrollView | null>(null);
 
   const load = useCallback(async () => {
@@ -86,6 +89,10 @@ export default function EventDetailScreen() {
     isHost || event.invitations?.some((i) => i.status === "accepted" && i.invitedAcademy?.id === user?.academyId);
   const slotsLeft = event.maxTeams != null ? Math.max(0, event.maxTeams - joinedTeams) : null;
   const chatOpen = event.status !== "closed";
+  const fixtures = event.fixtures ?? [];
+  const openFixtures = fixtures.filter((f) => !["completed", "abandoned"].includes(f.status));
+  const canScoreRole =
+    ["admin", "head_coach", "coach", "account_manager"].includes(user?.role ?? "") && Boolean(iAmMember);
 
   async function join() {
     setBusy(true);
@@ -199,12 +206,25 @@ export default function EventDetailScreen() {
         )}
       </Card>
 
+      {/* Console tabs — same layout as the tournament scoring console */}
+      <ChipRow
+        scroll
+        options={[
+          ...(canScoreRole
+            ? [{ key: "score", label: `⚡ Score${openFixtures.length ? ` (${openFixtures.length})` : ""}` }]
+            : []),
+          { key: "fixtures", label: "Fixtures" },
+          { key: "standings", label: "Standings" },
+          ...(messages !== null ? [{ key: "chat", label: "💬 Chat" }] : []),
+        ]}
+        value={tab}
+        onChange={(v) => setTab(v as typeof tab)}
+      />
+
       {/* Standings — from completed fixture results */}
-      {standings.some((s) => s.rows.length > 0) && (
+      {tab === "standings" &&
+        (standings.some((s) => s.rows.length > 0) ? (
         <View>
-          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
-            Standings
-          </Text>
           {standings.map((s) => (
             <Card key={s.sportKey} style={{ marginBottom: 8 }}>
               <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700", marginBottom: 8, textTransform: "capitalize" }}>
@@ -235,17 +255,23 @@ export default function EventDetailScreen() {
             </Card>
           ))}
         </View>
-      )}
+      ) : (
+        <EmptyState message="No completed results yet — the table builds as scores are confirmed." />
+      ))}
 
+      {(tab === "fixtures" || tab === "score") && (
       <View>
-        <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
-          Fixtures {event.fixtures?.length ? `(${event.fixtures.length})` : ""}
-        </Text>
-        {!event.fixtures || event.fixtures.length === 0 ? (
-          <EmptyState message="No fixtures yet — they appear when the host generates them or all team slots fill." />
+        {(tab === "score" ? openFixtures : fixtures).length === 0 ? (
+          <EmptyState
+            message={
+              tab === "score"
+                ? "All caught up — every fixture has a result. 🎉"
+                : "No fixtures yet — they appear when the host generates them or all team slots fill."
+            }
+          />
         ) : (
           <View style={{ gap: 8 }}>
-            {event.fixtures.map((f) => {
+            {(tab === "score" ? openFixtures : fixtures).map((f) => {
               const open = !["completed", "abandoned"].includes(f.status);
               // Same scoring option as everywhere else: coaches, head
               // coaches, admins and account managers score right from here.
@@ -296,19 +322,21 @@ export default function EventDetailScreen() {
           </View>
         )}
       </View>
+      )}
 
       {/* Team chat — members only, locks when the event closes */}
-      {messages !== null && (
+      {tab === "chat" && messages !== null && (
         <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <Ionicons name="chatbubbles-outline" size={16} color={colors.accent} />
-            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Team chat</Text>
-            {!chatOpen && <Pill tone="neutral">closed</Pill>}
-          </View>
+          {!chatOpen && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Ionicons name="chatbubbles-outline" size={16} color={colors.accent} />
+              <Pill tone="neutral">chat closed</Pill>
+            </View>
+          )}
           <Card>
             <ScrollView
               ref={chatScroll}
-              style={{ maxHeight: 260 }}
+              style={{ maxHeight: 400 }}
               onContentSizeChange={() => chatScroll.current?.scrollToEnd({ animated: false })}
             >
               {messages.length === 0 ? (

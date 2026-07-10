@@ -41,44 +41,11 @@ function slugify(name: string): string {
   );
 }
 
-// Final-score sanity rules per sport. Racket/net sports must end on a valid
-// game score (reach the target, win by 2, hard cap) — OR be entered as sets
-// won (small numbers like 2-0 / 3-1 / 3-2). Open-scoring sports (football,
-// cricket, basketball…) accept any decisive non-negative score.
-const GAME_SCORE_RULES: Record<string, { target: number; winBy: number; cap?: number; maxSets: number }> = {
-  badminton: { target: 21, winBy: 2, cap: 30, maxSets: 3 },
-  pickleball: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
-  "table-tennis": { target: 11, winBy: 2, cap: 21, maxSets: 7 },
-  squash: { target: 11, winBy: 2, cap: 21, maxSets: 5 },
-  tennis: { target: 6, winBy: 2, cap: 7, maxSets: 5 },
-  volleyball: { target: 25, winBy: 2, maxSets: 5 },
-  throwball: { target: 25, winBy: 2, maxSets: 5 },
-};
-
-export function validateFinalScore(sportKey: string, scoreA: number, scoreB: number): string | null {
-  if (scoreA < 0 || scoreB < 0) return "Scores cannot be negative.";
-  const rule = GAME_SCORE_RULES[sportKey];
-  if (!rule) return null; // open-scoring sport — any decisive score is fine
-  const winner = Math.max(scoreA, scoreB);
-  const loser = Math.min(scoreA, scoreB);
-  // Small numbers read as sets/games won: winner takes 2 (best of 3) up to
-  // floor(maxSets/2)+1 (e.g. 3 in a best of 5), loser has fewer.
-  if (winner <= rule.maxSets && winner <= 7) {
-    const maxNeeded = Math.floor(rule.maxSets / 2) + 1;
-    if (winner < 2 || winner > maxNeeded || loser >= winner) {
-      return `As a sets result, the winner takes 2–${maxNeeded} sets with fewer for the loser — e.g. 2-0 or ${maxNeeded}-${maxNeeded - 1}.`;
-    }
-    return null;
-  }
-  // Otherwise it's the points of a single game.
-  const capped = rule.cap != null && winner === rule.cap;
-  const atTarget = winner === rule.target && winner - loser >= rule.winBy;
-  const deuce = winner > rule.target && (rule.cap == null || winner < rule.cap) && winner - loser === rule.winBy;
-  if (capped || atTarget || deuce) return null;
-  return `Not a valid ${sportKey.replace("-", " ")} game score: first to ${rule.target}, win by ${rule.winBy}${
-    rule.cap ? `, capped at ${rule.cap}` : ""
-  } — or enter sets won (e.g. 2-0).`;
-}
+// Per-sport final-score validation lives in the shared engine
+// (common/game-score-rules.ts) so the Tournament module and the Match
+// Center validate results identically. Re-exported for existing importers.
+import { validateFinalScore } from "../common/game-score-rules";
+export { validateFinalScore };
 
 // Deterministic-enough shuffle for random seeding.
 function shuffle<T>(arr: T[]): T[] {

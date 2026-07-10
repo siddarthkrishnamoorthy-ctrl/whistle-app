@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import type { FixtureStatus, MatchType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { RatingService } from "../rating/rating.service";
+import { validateScoreline } from "../common/game-score-rules";
 import { SCORING_TEMPLATE_SEEDS } from "./scoring-templates.seed";
 import type { CreateFixtureDto } from "./dto/create-fixture.dto";
 import type { RecordScoreEventDto } from "./dto/record-score-event.dto";
@@ -276,8 +277,15 @@ export class ScoringService implements OnModuleInit {
 
   // BRD 12.4 manual/retrospective entry — same downstream effects as live
   // scoring, flagged so it's transparent this wasn't scored in real time.
+  // Runs the same per-sport score engine as the Tournament module (BRD 7.2):
+  // a badminton set must reach 21 win-by-2, a random number can't close a
+  // match. Live-scored sessions are exempt — real-time points are the truth.
   async enterManualResult(academyId: string, fixtureId: string, dto: CompleteSessionDto, by: ResultEnteredBy) {
-    await this.assertFixtureAccess(academyId, fixtureId);
+    const fixture = await this.assertFixtureAccess(academyId, fixtureId);
+    if (dto.scoreDisplay) {
+      const invalid = validateScoreline(fixture.sportKey, dto.scoreDisplay, dto.winnerSide);
+      if (invalid) throw new BadRequestException(invalid);
+    }
     return this.finalizeResult(fixtureId, dto, { ...by, enteredManually: true });
   }
 
