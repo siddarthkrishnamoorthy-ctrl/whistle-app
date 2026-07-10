@@ -8,6 +8,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Megaphone,
+  Ticket,
+  Trophy,
+  Users,
+  Wallet,
+  Zap,
+} from "lucide-react";
+import {
   clearTournamentSession,
   tJson,
   tournamentLogin,
@@ -15,6 +27,7 @@ import {
   tournamentSignup,
   type TournamentUser,
 } from "@/lib/tournament-client";
+import { RANK_MEDALS, sportEmoji } from "@/lib/sport-icons";
 
 interface OpenEvent {
   id: string;
@@ -338,7 +351,9 @@ export default function PlayPortal() {
           {/* Official scoring console */}
           {user.role === "official" && (
             <section className="mb-8">
-              <h2 className="text-lg font-bold text-white mb-3">Your scoring console</h2>
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-white">
+                <ClipboardList size={18} className="text-amber-300" /> Your scoring console
+              </h2>
               {officiating.length === 0 && (
                 <p className="text-sm text-slate-500">
                   No appointments yet — ask the organizer to appoint {user.email} from their manage page.
@@ -355,22 +370,24 @@ export default function PlayPortal() {
                     onClick={() => setExpanded((p) => ({ ...p, [t.id]: !open }))}
                     className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-white/[0.03]"
                   >
-                    <span className="font-bold text-white">{t.name}</span>
+                    <span className="flex items-center gap-2 font-bold text-white">
+                      <span className="text-base">{sportEmoji(t.events[0]?.sportKey)}</span> {t.name}
+                    </span>
                     <span className="flex items-center gap-3 text-xs text-slate-400">
                       <span className={pending > 0 ? "rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 font-bold text-amber-300" : ""}>
                         {pending} match{pending === 1 ? "" : "es"} to score
                       </span>
-                      <span className={`text-slate-300 transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+                      <ChevronRight size={16} className={`text-slate-300 transition-transform ${open ? "rotate-90" : ""}`} />
                     </span>
                   </button>
                   {open && (() => {
                     const tab = consoleTab[t.id] ?? "score";
                     const matchEvents = t.events.filter((ev) => ev.discipline === "match");
-                    const TABS: { key: ConsoleTab; label: string }[] = [
-                      { key: "score", label: `⚡ Score${pending ? ` (${pending})` : ""}` },
-                      { key: "fixtures", label: "📋 Fixtures" },
-                      { key: "standings", label: "🏆 Standings" },
-                      { key: "results", label: "✓ Results" },
+                    const TABS: { key: ConsoleTab; label: string; Icon: typeof Zap }[] = [
+                      { key: "score", label: `Score${pending ? ` (${pending})` : ""}`, Icon: Zap },
+                      { key: "fixtures", label: "Fixtures", Icon: CalendarDays },
+                      { key: "standings", label: "Standings", Icon: Trophy },
+                      { key: "results", label: "Results", Icon: CheckCircle2 },
                     ];
                     return (
                       <div className="px-5 pb-5">
@@ -380,13 +397,13 @@ export default function PlayPortal() {
                             <button
                               key={tb.key}
                               onClick={() => setConsoleTab((p) => ({ ...p, [t.id]: tb.key }))}
-                              className={`rounded-full px-4 py-1.5 text-xs font-bold transition ${
+                              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
                                 tab === tb.key
                                   ? "bg-amber-400 text-slate-900"
                                   : "border border-white/15 text-slate-300 hover:border-amber-400/50"
                               }`}
                             >
-                              {tb.label}
+                              <tb.Icon size={13} /> {tb.label}
                             </button>
                           ))}
                         </div>
@@ -574,7 +591,7 @@ export default function PlayPortal() {
                                           const diff = row.scoreFor - row.scoreAgainst;
                                           return (
                                             <tr key={row.entryId} className={`border-b border-white/5 last:border-0 ${i === 0 ? "bg-amber-400/10" : ""}`}>
-                                              <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                                              <td className="px-3 py-2 text-slate-400">{RANK_MEDALS[i] ?? i + 1}</td>
                                               <td className={`px-3 py-2 ${i === 0 ? "font-bold text-amber-300" : "text-slate-200"}`}>{row.name}</td>
                                               <td className="px-3 py-2 text-center text-slate-400">{row.played}</td>
                                               <td className="px-3 py-2 text-center text-slate-200">{row.won}</td>
@@ -615,6 +632,7 @@ export default function PlayPortal() {
                                         </p>
                                         <p>
                                           <span className={m.winnerEntryId === m.entryAId ? "font-bold text-amber-300" : "text-slate-300"}>
+                                            {m.winnerEntryId === m.entryAId ? "🏆 " : ""}
                                             {offEntryName(ev.entries, m.entryAId)}
                                           </span>
                                           <span className="mx-2 font-mono font-bold text-white">
@@ -622,6 +640,7 @@ export default function PlayPortal() {
                                           </span>
                                           <span className={m.winnerEntryId === m.entryBId ? "font-bold text-amber-300" : "text-slate-300"}>
                                             {offEntryName(ev.entries, m.entryBId)}
+                                            {m.winnerEntryId === m.entryBId ? " 🏆" : ""}
                                           </span>
                                         </p>
                                       </div>
@@ -645,7 +664,9 @@ export default function PlayPortal() {
           {/* My entries */}
           {entries.length > 0 && (
             <section className="mb-8">
-              <h2 className="text-lg font-bold text-white mb-3">My entries</h2>
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-white">
+                <Ticket size={18} className="text-amber-300" /> My entries
+              </h2>
               {entries.map((e) => (
                 <div key={e.id} className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
                   <div>
@@ -681,18 +702,26 @@ export default function PlayPortal() {
 
           {/* Open tournaments */}
           <section>
-            <h2 className="text-lg font-bold text-white mb-3">Open for registration</h2>
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-white">
+              <Megaphone size={18} className="text-amber-300" /> Open for registration
+            </h2>
             {open.length === 0 && <p className="text-sm text-slate-500">Nothing open right now — check back soon.</p>}
             {open.map((t) => (
               <div key={t.id} className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-bold text-white">{t.name}</h3>
+                  <h3 className="flex items-center gap-2 font-bold text-white">
+                    <span className="text-base">{sportEmoji(t.sports[0])}</span> {t.name}
+                  </h3>
                   <a href={`/t/${t.publicSlug}`} className="text-xs text-amber-300 hover:underline">
                     public page ↗
                   </a>
                 </div>
-                <p className="text-xs text-slate-400 mb-2">
-                  {t.organizer.organizationName ?? t.organizer.name} · {new Date(t.startDate).toLocaleDateString()} · {t.sports.join(", ")}
+                <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                  <span>{t.organizer.organizationName ?? t.organizer.name}</span>
+                  <span className="flex items-center gap-1">
+                    <CalendarDays size={12} /> {new Date(t.startDate).toLocaleDateString()}
+                  </span>
+                  <span>{t.sports.map((s) => `${sportEmoji(s)} ${s}`).join("  ")}</span>
                 </p>
                 {t.events.map((ev) => {
                   const already = entries.some(
@@ -709,8 +738,14 @@ export default function PlayPortal() {
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          {ev.kind} · {ev._count.entries} entered · {ev.entryFee ? `₹${ev.entryFee}` : "free entry"}
+                        <p className="flex items-center gap-3 text-xs text-slate-500">
+                          <span className="capitalize">{ev.kind}</span>
+                          <span className="flex items-center gap-1">
+                            <Users size={12} /> {ev._count.entries} entered
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Wallet size={12} /> {ev.entryFee ? `₹${ev.entryFee}` : "free entry"}
+                          </span>
                         </p>
                       </div>
                       {user.role !== "official" &&

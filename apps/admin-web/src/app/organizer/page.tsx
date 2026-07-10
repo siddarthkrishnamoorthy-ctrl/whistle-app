@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Trophy, Users, Wallet } from "lucide-react";
 import { Card, EmptyState, Field, PrimaryButton, SelectField, StatusPill, Table } from "@/components/ui";
+import { sportEmoji } from "@/lib/sport-icons";
 import {
   clearTournamentSession,
   tJson,
@@ -206,13 +208,18 @@ export default function TournamentsPage() {
           {mine && (
             <div className="grid grid-cols-3 gap-4">
               {[
-                { label: "Active tournaments", value: mine.stats.active },
-                { label: "Total registrations", value: mine.stats.registrations },
-                { label: "Fees collected", value: `₹${mine.stats.collected}` },
+                { label: "Active tournaments", value: mine.stats.active, Icon: Trophy },
+                { label: "Total registrations", value: mine.stats.registrations, Icon: Users },
+                { label: "Fees collected", value: `₹${mine.stats.collected}`, Icon: Wallet },
               ].map((s) => (
-                <Card key={s.label} className="text-center">
-                  <div className="text-2xl font-bold text-accent">{s.value}</div>
-                  <div className="text-xs text-text-secondary">{s.label}</div>
+                <Card key={s.label} className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+                    <s.Icon size={20} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-accent">{s.value}</div>
+                    <div className="text-xs text-text-secondary">{s.label}</div>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -227,10 +234,14 @@ export default function TournamentsPage() {
               {mine.tournaments.map((t) => (
                 <tr key={t.id}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-text-primary">{t.name}</div>
+                    <div className="flex items-center gap-2 font-medium text-text-primary">
+                      <span>{sportEmoji(t.sports[0])}</span> {t.name}
+                    </div>
                     <div className="text-xs text-text-secondary">{new Date(t.startDate).toLocaleDateString()}</div>
                   </td>
-                  <td className="px-4 py-3 text-text-secondary">{t.sports.join(", ")}</td>
+                  <td className="px-4 py-3 text-text-secondary">
+                    {t.sports.map((s) => `${sportEmoji(s)} ${s}`).join(", ")}
+                  </td>
                   <td className="px-4 py-3 text-text-secondary">{t.events.length}</td>
                   <td className="px-4 py-3 text-text-secondary">
                     {t.events.reduce((sum, e) => sum + e._count.entries, 0)}

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ScrollText, UserCheck, Wallet } from "lucide-react";
 import { Card, EmptyState, PrimaryButton, OutlineButton, StatusPill } from "@/components/ui";
 import { tJson, tournamentSession } from "@/lib/tournament-client";
+import { RANK_MEDALS, sportEmoji } from "@/lib/sport-icons";
 
 interface Entry {
   id: string;
@@ -189,7 +191,9 @@ export default function ManageTournamentPage() {
         {/* Payments (BRD 6.7) */}
         {pay && (
           <Card>
-            <h2 className="mb-2 font-semibold">Payments</h2>
+            <h2 className="mb-2 flex items-center gap-2 font-semibold">
+              <Wallet size={16} className="text-accent" /> Payments
+            </h2>
             <dl className="space-y-1 text-sm">
               {[
                 ["Collected", `₹${pay.collected}`],
@@ -208,7 +212,9 @@ export default function ManageTournamentPage() {
 
         {/* Officials */}
         <Card>
-          <h2 className="mb-2 font-semibold">Officials</h2>
+          <h2 className="mb-2 flex items-center gap-2 font-semibold">
+            <UserCheck size={16} className="text-accent" /> Officials
+          </h2>
           {detail.officials.length === 0 && (
             <p className="mb-2 text-sm text-text-secondary">No officials yet — they can score all matches.</p>
           )}
@@ -247,7 +253,9 @@ export default function ManageTournamentPage() {
       {/* Rules & regulations — editable any time, shown on the public page */}
       <Card>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-semibold">Rules &amp; regulations</h2>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <ScrollText size={16} className="text-accent" /> Rules &amp; regulations
+          </h2>
           <span className="text-xs text-text-secondary">shown on the public page</span>
         </div>
         <textarea
@@ -288,6 +296,7 @@ export default function ManageTournamentPage() {
             >
               <div>
                 <h2 className="flex items-center gap-2 text-lg font-semibold">
+                  <span>{sportEmoji(ev.sportKey)}</span>
                   {ev.name}
                   {ev.duprRated && (
                     <span className="rounded-full border border-accent/60 bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent">
@@ -510,10 +519,8 @@ export default function ManageTournamentPage() {
                                   className={`border-b border-border/50 last:border-0 ${i === 0 ? "bg-accent/10" : ""}`}
                                 >
                                   <td className="px-3 py-2">
-                                    {i === 0 ? (
-                                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-text">
-                                        1
-                                      </span>
+                                    {RANK_MEDALS[i] ? (
+                                      <span className="text-base">{RANK_MEDALS[i]}</span>
                                     ) : (
                                       <span className="text-text-secondary">{i + 1}</span>
                                     )}

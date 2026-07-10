@@ -79,15 +79,16 @@ export default function HomeScreen() {
             <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "700" }}>{user?.name ?? "Parent"}</Text>
           </View>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Image
-            source={require("../../assets/whistle-logo.png")}
-            style={{ width: 34, height: 31 }}
-            resizeMode="contain"
-          />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
             <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
           </TouchableOpacity>
+          {/* Logo anchored at the top-right corner of the home screen */}
+          <Image
+            source={require("../../assets/whistle-logo.png")}
+            style={{ width: 40, height: 36 }}
+            resizeMode="contain"
+          />
         </View>
       </View>
 

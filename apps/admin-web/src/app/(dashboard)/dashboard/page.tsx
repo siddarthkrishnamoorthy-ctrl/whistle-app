@@ -102,9 +102,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-text-secondary">Welcome back, {user?.name ?? "there"}.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-text-secondary">Welcome back, {user?.name ?? "there"}.</p>
+        </div>
+        {/* Logo anchored at the top-right corner of the home screen */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/whistle-logo.png" alt="Whistle" className="h-12 w-auto" />
       </div>
 
       {error && <Card className="text-sm text-danger">{error}</Card>}

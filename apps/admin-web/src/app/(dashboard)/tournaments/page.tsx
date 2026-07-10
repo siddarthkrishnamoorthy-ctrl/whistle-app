@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, EmptyState, Field, OutlineButton, PrimaryButton, StatusPill, Table } from "@/components/ui";
+import { sportEmoji } from "@/lib/sport-icons";
 import {
   clearTournamentSession,
   tJson,
@@ -230,10 +231,14 @@ export default function AdminTournamentsPage() {
           {mine.tournaments.map((t) => (
             <tr key={t.id}>
               <td className="px-4 py-3">
-                <div className="font-medium text-text-primary">{t.name}</div>
+                <div className="flex items-center gap-2 font-medium text-text-primary">
+                  <span>{sportEmoji(t.sports[0])}</span> {t.name}
+                </div>
                 <div className="text-xs text-text-secondary">{new Date(t.startDate).toLocaleDateString()}</div>
               </td>
-              <td className="px-4 py-3 text-text-secondary">{t.sports.join(", ")}</td>
+              <td className="px-4 py-3 text-text-secondary">
+                {t.sports.map((s) => `${sportEmoji(s)} ${s}`).join(", ")}
+              </td>
               <td className="px-4 py-3 text-text-secondary">
                 {t.events.reduce((sum, e) => sum + e._count.entries, 0)}
               </td>

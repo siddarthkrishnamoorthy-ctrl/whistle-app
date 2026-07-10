@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { RANK_MEDALS, sportEmoji } from "@/lib/sport-icons";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
@@ -188,7 +189,9 @@ export default function PublicTournamentPage() {
         <section key={ev.id} className="mb-10 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
             <span className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-white">{ev.name}</h2>
+              <h2 className="text-xl font-bold text-white">
+                {sportEmoji(ev.sportKey)} {ev.name}
+              </h2>
               {ev.duprRated && (
                 <span className="rounded-full border border-amber-400/60 bg-amber-400/10 px-2.5 py-0.5 text-xs font-bold text-amber-300">
                   DUPR rated
@@ -284,10 +287,8 @@ export default function PublicTournamentPage() {
                           }`}
                         >
                           <td className="px-3 py-2">
-                            {i === 0 ? (
-                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-slate-900">
-                                1
-                              </span>
+                            {RANK_MEDALS[i] ? (
+                              <span className="text-base">{RANK_MEDALS[i]}</span>
                             ) : (
                               <span className="text-slate-500">{i + 1}</span>
                             )}
