@@ -111,7 +111,7 @@ export default function EnquiryDetailPage() {
           <h2 className="text-sm font-semibold text-text-primary">Convert to client</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SelectField label="Plan" value={planId} onChange={(e) => setPlanId(e.target.value)}>
-              <option value="">Select a plan…</option>
+              <option value="">Plan…</option>
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -119,7 +119,7 @@ export default function EnquiryDetailPage() {
               ))}
             </SelectField>
             <SelectField label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
-              <option value="">Select a class…</option>
+              <option value="">Class…</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.title}

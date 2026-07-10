@@ -186,21 +186,21 @@ export default function NewTournamentPage() {
               <option value="team">Team / Pair</option>
             </SelectField>
             <SelectField label="Discipline" value={ev.discipline} onChange={(e) => update(i, { discipline: e.target.value as EventDraft["discipline"] })}>
-              <option value="match">Matches (scored games)</option>
-              <option value="timed">Timed / measured (athletics)</option>
+              <option value="match">Matches</option>
+              <option value="timed">Timed / measured</option>
             </SelectField>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {ev.discipline === "match" ? (
               <SelectField label="Format" value={ev.format} onChange={(e) => update(i, { format: e.target.value as EventDraft["format"] })}>
-                <option value="single_elim">Knockout (single elimination)</option>
-                <option value="round_robin">Round robin (everyone plays once)</option>
+                <option value="single_elim">Knockout</option>
+                <option value="round_robin">Round robin — all play once</option>
                 <option value="league">League (home & away, points table)</option>
               </SelectField>
             ) : (
               <SelectField label="Measured in" value={ev.unit} onChange={(e) => update(i, { unit: e.target.value as EventDraft["unit"] })}>
-                <option value="sec">Time (seconds — lowest wins)</option>
-                <option value="m">Distance (metres — highest wins)</option>
+                <option value="sec">Time — lowest wins</option>
+                <option value="m">Distance — highest wins</option>
               </SelectField>
             )}
             <SelectField label="Entry" value={ev.feeMode} onChange={(e) => update(i, { feeMode: e.target.value as EventDraft["feeMode"] })}>
@@ -223,8 +223,8 @@ export default function NewTournamentPage() {
                 value={ev.duprRated}
                 onChange={(e) => update(i, { duprRated: e.target.value as EventDraft["duprRated"] })}
               >
-                <option value="no">Not DUPR rated — casual play</option>
-                <option value="yes">DUPR rated — results submitted to DUPR</option>
+                <option value="no">Not DUPR rated</option>
+                <option value="yes">DUPR rated</option>
               </SelectField>
               {ev.duprRated === "yes" && (
                 <p className="mt-2 text-xs text-text-secondary">

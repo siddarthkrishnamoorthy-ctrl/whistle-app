@@ -73,7 +73,7 @@ export default function RatingsAdminPage() {
 
       <Card className="flex items-end gap-3">
         <SelectField label="Client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-          <option value="">Select a client…</option>
+          <option value="">Student…</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -81,7 +81,7 @@ export default function RatingsAdminPage() {
           ))}
         </SelectField>
         <SelectField label="Sport" value={sportKey} onChange={(e) => setSportKey(e.target.value)}>
-          <option value="">Select a sport…</option>
+          <option value="">Sport…</option>
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}

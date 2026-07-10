@@ -127,8 +127,8 @@ export default function TournamentsPage() {
               <>
                 <Field label="Full name *" value={name} onChange={(e) => setName(e.target.value)} />
                 <SelectField label="I am a…" value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="organizer">Organizer — host tournaments</option>
-                  <option value="official">Official — score matches</option>
+                  <option value="organizer">Organizer</option>
+                  <option value="official">Official / Scorer</option>
                   <option value="registrant">Player / Team</option>
                 </SelectField>
                 {role === "organizer" && (

@@ -51,7 +51,7 @@ export default function PlansPage() {
           <EmptyState message="No plans yet in this category." />
         </Card>
       ) : (
-        <Table columns={["Title", "Classes", "Clients", "Make Up", "Amount"]}>
+        <Table columns={["Title", "Classes", "Students", "Make Up", "Amount"]}>
           {filtered.map((plan) => (
             <tr key={plan.id} className="hover:bg-surface-alt">
               <td className="px-4 py-3">

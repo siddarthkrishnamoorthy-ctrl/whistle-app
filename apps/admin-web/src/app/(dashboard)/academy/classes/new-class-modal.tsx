@@ -145,7 +145,7 @@ export function NewClassModal({
 
       <div className="grid grid-cols-2 gap-3">
         <SelectField label="Skill *" value={sportKey} onChange={(e) => setSportKey(e.target.value)}>
-          <option value="">Select a sport…</option>
+          <option value="">Sport…</option>
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}
@@ -180,7 +180,7 @@ export function NewClassModal({
 
       <div className="grid grid-cols-2 gap-3">
         <SelectField label="Center *" value={centerId} onChange={(e) => setCenterId(e.target.value)}>
-          <option value="">Select a center…</option>
+          <option value="">Center…</option>
           {centers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -200,12 +200,12 @@ export function NewClassModal({
           ))}
         </SelectField>
         <SelectField
-          label="Lesson plan scheduling for this class *"
+          label="Lesson plan scheduling *"
           value={lessonPlanMode}
           onChange={(e) => setLessonPlanMode(e.target.value as "calendar" | "grade_sequence")}
         >
-          <option value="calendar">Via class calendar — coach sees plans on scheduled sessions</option>
-          <option value="grade_sequence">Grade-wise sequential — coach follows the curriculum order</option>
+          <option value="calendar">Via class calendar</option>
+          <option value="grade_sequence">Grade-wise sequential</option>
         </SelectField>
 
         <SelectField label="School (partner school class)" value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>

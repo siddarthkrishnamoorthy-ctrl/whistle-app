@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, IndianRupee, Inbox, RefreshCw, Swords, Trophy, Users, Wallet } from "lucide-react";
+import { Building2, CalendarDays, IndianRupee, Inbox, MapPin, RefreshCw, School, Swords, Trophy, Users, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, StatusPill } from "@/components/ui";
@@ -39,6 +39,7 @@ interface Snapshot {
   openEnquiries: number;
   fixtures: FixtureRow[];
   eventsCount: number;
+  enrollment: { academiesOnPlatform: number; mySchools: number; myCenters: number } | null;
 }
 
 const FIXTURE_TONE: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -68,8 +69,11 @@ export default function DashboardPage() {
       apiJson<{ stage?: string }[]>("/enquiries").catch(() => []),
       apiJson<FixtureRow[]>("/fixtures").catch(() => []),
       apiJson<unknown[]>("/interschool/events").catch(() => []),
+      apiJson<{ academiesOnPlatform: number; mySchools: number; myCenters: number }>(
+        "/reports/platform-enrollment"
+      ).catch(() => null),
     ])
-      .then(([clients, sessions, invoices, renewals, enquiries, fixtures, events]) => {
+      .then(([clients, sessions, invoices, renewals, enquiries, fixtures, events, enrollment]) => {
         setSnap({
           activeClients: clients.filter((c) => c.status === "active").length,
           totalClients: clients.length,
@@ -81,6 +85,7 @@ export default function DashboardPage() {
             .filter((f) => f.status === "live" || f.status === "scheduled" || f.status === "pending_confirmation")
             .slice(0, 5),
           eventsCount: events.length,
+          enrollment,
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load dashboard."));
@@ -107,6 +112,52 @@ export default function DashboardPage() {
 
       {snap && (
         <>
+          {/* Company-level enrollment strip (product ask: "overall admin
+              login should say how many academies or schools are enrolled") */}
+          {snap.enrollment && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                {
+                  label: "Academies on Whistle",
+                  value: snap.enrollment.academiesOnPlatform,
+                  sub: "enrolled on the platform",
+                  icon: Building2,
+                  href: "/dashboard",
+                },
+                {
+                  label: "Partner schools",
+                  value: snap.enrollment.mySchools,
+                  sub: "enrolled with your academy",
+                  icon: School,
+                  href: "/academy/schools",
+                },
+                {
+                  label: "Centers",
+                  value: snap.enrollment.myCenters,
+                  sub: "active venues",
+                  icon: MapPin,
+                  href: "/academy/centers",
+                },
+              ].map((s) => {
+                const Icon = s.icon;
+                return (
+                  <Link key={s.label} href={s.href}>
+                    <Card className="border-admin-action/30 bg-admin-action/5 transition hover:border-admin-action/60">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-text-muted">{s.label}</div>
+                          <div className="mt-2 text-2xl font-bold text-admin-action">{s.value}</div>
+                          <div className="mt-1 text-xs text-text-secondary">{s.sub}</div>
+                        </div>
+                        <Icon className="h-5 w-5 text-admin-action/70" strokeWidth={1.8} />
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((s) => {
               const Icon = s.icon;

@@ -71,3 +71,11 @@ select optgroup {
   background-color: #141a28;
   color: #f1f5f9;
 }
+
+/* Long labels inside a closed <select> must never overflow the control —
+   clip with an ellipsis instead. */
+select {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

@@ -138,7 +138,7 @@ export function NewDrillModal({
 
       <div className="grid grid-cols-2 gap-3">
         <SelectField label="Sport *" value={sportKey} onChange={(e) => setSportKey(e.target.value)}>
-          <option value="">Select a sport…</option>
+          <option value="">Sport…</option>
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}

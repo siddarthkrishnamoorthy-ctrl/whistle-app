@@ -141,7 +141,7 @@ export default function ClassDetailPage() {
           ))}
           {availableToLink.length > 0 && (
             <SelectField label="Link a plan" disabled={linking} onChange={(e) => handleLinkPlan(e.target.value)} value="">
-              <option value="">Select a plan…</option>
+              <option value="">Plan…</option>
               {availableToLink.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}

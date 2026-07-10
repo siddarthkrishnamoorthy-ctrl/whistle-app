@@ -115,7 +115,7 @@ export default function CurriculumPage() {
 
       <Card className="flex items-end gap-3">
         <SelectField label="Sport" value={sportKey} onChange={(e) => setSportKey(e.target.value)}>
-          <option value="">Select a sport…</option>
+          <option value="">Sport…</option>
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}
@@ -123,7 +123,7 @@ export default function CurriculumPage() {
           ))}
         </SelectField>
         <SelectField label="Grade" value={gradeId} onChange={(e) => setGradeId(e.target.value)}>
-          <option value="">Select a grade…</option>
+          <option value="">Grade…</option>
           {grades.map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
@@ -177,7 +177,7 @@ export default function CurriculumPage() {
 
           <div className="flex items-end gap-3 border-t border-border pt-4">
             <SelectField label="Add a lesson plan" value={addLessonPlanId} onChange={(e) => setAddLessonPlanId(e.target.value)}>
-              <option value="">Select a lesson plan…</option>
+              <option value="">Lesson plan…</option>
               {availableLessonPlans.map((lp) => (
                 <option key={lp.id} value={lp.id}>
                   {lp.title}

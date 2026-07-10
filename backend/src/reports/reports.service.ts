@@ -144,4 +144,16 @@ export class ReportsService {
   expense() {
     return { implemented: false, rows: [], totals: null };
   }
+
+  // Company-level enrollment counters for the admin dashboard: how many
+  // academies are on the Whistle platform, plus this academy's own partner
+  // schools and centers.
+  async platformEnrollment(academyId: string) {
+    const [academies, mySchools, myCenters] = await Promise.all([
+      this.prisma.academy.count(),
+      this.prisma.school.count({ where: { academyId } }),
+      this.prisma.center.count({ where: { academyId } }),
+    ]);
+    return { academiesOnPlatform: academies, mySchools, myCenters };
+  }
 }

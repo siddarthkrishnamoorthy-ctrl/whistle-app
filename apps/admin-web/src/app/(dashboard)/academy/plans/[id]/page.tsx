@@ -104,7 +104,7 @@ export default function PlanDetailPage() {
               onChange={(e) => handleLink(e.target.value)}
               value=""
             >
-              <option value="">Select a class…</option>
+              <option value="">Class…</option>
               {availableToLink.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.title}

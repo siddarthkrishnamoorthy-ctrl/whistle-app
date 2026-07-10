@@ -80,7 +80,7 @@ export function RostersTab({ event }: { event: InterschoolEvent }) {
             ))}
           </SelectField>
           <SelectField label="Client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            <option value="">Select a client…</option>
+            <option value="">Student…</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

@@ -53,4 +53,12 @@ export class ReportsController {
   expense() {
     return this.reportsService.expense();
   }
+
+  // Platform-wide enrollment ("as a company, how many academies/schools are
+  // on Whistle") — shown on the admin dashboard. Admin-only.
+  @Get("platform-enrollment")
+  @Roles("admin")
+  platformEnrollment(@CurrentUser() user: AuthenticatedUser) {
+    return this.reportsService.platformEnrollment(user.academyId as string);
+  }
 }

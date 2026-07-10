@@ -78,7 +78,7 @@ export function NewClientModal({
         reset();
         onClose();
       }}
-      title="New Client"
+      title="New Student"
       subtitle="Enroll a client and assign a plan"
       wide
       footer={
@@ -88,7 +88,7 @@ export function NewClientModal({
             onClose();
           }}
           onSubmit={handleSubmit}
-          submitLabel="Add Client"
+          submitLabel="Add Student"
           submitting={submitting}
         />
       }

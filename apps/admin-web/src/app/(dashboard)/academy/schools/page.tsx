@@ -161,8 +161,8 @@ export default function SchoolsPage() {
           onChange={(e) => setMode(e.target.value as typeof mode)}
         >
           <option value="">Inherit academy default</option>
-          <option value="calendar">Via scheduled class calendar</option>
-          <option value="grade_sequence">Grade-wise sequential curriculum</option>
+          <option value="calendar">Via class calendar</option>
+          <option value="grade_sequence">Grade-wise sequential</option>
         </SelectField>
       </Modal>
     </div>

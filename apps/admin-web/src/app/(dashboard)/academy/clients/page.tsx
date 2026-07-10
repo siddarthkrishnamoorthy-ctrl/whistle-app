@@ -30,8 +30,8 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Clients</h1>
-          <p className="text-sm text-text-secondary">{clients.length} clients</p>
+          <h1 className="text-xl font-semibold">Students</h1>
+          <p className="text-sm text-text-secondary">{clients.length} students</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -44,7 +44,7 @@ export default function ClientsPage() {
             onClick={() => setModalOpen(true)}
             className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
           >
-            + New Client
+            + New Student
           </button>
         </div>
       </div>

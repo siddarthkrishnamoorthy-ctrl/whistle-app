@@ -114,7 +114,7 @@ export function OverviewTab({ event, onRefetch }: { event: InterschoolEvent; onR
 
         <div className="flex items-end gap-3">
           <SelectField label="Invite a member school" value={inviteAcademyId} onChange={(e) => setInviteAcademyId(e.target.value)}>
-            <option value="">Select a school…</option>
+            <option value="">School…</option>
             {invitableSchools.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}

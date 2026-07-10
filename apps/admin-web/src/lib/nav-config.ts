@@ -51,7 +51,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Plans", href: "/academy/plans", icon: ClipboardList },
       { label: "Classes", href: "/academy/classes", icon: GraduationCap },
       { label: "Enquiries", href: "/academy/enquiries", icon: Inbox },
-      { label: "Clients", href: "/academy/clients", icon: Users },
+      { label: "Students", href: "/academy/clients", icon: Users },
       { label: "Schools", href: "/academy/schools", icon: Building2 },
       { label: "Centers", href: "/academy/centers", icon: MapPin },
       { label: "Attendance", href: "/academy/attendance", icon: UserCheck },
