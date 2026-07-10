@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { TournamentsService } from "./tournaments.service";
+import { CricketService } from "./cricket.service";
+import { CricketController } from "./cricket.controller";
 import {
   TournamentAuthController,
   TournamentPublicController,
@@ -11,7 +13,7 @@ import {
 // endpoints, no academy tenancy. Shares only the JWT signing infra.
 @Module({
   imports: [JwtModule.register({})],
-  controllers: [TournamentAuthController, TournamentPublicController, TournamentsController],
-  providers: [TournamentsService],
+  controllers: [TournamentAuthController, TournamentPublicController, CricketController, TournamentsController],
+  providers: [TournamentsService, CricketService],
 })
 export class TournamentsModule {}

@@ -32,6 +32,7 @@ interface TEvent {
   id: string;
   name: string;
   kind: string;
+  sportKey: string;
   discipline: string;
   format: string;
   unit: string;
@@ -413,8 +414,17 @@ export default function ManageTournamentPage() {
                             <span className="text-accent">
                               {m.scoreDisplay === "bye"
                                 ? "Bye — auto-advanced"
-                                : `${m.scoreA}–${m.scoreB} · ${entryName(ev.entries, m.winnerEntryId)} wins`}
+                                : ev.sportKey === "cricket" && m.scoreDisplay
+                                  ? m.scoreDisplay
+                                  : `${m.scoreA}–${m.scoreB} · ${entryName(ev.entries, m.winnerEntryId)} wins`}
                             </span>
+                          ) : ev.sportKey === "cricket" && canScore ? (
+                            <a
+                              href={`/score/cricket/${m.id}`}
+                              className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-accent-text hover:opacity-90"
+                            >
+                              🏏 Ball-by-ball scoring →
+                            </a>
                           ) : canScore ? (
                             <span className="flex items-center gap-2">
                               {m.status === "live" && <StatusPill tone="warning">live</StatusPill>}

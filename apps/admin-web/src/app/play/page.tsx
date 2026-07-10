@@ -402,6 +402,29 @@ export default function PlayPortal() {
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   {toScore.map((m) => {
                                     const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
+                                    // Cricket uses the full ball-by-ball console, not number boxes.
+                                    if (ev.sportKey === "cricket") {
+                                      return (
+                                        <a
+                                          key={m.id}
+                                          href={`/score/cricket/${m.id}`}
+                                          className="flex items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-400/5 p-4 hover:border-emerald-400/60"
+                                        >
+                                          <span>
+                                            <span className="block text-[11px] text-slate-500">
+                                              Round {m.round} · Match {m.matchNo}
+                                              {m.venue ? ` · ${m.venue}` : ""}
+                                            </span>
+                                            <span className="text-sm font-semibold text-white">
+                                              {offEntryName(ev.entries, m.entryAId)} vs {offEntryName(ev.entries, m.entryBId)}
+                                            </span>
+                                          </span>
+                                          <span className="rounded-full bg-emerald-400 px-3 py-1.5 text-xs font-bold text-slate-900">
+                                            🏏 Ball-by-ball →
+                                          </span>
+                                        </a>
+                                      );
+                                    }
                                     return (
                                       <div key={m.id} className="rounded-xl border border-white/10 bg-slate-900/40 p-4">
                                         <div className="mb-3 flex items-center justify-between text-[11px] text-slate-500">

@@ -9,6 +9,9 @@ import { formatDate, type InterschoolEvent } from "@whistle/shared";
 type EventRow = InterschoolEvent & {
   hostAcademy?: { id: string; name: string };
   _count?: { fixtures: number; invitations: number };
+  // Discovery is ranked by distance from the coach's center pin (2026-07).
+  distanceKm?: number | null;
+  nearestVenue?: string | null;
 };
 
 interface LblRegistration {
@@ -44,6 +47,7 @@ function EventList({ events, emptyMessage }: { events: EventRow[]; emptyMessage:
             `${formatDate(e.startDate)} – ${formatDate(e.endDate)}`,
             e.sports.join(", "),
             e.hostAcademy ? `Host: ${e.hostAcademy.name}` : undefined,
+            e.distanceKm != null ? `📍 ≈${e.distanceKm} km away${e.nearestVenue ? ` (${e.nearestVenue})` : ""}` : undefined,
           ]
             .filter(Boolean)
             .join(" · ")}

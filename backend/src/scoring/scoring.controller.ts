@@ -38,6 +38,13 @@ export class ScoringController {
     return this.scoringService.upsertTemplate(sportKey, formatType, body);
   }
 
+  // A student's recent match performance (2026-07): parents see their own
+  // child's Match Center contribution; staff see any student's.
+  @Get("player-stats/:clientId")
+  playerStats(@CurrentUser() user: AuthenticatedUser, @Param("clientId") clientId: string) {
+    return this.scoringService.playerStats(user.academyId as string, user.sub, user.role, clientId);
+  }
+
   @Get("fixtures")
   findFixtures(
     @CurrentUser() user: AuthenticatedUser,

@@ -67,7 +67,7 @@ export class InterschoolController {
     @Query("status") status?: EventStatus,
     @Query("scope") scope?: "mine" | "discover"
   ) {
-    return this.interschoolService.findEvents(user.academyId as string, status, scope);
+    return this.interschoolService.findEvents(user.academyId as string, status, scope, user.sub);
   }
 
   @Get("events/:id")

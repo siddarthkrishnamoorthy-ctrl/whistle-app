@@ -10,6 +10,7 @@ import {
 import { JwtService, type JwtSignOptions } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { PrismaService } from "../prisma/prisma.service";
+import { CricketService } from "./cricket.service";
 import type { TournamentLoginDto, TournamentSignupDto } from "./dto/tournament-auth.dto";
 import type {
   CreateTournamentDto,
@@ -93,7 +94,8 @@ function shuffle<T>(arr: T[]): T[] {
 export class TournamentsService {
   constructor(
     private prisma: PrismaService,
-    private jwt: JwtService
+    private jwt: JwtService,
+    private cricket: CricketService
   ) {}
 
   // ── Auth: standalone user master (BRD 5.1) ────────────────────────────────
@@ -708,6 +710,7 @@ export class TournamentsService {
   // ── Standings + public microsite (BRD 6.6, no auth) ───────────────────────
 
   async standings(eventId: string) {
+    const event = await this.prisma.tournamentEvent.findUnique({ where: { id: eventId } });
     const matches = await this.prisma.tournamentMatch.findMany({
       where: { eventId, status: "completed" },
     });
@@ -740,6 +743,18 @@ export class TournamentsService {
         const loser = m.winnerEntryId === m.entryAId ? b : a;
         if (loser) loser.lost++;
       }
+    }
+    // Cricket league standings tie-break on Net Run Rate, derived from the
+    // ball-by-ball logs (Cricket Scoring Requirements 4.7).
+    if (event?.sportKey === "cricket") {
+      const nrrData = await this.cricket.nrrByEntry(eventId);
+      const withNrr = [...rows.values()].map((r) => {
+        const d = nrrData.get(r.entryId);
+        const rate = (pair: [number, number]) => (pair[1] > 0 ? pair[0] / (pair[1] / 6) : 0);
+        const nrr = d ? Math.round((rate(d.for) - rate(d.against)) * 1000) / 1000 : 0;
+        return { ...r, nrr };
+      });
+      return withNrr.sort((x, y) => y.points - x.points || y.nrr - x.nrr);
     }
     return [...rows.values()].sort(
       (x, y) => y.points - x.points || y.scoreFor - y.scoreAgainst - (x.scoreFor - x.scoreAgainst)

@@ -6,10 +6,27 @@ import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, LoadingView, Pill, colors } from "@/components/ui";
 import type { Drill, LessonPlan } from "@whistle/shared";
 
+interface FitnessTestHistory {
+  test: { id: string; name: string; unit: string; metricType: string };
+  results: {
+    cycleTitle: string;
+    value: number;
+    benchmarkZone: string | null;
+    recordedAt: string;
+  }[];
+}
+
+const ZONE_TONE: Record<string, "success" | "warning" | "neutral"> = {
+  "High Performance": "success",
+  "Healthy Zone": "success",
+  "Needs Improvement": "warning",
+};
+
 export default function ChildScreen() {
   const { selectedChild, loading } = useChildren();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [drills, setDrills] = useState<Drill[]>([]);
+  const [fitness, setFitness] = useState<FitnessTestHistory[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -20,6 +37,9 @@ export default function ChildScreen() {
         .catch(() => undefined);
       apiJson<Drill[]>("/drills")
         .then((all) => !cancelled && setDrills(all))
+        .catch(() => undefined);
+      apiJson<FitnessTestHistory[]>(`/assessment-history/${selectedChild.id}`)
+        .then((all) => !cancelled && setFitness(all))
         .catch(() => undefined);
       return () => {
         cancelled = true;
@@ -65,6 +85,53 @@ export default function ChildScreen() {
           </View>
         )}
       </View>
+
+      {/* Periodic Assessment history (Assessment Module BRD 4.6): every
+          completed cycle's result, its benchmark zone and the trend. */}
+      {fitness.length > 0 && (
+        <View>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
+            Fitness tests
+          </Text>
+          <View style={{ gap: 8 }}>
+            {fitness.map((f) => {
+              const latest = f.results.at(-1);
+              const prev = f.results.at(-2);
+              const delta =
+                latest && prev
+                  ? Math.round((latest.value - prev.value) * 100) / 100
+                  : null;
+              const improved =
+                delta != null && (f.test.metricType === "time" ? delta < 0 : delta > 0);
+              return (
+                <Card key={f.test.id}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <Text style={{ color: colors.textPrimary, fontWeight: "600" }}>{f.test.name}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                        {latest ? `${latest.value} ${f.test.unit} · ${latest.cycleTitle}` : "—"}
+                      </Text>
+                      {delta != null && (
+                        <Text style={{ color: improved ? colors.success : colors.warning, fontSize: 12, marginTop: 2 }}>
+                          {improved ? "▲ improved" : "▼"} {Math.abs(delta)} {f.test.unit} vs last cycle
+                        </Text>
+                      )}
+                    </View>
+                    {latest?.benchmarkZone ? (
+                      <Pill tone={ZONE_TONE[latest.benchmarkZone] ?? "neutral"}>{latest.benchmarkZone}</Pill>
+                    ) : null}
+                  </View>
+                  {f.results.length > 1 && (
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
+                      Trend: {f.results.map((r) => r.value).join(" → ")} {f.test.unit}
+                    </Text>
+                  )}
+                </Card>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>

@@ -396,4 +396,44 @@ export class ScoringService implements OnModuleInit {
       )
     );
   }
+
+  // A student's recent Match Center performance (2026-07): parents are
+  // restricted to their own linked child; staff can view any student.
+  async playerStats(academyId: string, userId: string, role: string, clientId: string) {
+    const client = await this.prisma.client.findUnique({
+      where: { id: clientId },
+      include: { guardians: true },
+    });
+    if (!client || client.academyId !== academyId) throw new NotFoundException("Student not found.");
+    if ((role === "parent" || role === "student") && !client.guardians.some((g) => g.userId === userId)) {
+      throw new ForbiddenException("You can only view your own child's match performance.");
+    }
+    const stats = await this.prisma.playerMatchStat.findMany({
+      where: { clientId },
+      include: {
+        fixture: {
+          select: {
+            id: true,
+            sportKey: true,
+            matchType: true,
+            status: true,
+            scheduledAt: true,
+            resultSummary: true,
+          },
+        },
+      },
+      orderBy: { fixture: { scheduledAt: "desc" } },
+      take: 20,
+    });
+    return stats.map((s) => ({
+      fixtureId: s.fixtureId,
+      sportKey: s.fixture.sportKey,
+      matchType: s.fixture.matchType,
+      status: s.fixture.status,
+      playedAt: s.fixture.scheduledAt,
+      result: s.fixture.resultSummary,
+      stats: s.statFields,
+      contributionWeight: Number(s.contributionWeight),
+    }));
+  }
 }

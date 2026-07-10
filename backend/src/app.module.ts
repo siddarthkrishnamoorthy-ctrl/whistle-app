@@ -31,6 +31,7 @@ import { AssessmentsModule } from "./assessments/assessments.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
+import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-assessments.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { TournamentsModule } from "./tournaments/tournaments.module";
     JobsModule,
     SchoolsModule,
     TournamentsModule,
+    PeriodicAssessmentsModule,
   ],
 })
 export class AppModule {}

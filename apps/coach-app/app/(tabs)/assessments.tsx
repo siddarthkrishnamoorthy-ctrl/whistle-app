@@ -22,11 +22,21 @@ function metricSummary(a: Assessment): string {
   return parts.join(" · ") || "No metrics";
 }
 
+interface DueCycle {
+  id: string;
+  title: string;
+  cadence: string;
+  windowStart: string;
+  windowEnd: string;
+  tests: { id: string; name: string; metricType: string; unit: string }[];
+}
+
 export default function AssessmentsScreen() {
   const { user } = useAuth();
   const [clients, setClients] = useState<ClientRef[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [dueCycles, setDueCycles] = useState<DueCycle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -36,11 +46,15 @@ export default function AssessmentsScreen() {
         return;
       }
       let cancelled = false;
-      apiJson<ClientRef[]>("/clients")
-        .then((all) => {
+      Promise.all([
+        apiJson<ClientRef[]>("/clients"),
+        apiJson<DueCycle[]>("/assessment-cycles/due").catch(() => [] as DueCycle[]),
+      ])
+        .then(([all, cycles]) => {
           if (cancelled) return;
           setClients(all);
           setSelectedClientId((prev) => prev ?? all[0]?.id ?? null);
+          setDueCycles(cycles);
         })
         .catch(() => undefined)
         .finally(() => !cancelled && setLoading(false));
@@ -73,12 +87,39 @@ export default function AssessmentsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Scheduled fitness/skill test cycles — distinct from ad hoc drill
+          assessments (Assessment Module BRD 4.6), same visual language. */}
+      {dueCycles.length > 0 && (
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Fitness test cycles due</Text>
+          {dueCycles.map((c) => (
+            <TouchableOpacity key={c.id} onPress={() => router.push(`/assessments/cycle/${c.id}`)}>
+              <Card style={{ borderColor: "rgba(245,185,63,0.35)", borderWidth: 1 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={{ color: colors.textPrimary, fontWeight: "700" }}>{c.title}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                      {c.tests.map((t) => t.name).join(" · ")}
+                    </Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                      window: {formatDate(c.windowStart)} – {formatDate(c.windowEnd)}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.accent, fontWeight: "800", fontSize: 18 }}>›</Text>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {loading ? (
         <Text style={{ color: colors.textSecondary }}>Loading…</Text>
       ) : clients.length === 0 ? (
         <EmptyState message="No students in your academy yet." />
       ) : (
         <>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Drill assessments</Text>
           <ChipRow
             options={clients.map((c) => ({ key: c.id, label: c.name }))}
             value={selectedClientId ?? ""}

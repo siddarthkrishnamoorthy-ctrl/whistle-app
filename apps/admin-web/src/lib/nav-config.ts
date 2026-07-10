@@ -70,6 +70,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Drill Bank", href: "/misc/drill-bank", icon: Dumbbell },
       { label: "Curriculum", href: "/misc/curriculum", icon: ListOrdered },
       { label: "Grades", href: "/misc/grades", icon: Layers },
+      { label: "Assessment Tests", href: "/misc/assessment-tests", icon: ClipboardList },
+      { label: "Assessment Cycles", href: "/misc/assessment-cycles", icon: RefreshCw },
     ],
   },
   {

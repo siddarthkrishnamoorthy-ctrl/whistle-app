@@ -1296,9 +1296,167 @@ model TournamentMatch {
   winnerEntryId String?   @map("winner_entry_id")
   officialId    String?   @map("official_id")
 
-  event TournamentEvent @relation(fields: [eventId], references: [id])
+  event         TournamentEvent          @relation(fields: [eventId], references: [id])
+  cricketConfig TournamentCricketConfig?
+  deliveries    CricketDelivery[]
 
   @@map("tournament_matches")
+}
+
+// ── Cricket ball-by-ball scoring (Cricket Scoring Requirements v1.0) ───────
+// Match setup (BRD Cricket 4.1): limited-overs with ANY overs count, toss
+// choice, playing XI per side. DLS is stored as a toggle; school-level
+// matches without it are simply completed on reduced overs or abandoned.
+model TournamentCricketConfig {
+  matchId      String  @id @map("match_id")
+  oversPerSide Int     @map("overs_per_side")
+  battingFirst String  @map("batting_first") // "A" | "B" (toss winner's choice)
+  playersA     String[] @map("players_a")
+  playersB     String[] @map("players_b")
+  dlsEnabled   Boolean @default(false) @map("dls_enabled")
+
+  match TournamentMatch @relation(fields: [matchId], references: [id])
+
+  @@map("tournament_cricket_configs")
+}
+
+// One row per delivery (legal or not) — the single source of truth. Every
+// batting/bowling/fielding stat, partnership, graph and the result itself is
+// derived from this log, never stored separately (BRD Cricket 4.4/5).
+model CricketDelivery {
+  id              String   @id @default(uuid())
+  matchId         String   @map("match_id")
+  seq             Int // global order within the match
+  innings         Int // 1 | 2
+  overNo          Int      @map("over_no") // 0-based
+  ballInOver      Int      @map("ball_in_over") // legal balls only, 1..6; 0 while illegal
+  batter          String
+  nonStriker      String   @map("non_striker")
+  bowler          String
+  runsOffBat      Int      @default(0) @map("runs_off_bat")
+  extraType       String?  @map("extra_type") // wide | no_ball | bye | leg_bye | penalty
+  extraRuns       Int      @default(0) @map("extra_runs")
+  isWicket        Boolean  @default(false) @map("is_wicket")
+  wicketType      String?  @map("wicket_type") // bowled | caught | lbw | run_out | stumped | hit_wicket | retired
+  dismissedBatter String?  @map("dismissed_batter")
+  fielder         String?
+  shotDirection   String?  @map("shot_direction") // optional, powers the Wagon Wheel
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  match TournamentMatch @relation(fields: [matchId], references: [id])
+
+  @@index([matchId, seq])
+  @@map("cricket_deliveries")
+}
+
+// Post-confirmation correction audit (BRD Cricket 4.6): who/when/what/why —
+// dependent stats are recomputed from the log, never patched.
+model CricketCorrection {
+  id              String   @id @default(uuid())
+  deliveryId      String   @map("delivery_id")
+  correctedBy     String   @map("corrected_by") // tournament user id
+  reason          String
+  previousPayload Json     @map("previous_payload")
+  newPayload      Json     @map("new_payload")
+  correctedAt     DateTime @default(now()) @map("corrected_at")
+
+  @@map("cricket_corrections")
+}
+
+// ── Periodic Assessment module (Assessment Module BRD v1.0) ────────────────
+// Standardized fitness/skill test library defined by Admin/Account Manager.
+// Numeric data only — no photo/video anywhere in this module (BRD 4.4).
+model AssessmentTest {
+  id                 String   @id @default(uuid())
+  academyId          String   @map("academy_id")
+  name               String
+  category           String // speed|agility|power|endurance|strength|flexibility|sport_skill
+  applicableGradeIds String[] @map("applicable_grade_ids")
+  metricType         String   @map("metric_type") // time | repetitions | distance_height
+  unit               String // seconds | count | cm
+  precisionDecimals  Int      @default(0) @map("precision_decimals")
+  attemptsAllowed    Int      @default(1) @map("attempts_allowed")
+  instructions       String?
+  createdById        String?  @map("created_by_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  zones   AssessmentBenchmarkZone[]
+  results PeriodicAssessmentResult[]
+
+  @@map("assessment_tests")
+}
+
+// FitnessGram-style Healthy Fitness Zone bands by age/gender (BRD 4.1/4.5) —
+// thresholds are set by the Admin/PE lead, never hardcoded.
+model AssessmentBenchmarkZone {
+  id            String   @id @default(uuid())
+  testId        String   @map("test_id")
+  ageMin        Int?     @map("age_min")
+  ageMax        Int?     @map("age_max")
+  gender        String   @default("any") // male | female | any
+  zoneName      String   @map("zone_name")
+  thresholdLow  Decimal? @map("threshold_low") @db.Decimal(10, 2)
+  thresholdHigh Decimal? @map("threshold_high") @db.Decimal(10, 2)
+
+  test AssessmentTest @relation(fields: [testId], references: [id])
+
+  @@map("assessment_benchmark_zones")
+}
+
+// A scheduled testing cycle — bundles one or more tests for grade(s)/class(es)
+// on a Monthly/Quarterly/Half-Yearly/Annual cadence with a testing window;
+// recurring cycles auto-generate their next occurrence (BRD 4.2).
+model AssessmentCycle {
+  id            String   @id @default(uuid())
+  academyId     String   @map("academy_id")
+  title         String
+  cadence       String // monthly | quarterly | half_yearly | annual
+  testIds       String[] @map("test_ids")
+  gradeIds      String[] @map("grade_ids")
+  classIds      String[] @default([]) @map("class_ids")
+  windowStart   DateTime @map("window_start") @db.Date
+  windowEnd     DateTime @map("window_end") @db.Date
+  status        String   @default("open") // open | closed
+  nextGenerated Boolean  @default(false) @map("next_generated")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  results PeriodicAssessmentResult[]
+
+  @@map("assessment_cycles")
+}
+
+// One official result per (cycle, test, student). best_value is the kept
+// best-of-attempts; every attempt is retained for audit. absent/exempt are
+// explicit statuses so "missing data" ≠ "exempted" (BRD 4.3/4.5).
+model PeriodicAssessmentResult {
+  id            String    @id @default(uuid())
+  cycleId       String    @map("cycle_id")
+  testId        String    @map("test_id")
+  clientId      String    @map("client_id")
+  status        String    @default("pending") // pending | recorded | absent | exempt
+  bestValue     Decimal?  @map("best_value") @db.Decimal(10, 2)
+  benchmarkZone String?   @map("benchmark_zone") // resolved at entry time
+  recordedById  String?   @map("recorded_by_id")
+  recordedAt    DateTime? @map("recorded_at")
+
+  cycle    AssessmentCycle           @relation(fields: [cycleId], references: [id])
+  test     AssessmentTest            @relation(fields: [testId], references: [id])
+  attempts AssessmentResultAttempt[]
+
+  @@unique([cycleId, testId, clientId])
+  @@map("assessment_results_periodic")
+}
+
+model AssessmentResultAttempt {
+  id         String   @id @default(uuid())
+  resultId   String   @map("result_id")
+  attemptNo  Int      @map("attempt_no")
+  value      Decimal  @db.Decimal(10, 2)
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  result PeriodicAssessmentResult @relation(fields: [resultId], references: [id])
+
+  @@map("assessment_result_attempts")
 }
 
 // BRD 7.4 — recorded time/distance per entrant per heat; heats pool into a

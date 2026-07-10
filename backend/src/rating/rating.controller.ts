@@ -15,7 +15,10 @@ import type { AuthenticatedUser } from "../auth/jwt-payload";
 export class RatingController {
   constructor(private ratingService: RatingService) {}
 
+  // Whistle Standings are readable by parents/students too (2026-07): the
+  // parent Match Center view shows the leaderboard alongside live matches.
   @Get("leaderboard/students")
+  @Roles("admin", "account_manager", "venue_manager", "head_coach", "coach", "referee", "parent", "student")
   studentLeaderboard(
     @Query("sportKey") sportKey: string,
     @Query("formatType") formatType: FormatType,
@@ -25,6 +28,7 @@ export class RatingController {
   }
 
   @Get("leaderboard/schools")
+  @Roles("admin", "account_manager", "venue_manager", "head_coach", "coach", "referee", "parent", "student")
   schoolLeaderboard(@Query("sportKey") sportKey: string) {
     return this.ratingService.schoolLeaderboard(sportKey);
   }

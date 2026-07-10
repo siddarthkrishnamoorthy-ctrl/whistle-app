@@ -28,6 +28,17 @@ function ageAsOf(dob: Date, asOf: Date): number {
   return age;
 }
 
+// Great-circle distance in km — ranks discovered events by how far the host
+// academy's nearest pinned center is from the coach's own center (2026-07).
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 @Injectable()
 export class InterschoolService {
   constructor(
@@ -73,7 +84,7 @@ export class InterschoolService {
     });
   }
 
-  async findEvents(academyId: string, status?: EventStatus, scope?: "mine" | "discover") {
+  async findEvents(academyId: string, status?: EventStatus, scope?: "mine" | "discover", userId?: string) {
     // "discover" = published (scheduled/live) events hosted by OTHER academies
     // in the interschool network — how coaches find game days around them.
     // Default remains: own-hosted or accepted-invitation events only.
@@ -91,11 +102,51 @@ export class InterschoolService {
               { invitations: { some: { invitedAcademyId: academyId, status: "accepted" as const } } },
             ],
           };
-    return this.prisma.interschoolEvent.findMany({
+    const events = await this.prisma.interschoolEvent.findMany({
       where,
       include: { hostAcademy: { select: { id: true, name: true } }, _count: { select: { fixtures: true, invitations: true } } },
       orderBy: { startDate: "desc" },
     });
+    // Discovery is ranked by distance from the coach's own center pin
+    // (2026-07): nearest host first; hosts with no pinned center sort last.
+    if (scope === "discover" && userId) {
+      const me = await this.coachCenterPin(academyId, userId);
+      if (me) {
+        const hostIds = [...new Set(events.map((e) => e.hostAcademyId))];
+        const hostCenters = await this.prisma.center.findMany({
+          where: { academyId: { in: hostIds }, geoLat: { not: null }, geoLng: { not: null } },
+          select: { academyId: true, geoLat: true, geoLng: true, name: true },
+        });
+        const withDistance = events.map((e) => {
+          let best: { km: number; center: string } | null = null;
+          for (const c of hostCenters.filter((x) => x.academyId === e.hostAcademyId)) {
+            const km = Math.round(haversineKm(me.lat, me.lng, Number(c.geoLat), Number(c.geoLng)) * 10) / 10;
+            if (!best || km < best.km) best = { km, center: c.name };
+          }
+          return { ...e, distanceKm: best?.km ?? null, nearestVenue: best?.center ?? null };
+        });
+        return withDistance.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
+      }
+    }
+    return events;
+  }
+
+  // The coach's location = their assigned center's pin, else the academy's
+  // first pinned center.
+  private async coachCenterPin(academyId: string, userId: string): Promise<{ lat: number; lng: number } | null> {
+    const profile = await this.prisma.staffProfile.findUnique({
+      where: { userId },
+      include: { center: { select: { geoLat: true, geoLng: true } } },
+    });
+    let geo: { geoLat: unknown; geoLng: unknown } | null | undefined = profile?.center;
+    if (!geo?.geoLat || !geo?.geoLng) {
+      geo = await this.prisma.center.findFirst({
+        where: { academyId, geoLat: { not: null }, geoLng: { not: null } },
+        select: { geoLat: true, geoLng: true },
+      });
+    }
+    if (!geo?.geoLat || !geo?.geoLng) return null;
+    return { lat: Number(geo.geoLat), lng: Number(geo.geoLng) };
   }
 
   private async assertEventMember(academyId: string, eventId: string) {
