@@ -260,7 +260,10 @@ export default function FixtureDetailScreen() {
   const sideB = sideNames(fixture.entrantBClients, fixture.entrantB);
 
   const canScore = SCORING_ROLES.includes(user?.role ?? "");
-  const canManual = ["admin", "head_coach", "account_manager"].includes(user?.role ?? "");
+  // Coaches included (2026-07): Match Center hosts score their own event's
+  // fixtures — a coach-entered interschool result still needs the opposing
+  // school's approval before it completes (backend rule).
+  const canManual = SCORING_ROLES.includes(user?.role ?? "");
   const isOpen = !["completed", "abandoned"].includes(fixture.status);
 
   return (

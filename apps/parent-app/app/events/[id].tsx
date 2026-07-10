@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, ListRow, LoadingView, Pill, colors } from "@/components/ui";
 import { formatDate, type Fixture, type InterschoolEvent } from "@whistle/shared";
@@ -40,16 +40,20 @@ export default function EventDetailScreen() {
   const [standings, setStandings] = useState<{ sportKey: string; rows: StandingsRow[] }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    apiJson<EventDetail>(`/interschool/events/${id}`)
-      .then(setEvent)
-      .catch(() => setEvent(null))
-      .finally(() => setLoading(false));
-    apiJson<{ standings: { sportKey: string; rows: StandingsRow[] }[] }>(`/interschool/events/${id}/standings`)
-      .then((s) => setStandings(s.standings))
-      .catch(() => setStandings([]));
-  }, [id]);
+  // Focus-based so results and standings are fresh every time the parent
+  // opens the event — right after a coach confirms a score.
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      apiJson<EventDetail>(`/interschool/events/${id}`)
+        .then(setEvent)
+        .catch(() => setEvent(null))
+        .finally(() => setLoading(false));
+      apiJson<{ standings: { sportKey: string; rows: StandingsRow[] }[] }>(`/interschool/events/${id}/standings`)
+        .then((s) => setStandings(s.standings))
+        .catch(() => setStandings([]));
+    }, [id])
+  );
 
   if (loading) return <LoadingView />;
   if (!event) return <EmptyState message="Event not found." />;

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
@@ -69,9 +69,13 @@ export default function EventDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    load().finally(() => setLoading(false));
-  }, [load]);
+  // Focus-based: returning from a scoring screen refreshes results, the
+  // standings table and the chat without a manual reload.
+  useFocusEffect(
+    useCallback(() => {
+      load().finally(() => setLoading(false));
+    }, [load])
+  );
 
   if (loading) return <LoadingView />;
   if (!event) return <EmptyState message="Event not found." />;
@@ -241,21 +245,54 @@ export default function EventDetailScreen() {
           <EmptyState message="No fixtures yet — they appear when the host generates them or all team slots fill." />
         ) : (
           <View style={{ gap: 8 }}>
-            {event.fixtures.map((f) => (
-              <ListRow
-                key={f.id}
-                title={`${f.sportKey} · ${f.matchType.replace("_", " ")}`}
-                subtitle={[
-                  f.scheduledAt ? formatDate(f.scheduledAt) : "Unscheduled",
-                  f.venue ?? undefined,
-                  f.resultSummary?.scoreDisplay ?? undefined,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-                right={<Pill tone={FIXTURE_TONE[f.status as keyof typeof FIXTURE_TONE] ?? "neutral"}>{f.status.replace("_", " ")}</Pill>}
-                onPress={() => router.push(`/fixtures/${f.id}`)}
-              />
-            ))}
+            {event.fixtures.map((f) => {
+              const open = !["completed", "abandoned"].includes(f.status);
+              // Same scoring option as everywhere else: coaches, head
+              // coaches, admins and account managers score right from here.
+              const canScore = ["admin", "head_coach", "coach", "account_manager"].includes(user?.role ?? "");
+              return (
+                <ListRow
+                  key={f.id}
+                  title={`${f.sportKey} · ${f.matchType.replace("_", " ")}`}
+                  subtitle={[
+                    f.scheduledAt ? formatDate(f.scheduledAt) : "Unscheduled",
+                    f.venue ?? undefined,
+                    f.resultSummary?.scoreDisplay ?? undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  right={
+                    canScore && open ? (
+                      <View
+                        style={{
+                          backgroundColor: f.status === "pending_confirmation" ? "transparent" : colors.accent,
+                          borderWidth: 1,
+                          borderColor: colors.accent,
+                          borderRadius: 999,
+                          paddingHorizontal: 12,
+                          paddingVertical: 5,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: f.status === "pending_confirmation" ? colors.accent : colors.accentText,
+                            fontSize: 12,
+                            fontWeight: "700",
+                          }}
+                        >
+                          {f.status === "pending_confirmation" ? "Approve" : "⚡ Score"}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pill tone={FIXTURE_TONE[f.status as keyof typeof FIXTURE_TONE] ?? "neutral"}>
+                        {f.status.replace("_", " ")}
+                      </Pill>
+                    )
+                  }
+                  onPress={() => router.push(`/fixtures/${f.id}`)}
+                />
+              );
+            })}
           </View>
         )}
       </View>
