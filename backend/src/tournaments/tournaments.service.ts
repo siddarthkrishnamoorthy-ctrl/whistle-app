@@ -233,6 +233,27 @@ export class TournamentsService {
     });
   }
 
+  // Hand a tournament over to another organizer (admin creates → moves to
+  // the organizer who will actually run it). Ownership transfers fully: it
+  // disappears from the sender's console and appears in the receiver's
+  // /organizer portal.
+  async transfer(organizerId: string, tournamentId: string, email: string) {
+    await this.ownTournamentOrThrow(organizerId, tournamentId);
+    const target = await this.prisma.tournamentUser.findUnique({ where: { email } });
+    if (!target) {
+      throw new NotFoundException("No tournament account with that email — ask them to sign up as an Organizer at /organizer first.");
+    }
+    if (target.role !== "organizer") {
+      throw new BadRequestException(`${email} is a ${target.role} account — tournaments can only be handed to Organizer accounts.`);
+    }
+    if (target.id === organizerId) throw new BadRequestException("That's already the owner.");
+    return this.prisma.tournament.update({
+      where: { id: tournamentId },
+      data: { organizerId: target.id },
+      include: { organizer: { select: { name: true, email: true, organizationName: true } } },
+    });
+  }
+
   async publish(organizerId: string, tournamentId: string) {
     await this.ownTournamentOrThrow(organizerId, tournamentId);
     return this.prisma.tournament.update({

@@ -119,6 +119,12 @@ export class TournamentsController {
     return this.service.publish(user.sub, id);
   }
 
+  @Post(":id/transfer")
+  @TournamentRoles("t_organizer")
+  transfer(@CurrentUser() user: TUser, @Param("id") id: string, @Body("email") email: string) {
+    return this.service.transfer(user.sub, id, (email ?? "").trim());
+  }
+
   @Get(":id/payment-summary")
   @TournamentRoles("t_organizer")
   paymentSummary(@CurrentUser() user: TUser, @Param("id") id: string) {

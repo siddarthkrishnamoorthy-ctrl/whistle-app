@@ -7,6 +7,7 @@ import {
   CalendarRange,
   ClipboardList,
   Dumbbell,
+  ExternalLink,
   Flag,
   GraduationCap,
   Inbox,
@@ -74,9 +75,12 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Tournaments",
-    // Opens the standalone organizer portal — its own tournament login,
-    // shareable with external organizers who have no academy account.
-    items: [{ label: "Whistle - Tournaments", href: "/organizer", icon: Flag }],
+    items: [
+      // Admin creates tournaments here, then hands them to an organizer.
+      { label: "Whistle - Tournaments", href: "/tournaments", icon: Flag },
+      // Standalone portal for the organizers who run them (shareable URL).
+      { label: "Organizer Portal", href: "/organizer", icon: ExternalLink },
+    ],
   },
   {
     label: "Match Center",
