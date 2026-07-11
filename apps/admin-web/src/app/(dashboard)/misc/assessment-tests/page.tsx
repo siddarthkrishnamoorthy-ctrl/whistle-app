@@ -52,6 +52,8 @@ export default function AssessmentTestsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Test | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("agility");
@@ -137,6 +139,26 @@ export default function AssessmentTestsPage() {
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
 
+      {tests.length > 0 && (
+        <div className="flex gap-3">
+          <Field
+            label=""
+            placeholder="Search tests…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <SelectField label="" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="max-w-[200px]">
+            <option value="">All categories</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c.replace("_", " ")}
+              </option>
+            ))}
+          </SelectField>
+        </div>
+      )}
+
       {loading ? (
         <Card className="text-sm text-text-secondary">Loading…</Card>
       ) : tests.length === 0 ? (
@@ -145,7 +167,13 @@ export default function AssessmentTestsPage() {
         </Card>
       ) : (
         <Table columns={["Test", "Category", "Metric", "Attempts", "Grades", "Zones", ""]}>
-          {tests.map((t) => (
+          {tests
+            .filter(
+              (t) =>
+                (!filterCategory || t.category === filterCategory) &&
+                (!search.trim() || t.name.toLowerCase().includes(search.trim().toLowerCase()))
+            )
+            .map((t) => (
             <tr key={t.id}>
               <td className="px-4 py-3 font-medium text-text-primary">{t.name}</td>
               <td className="px-4 py-3 capitalize text-text-secondary">{t.category.replace("_", " ")}</td>

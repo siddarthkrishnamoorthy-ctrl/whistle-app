@@ -148,37 +148,78 @@ export default function PublicTournamentPage() {
   const live = data.events.flatMap((ev) =>
     ev.matches.filter((m) => m.status === "live").map((m) => ({ ev, m }))
   );
+  const totalParticipants = data.events.reduce((s, ev) => s + ev.entries.length, 0);
+  const totalMatches = data.events.reduce((s, ev) => s + ev.matches.length, 0);
+  const completedMatches = data.events.reduce(
+    (s, ev) => s + ev.matches.filter((m) => m.status === "completed").length,
+    0
+  );
+  const isLive = data.status === "in_progress" || live.length > 0;
 
   return (
-    <main className="min-h-screen px-4 py-10 md:px-10 max-w-5xl mx-auto text-slate-200">
-      {/* Header */}
-      <header className="mb-8">
-        <div className="mb-2 flex flex-wrap items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/whistle-logo.png" alt="Whistle" className="h-9 w-auto" />
-          <span className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</span>
-          <span className="text-xs px-2 py-0.5 rounded-full border border-emerald-400/40 text-emerald-300">
+    <main className="min-h-screen px-4 py-8 md:px-10 max-w-5xl mx-auto text-slate-200">
+      {/* Top bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/whistle-logo.png" alt="Whistle" className="h-8 w-auto" />
+        <span className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</span>
+        <span className="flex-1" />
+        <a href="/play" className="text-xs text-amber-300 hover:underline">
+          🏠 Home
+        </a>
+        <a href="/rankings" className="text-xs text-amber-300 hover:underline">
+          📈 Pulse
+        </a>
+      </div>
+
+      {/* Hero */}
+      <header className="mb-8 overflow-hidden rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-400/15 via-white/[0.03] to-transparent p-6 md:p-8">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {data.sports.map((s) => (
+            <span key={s} className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-slate-200">
+              {sportEmoji(s)} {s.replace(/[-_]/g, " ")}
+            </span>
+          ))}
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold ${
+              isLive
+                ? "bg-red-500/20 text-red-300"
+                : data.status === "completed"
+                  ? "bg-slate-500/20 text-slate-300"
+                  : "bg-emerald-400/20 text-emerald-300"
+            }`}
+          >
+            {isLive && <span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-red-400" />}
             {STATUS_LABEL[data.status] ?? data.status}
           </span>
-          <span className="flex-1" />
-          <a href="/play" className="text-xs text-amber-300 hover:underline">
-            🏠 Tournaments home
-          </a>
-          <a href="/rankings" className="text-xs text-amber-300 hover:underline">
-            🏆 Player rankings
-          </a>
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-white">{data.name}</h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Hosted by {data.organizer} · {new Date(data.startDate).toLocaleDateString()} –{" "}
-          {new Date(data.endDate).toLocaleDateString()}
+        <h1 className="text-3xl font-black text-white md:text-5xl">{data.name}</h1>
+        <p className="mt-2 text-sm text-slate-300">
+          Hosted by <span className="font-semibold text-white">{data.organizer}</span> ·{" "}
+          {new Date(data.startDate).toLocaleDateString()} – {new Date(data.endDate).toLocaleDateString()}
           {data.venues.length > 0 && <> · {data.venues.join(", ")}</>}
         </p>
-        {data.description && <p className="text-sm text-slate-300 mt-3 max-w-2xl">{data.description}</p>}
+        {data.description && <p className="mt-3 max-w-2xl text-sm text-slate-300">{data.description}</p>}
+
+        {/* Stat strip */}
+        <div className="mt-5 flex flex-wrap gap-3">
+          {[
+            { label: "Events", value: data.events.length },
+            { label: "Participants", value: totalParticipants },
+            { label: "Matches", value: totalMatches },
+            { label: "Completed", value: completedMatches },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-2.5">
+              <div className="text-2xl font-extrabold text-white">{s.value}</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
         {data.status === "registration_open" && (
           <a
             href="/play"
-            className="mt-4 inline-block rounded-full bg-amber-400 px-6 py-2 text-sm font-bold text-slate-900 hover:opacity-90"
+            className="mt-5 inline-block rounded-full bg-amber-400 px-6 py-2.5 text-sm font-bold text-slate-900 hover:opacity-90"
           >
             Register to play →
           </a>

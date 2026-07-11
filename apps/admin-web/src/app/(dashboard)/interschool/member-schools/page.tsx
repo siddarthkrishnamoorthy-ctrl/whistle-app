@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { useApiList } from "@/lib/hooks";
-import { Card, EmptyState, Table, ToggleSwitch } from "@/components/ui";
+import { Card, EmptyState, Field, Table, ToggleSwitch } from "@/components/ui";
 import type { InterschoolSettings, MemberSchool } from "@/lib/types";
 
 export default function MemberSchoolsPage() {
   const { data: schools, loading, error } = useApiList<MemberSchool>("/interschool/member-schools");
   const [settings, setSettings] = useState<InterschoolSettings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     apiJson<InterschoolSettings>("/interschool/settings").then(setSettings);
@@ -86,6 +87,16 @@ export default function MemberSchoolsPage() {
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
 
+      {schools.length > 0 && (
+        <Field
+          label=""
+          placeholder="Search schools…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      )}
+
       {loading ? (
         <Card className="text-sm text-text-secondary">Loading…</Card>
       ) : schools.length === 0 ? (
@@ -94,7 +105,9 @@ export default function MemberSchoolsPage() {
         </Card>
       ) : (
         <Table columns={["School", "Centers", "School Ratings"]}>
-          {schools.map((s) => (
+          {schools
+            .filter((s) => !search.trim() || s.name.toLowerCase().includes(search.trim().toLowerCase()))
+            .map((s) => (
             <tr key={s.id} className="hover:bg-surface-alt">
               <td className="px-4 py-3 font-medium text-text-primary">{s.name}</td>
               <td className="px-4 py-3 text-text-secondary">{s.centers.map((c) => c.name).join(", ") || "—"}</td>

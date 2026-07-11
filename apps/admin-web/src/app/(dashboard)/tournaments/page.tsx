@@ -52,6 +52,7 @@ export default function AdminTournamentsPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Hand-over state: which tournament row has the transfer box open + email.
   const [handoverFor, setHandoverFor] = useState<string | null>(null);
@@ -123,54 +124,64 @@ export default function AdminTournamentsPage() {
 
   if (!user) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold">Whistle - Tournaments</h1>
-          <p className="text-sm text-text-secondary">
-            Create tournaments here, then hand them over to the organizer who runs them. Log in with a tournament
-            organizer account (separate from your academy login).
-          </p>
+      <div className="flex min-h-[75vh] items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+            <div className="border-b border-border bg-gradient-to-br from-accent/15 via-white/[0.03] to-transparent px-7 pb-6 pt-7 text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-12 w-auto" />
+              <p className="text-[11px] uppercase tracking-widest text-accent/80">🏆 Whistle Tournaments</p>
+              <h1 className="mt-1 text-2xl font-extrabold text-text-primary">
+                {mode === "login" ? "Organizer login" : "Create organizer account"}
+              </h1>
+              <p className="mt-1 text-xs text-text-secondary">
+                Create tournaments here, then hand them to the organizer who runs them.
+              </p>
+            </div>
+            <div className="p-7">
+              <div className="mb-5 flex gap-2 rounded-full border border-border bg-white/[0.03] p-1">
+                {(["login", "signup"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      mode === m ? "bg-accent text-accent-text shadow" : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {m === "login" ? "Login" : "Sign up"}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {mode === "signup" && (
+                  <>
+                    <Field label="Full name *" value={name} onChange={(e) => setName(e.target.value)} />
+                    <Field label="Organization (optional)" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+                  </>
+                )}
+                <Field label="Email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Field label="Password *" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                {error && <p className="text-sm text-danger">{error}</p>}
+                <PrimaryButton onClick={submitAuth} disabled={submitting} className="w-full">
+                  {submitting ? "Please wait…" : mode === "login" ? "Login" : "Create Account"}
+                </PrimaryButton>
+                <p className="pt-1 text-center text-xs text-text-muted">
+                  Demo: <span className="text-text-secondary">organizer@tourney.test / whistle123</span>
+                </p>
+                <p className="text-center text-xs text-text-secondary">
+                  Organizers run tournaments at{" "}
+                  <a href="/organizer" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                    /organizer
+                  </a>{" "}
+                  · players &amp; officials at{" "}
+                  <a href="/play" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                    /play
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <Card className="max-w-md">
-          <div className="mb-4 flex gap-2">
-            {(["login", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
-                  mode === m ? "bg-accent text-accent-text" : "border border-border text-text-secondary"
-                }`}
-              >
-                {m === "login" ? "Login" : "Create Organizer Account"}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-3">
-            {mode === "signup" && (
-              <>
-                <Field label="Full name *" value={name} onChange={(e) => setName(e.target.value)} />
-                <Field label="Organization (optional)" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
-              </>
-            )}
-            <Field label="Email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Field label="Password *" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <PrimaryButton onClick={submitAuth} disabled={submitting} className="w-full">
-              {submitting ? "Please wait…" : mode === "login" ? "Login" : "Create Account"}
-            </PrimaryButton>
-            <p className="text-xs text-text-secondary">Demo organizer: organizer@tourney.test / whistle123</p>
-            <p className="text-xs text-text-secondary">
-              External organizers manage tournaments at{" "}
-              <a href="/organizer" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                /organizer
-              </a>{" "}
-              · players &amp; officials at{" "}
-              <a href="/play" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                /play
-              </a>
-            </p>
-          </div>
-        </Card>
       </div>
     );
   }
@@ -222,13 +233,25 @@ export default function AdminTournamentsPage() {
         </div>
       )}
 
+      {mine && mine.tournaments.length > 0 && (
+        <Field
+          label=""
+          placeholder="Search tournaments…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      )}
+
       {!mine || mine.tournaments.length === 0 ? (
         <Card>
           <EmptyState message="No tournaments under this account. Create one, or it may already be handed over to an organizer." />
         </Card>
       ) : (
         <Table columns={["Tournament", "Sports", "Entries", "Status", "Public page", ""]}>
-          {mine.tournaments.map((t) => (
+          {mine.tournaments
+            .filter((t) => !search.trim() || t.name.toLowerCase().includes(search.trim().toLowerCase()))
+            .map((t) => (
             <tr key={t.id}>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2 font-medium text-text-primary">

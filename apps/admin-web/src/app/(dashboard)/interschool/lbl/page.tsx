@@ -37,6 +37,7 @@ export default function LblPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const [name, setName] = useState("");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
@@ -137,6 +138,16 @@ export default function LblPage() {
       {error && <Card className="text-sm text-danger">{error}</Card>}
       {notice && <Card className="text-sm text-success">{notice}</Card>}
 
+      {events.length > 0 && (
+        <Field
+          label=""
+          placeholder="Search LBL tournaments…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      )}
+
       {loading ? (
         <Card className="text-sm text-text-secondary">Loading…</Card>
       ) : events.length === 0 ? (
@@ -145,7 +156,9 @@ export default function LblPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {events.map((e) => (
+          {events
+            .filter((e) => !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase()))
+            .map((e) => (
             <Card key={e.id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
