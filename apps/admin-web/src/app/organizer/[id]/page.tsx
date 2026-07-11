@@ -119,6 +119,9 @@ export default function ManageTournamentPage() {
   // Each event manages entries, fixtures, scoring and standings — collapsed
   // by default (first event open) so multi-event tournaments stay scannable.
   const [openEvents, setOpenEvents] = useState<Record<string, boolean>>({});
+  // Per-match scheduling editor state (datetime-local + court).
+  const [schedOpen, setSchedOpen] = useState<Record<string, boolean>>({});
+  const [sched, setSched] = useState<Record<string, { at: string; venue: string }>>({});
   const [officialEmail, setOfficialEmail] = useState("");
   const [rulesDraft, setRulesDraft] = useState<string | null>(null);
 
@@ -424,15 +427,40 @@ export default function ManageTournamentPage() {
                     {ev.matches.map((m) => {
                       const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
                       const canScore = m.status !== "completed" && m.entryAId && m.entryBId;
+                      const when = (m as { scheduledAt?: string | null }).scheduledAt;
+                      const whenLabel = when
+                        ? new Date(when).toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+                        : null;
+                      const editor = sched[m.id] ?? {
+                        at: when ? new Date(new Date(when).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                        venue: m.venue ?? "",
+                      };
                       return (
-                        <div key={m.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
+                        <div key={m.id}>
+                        <div className="flex flex-wrap items-center gap-3 py-2 text-sm">
                           <span className="w-20 text-xs text-text-secondary">
                             R{m.round} · M{m.matchNo}
                           </span>
                           <span className="min-w-[220px] flex-1 font-medium text-text-primary">
                             {entryName(ev.entries, m.entryAId)} vs {entryName(ev.entries, m.entryBId)}
                           </span>
-                          <span className="w-24 text-xs text-text-secondary">{m.venue ?? "—"}</span>
+                          {/* Schedule chip — organizer staggers times & courts per match */}
+                          {m.status !== "completed" ? (
+                            <button
+                              type="button"
+                              onClick={() => setSchedOpen((p) => ({ ...p, [m.id]: !p[m.id] }))}
+                              className="rounded-full border border-border px-3 py-1 text-xs text-text-secondary transition hover:border-accent/60 hover:text-text-primary"
+                              title="Set match time & court"
+                            >
+                              🕒 {whenLabel ?? "Set time"}
+                              {m.venue ? ` · ${m.venue}` : ""}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-text-secondary">
+                              {whenLabel ?? ""}
+                              {m.venue ? `${whenLabel ? " · " : ""}${m.venue}` : whenLabel ? "" : "—"}
+                            </span>
+                          )}
                           {m.status === "completed" ? (
                             <span className="text-accent">
                               {m.scoreDisplay === "bye"
@@ -490,6 +518,41 @@ export default function ManageTournamentPage() {
                           ) : (
                             <span className="text-xs text-text-secondary">waiting for both slots</span>
                           )}
+                        </div>
+                        {schedOpen[m.id] && m.status !== "completed" && (
+                          <div className="mb-2 ml-20 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-alt/50 px-3 py-2">
+                            <input
+                              type="datetime-local"
+                              value={editor.at}
+                              onChange={(e) => setSched((p) => ({ ...p, [m.id]: { ...editor, at: e.target.value } }))}
+                              className="rounded-md border border-border bg-surface-alt px-2 py-1 text-xs text-text-primary focus:border-accent focus:outline-none"
+                            />
+                            <input
+                              value={editor.venue}
+                              onChange={(e) => setSched((p) => ({ ...p, [m.id]: { ...editor, venue: e.target.value } }))}
+                              placeholder="Court / ground"
+                              className="w-32 rounded-md border border-border bg-surface-alt px-2 py-1 text-xs text-text-primary focus:border-accent focus:outline-none"
+                            />
+                            <OutlineButton
+                              disabled={busy || (!editor.at && !editor.venue.trim())}
+                              className="!px-3 !py-1 text-xs"
+                              onClick={() =>
+                                act(async () => {
+                                  await tJson(`/tournaments/matches/${m.id}/schedule`, {
+                                    method: "POST",
+                                    body: JSON.stringify({
+                                      ...(editor.at ? { scheduledAt: new Date(editor.at).toISOString() } : {}),
+                                      venue: editor.venue.trim() || undefined,
+                                    }),
+                                  });
+                                  setSchedOpen((p) => ({ ...p, [m.id]: false }));
+                                })
+                              }
+                            >
+                              Save
+                            </OutlineButton>
+                          </div>
+                        )}
                         </div>
                       );
                     })}

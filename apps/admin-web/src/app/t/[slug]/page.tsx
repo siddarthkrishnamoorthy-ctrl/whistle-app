@@ -322,7 +322,24 @@ export default function PublicTournamentPage() {
                       <td className="py-2 pr-2 text-center font-mono">
                         {m.scoreDisplay === "bye" ? "bye" : m.status === "scheduled" ? "—" : `${m.scoreA}–${m.scoreB}`}
                       </td>
-                      <td className="py-2 pr-2 text-slate-400">{m.venue ?? "—"}</td>
+                      <td className="py-2 pr-2 text-slate-400">
+                        {[
+                          (m as { scheduledAt?: string | null }).scheduledAt &&
+                          new Date((m as { scheduledAt?: string }).scheduledAt!).getHours() +
+                            new Date((m as { scheduledAt?: string }).scheduledAt!).getMinutes() >
+                            0
+                            ? new Date((m as { scheduledAt?: string }).scheduledAt!).toLocaleString([], {
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : null,
+                          m.venue,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </td>
                       <td className="py-2">
                         <span
                           className={

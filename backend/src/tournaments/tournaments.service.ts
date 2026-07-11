@@ -578,6 +578,30 @@ export class TournamentsService {
     return this.completeMatchInternal(matchId, dto.scoreA, dto.scoreB, dto.scoreDisplay, userId);
   }
 
+  // Per-match scheduling (2026-07): the organizer staggers the game day —
+  // each match gets its own time and court instead of one shared date.
+  async scheduleMatch(organizerId: string, matchId: string, dto: { scheduledAt?: string; venue?: string }) {
+    const match = await this.prisma.tournamentMatch.findUnique({
+      where: { id: matchId },
+      include: { event: { include: { tournament: true } } },
+    });
+    if (!match) throw new NotFoundException("Match not found.");
+    if (match.event.tournament.organizerId !== organizerId) {
+      throw new ForbiddenException("Only the organizer schedules matches.");
+    }
+    if (match.status === "completed") throw new BadRequestException("This match is settled — its schedule can't change.");
+    if (dto.scheduledAt === undefined && dto.venue === undefined) {
+      throw new BadRequestException("Provide a date/time or a venue to update.");
+    }
+    return this.prisma.tournamentMatch.update({
+      where: { id: matchId },
+      data: {
+        ...(dto.scheduledAt !== undefined ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
+        ...(dto.venue !== undefined ? { venue: dto.venue || null } : {}),
+      },
+    });
+  }
+
   private async completeMatchInternal(matchId: string, scoreA: number, scoreB: number, display?: string, officialId?: string) {
     const match = await this.prisma.tournamentMatch.findUniqueOrThrow({ where: { id: matchId } });
     const winnerEntryId = scoreA > scoreB ? match.entryAId : match.entryBId;
@@ -800,6 +824,7 @@ export class TournamentsService {
           scoreDisplay: m.scoreDisplay,
           winnerEntryId: m.winnerEntryId,
           venue: m.venue,
+          scheduledAt: m.scheduledAt,
         })),
         standings: e.standings,
         heatRanking: e.heatRanking,

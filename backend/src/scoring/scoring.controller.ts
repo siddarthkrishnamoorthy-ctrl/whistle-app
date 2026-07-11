@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import type { FixtureStatus, MatchType } from "@prisma/client";
 import { ScoringService } from "./scoring.service";
 import { CreateFixtureDto } from "./dto/create-fixture.dto";
@@ -80,6 +80,18 @@ export class ScoringController {
     @Body("force") force?: boolean
   ) {
     return this.scoringService.confirmFixture(user.academyId as string, id, user.sub, force ?? false);
+  }
+
+  // Per-fixture scheduling: the host staggers match times/courts after
+  // fixtures generate (service enforces host-only for event fixtures).
+  @Patch("fixtures/:id/schedule")
+  @Roles("admin", "head_coach", "coach", "account_manager")
+  schedule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: { scheduledAt?: string; venue?: string }
+  ) {
+    return this.scoringService.scheduleFixture(user.academyId as string, id, dto);
   }
 
   @Post("fixtures/:id/manual-result")

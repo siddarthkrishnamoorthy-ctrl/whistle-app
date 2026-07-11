@@ -176,6 +176,17 @@ export class TournamentsController {
 
   // ── Scoring (organizer or appointed official) ────────────────────────────
 
+  // Per-match scheduling — organizer staggers times and courts.
+  @Post("matches/:matchId/schedule")
+  @TournamentRoles("t_organizer")
+  scheduleMatch(
+    @CurrentUser() user: TUser,
+    @Param("matchId") matchId: string,
+    @Body() dto: { scheduledAt?: string; venue?: string }
+  ) {
+    return this.service.scheduleMatch(user.sub, matchId, dto);
+  }
+
   @Post("matches/:matchId/score")
   @TournamentRoles("t_organizer", "t_official")
   scoreMatch(@CurrentUser() user: TUser, @Param("matchId") matchId: string, @Body() dto: ScoreMatchDto) {

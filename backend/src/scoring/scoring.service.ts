@@ -275,6 +275,39 @@ export class ScoringService implements OnModuleInit {
     return this.finalizeResult(session.fixtureId, dto, { ...by, enteredManually: false });
   }
 
+  // Per-fixture scheduling (2026-07): the HOST sets each match's date/time
+  // and court after fixtures generate — staggering a game day instead of
+  // every fixture inheriting the event's start date.
+  async scheduleFixture(
+    academyId: string,
+    fixtureId: string,
+    dto: { scheduledAt?: string; venue?: string }
+  ) {
+    const fixture = await this.assertFixtureAccess(academyId, fixtureId);
+    if (fixture.status === "completed" || fixture.status === "abandoned") {
+      throw new BadRequestException("This match is settled — its schedule can't change.");
+    }
+    if (fixture.eventId) {
+      const event = await this.prisma.interschoolEvent.findUnique({
+        where: { id: fixture.eventId },
+        select: { hostAcademyId: true },
+      });
+      if (event && event.hostAcademyId !== academyId) {
+        throw new ForbiddenException("Only the host school sets match times for this event.");
+      }
+    }
+    if (dto.scheduledAt === undefined && dto.venue === undefined) {
+      throw new BadRequestException("Provide a date/time or a venue to update.");
+    }
+    return this.prisma.fixture.update({
+      where: { id: fixtureId },
+      data: {
+        ...(dto.scheduledAt !== undefined ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
+        ...(dto.venue !== undefined ? { venue: dto.venue || null } : {}),
+      },
+    });
+  }
+
   // BRD 12.4 manual/retrospective entry — same downstream effects as live
   // scoring, flagged so it's transparent this wasn't scored in real time.
   // Runs the same per-sport score engine as the Tournament module (BRD 7.2):

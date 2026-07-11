@@ -75,6 +75,15 @@ interface OffMatch {
   venue: string | null;
   winnerEntryId: string | null;
   scoreDisplay: string | null;
+  scheduledAt?: string | null;
+}
+
+// "12 Sep, 09:30" once the organizer schedules the match.
+function matchWhen(m: { scheduledAt?: string | null }): string | null {
+  if (!m.scheduledAt) return null;
+  const d = new Date(m.scheduledAt);
+  if (d.getHours() === 0 && d.getMinutes() === 0) return null;
+  return d.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 interface OffEvent {
@@ -470,6 +479,7 @@ export default function PlayPortal() {
                                         <div className="mb-3 flex items-center justify-between text-[11px] text-slate-500">
                                           <span>
                                             Round {m.round} · Match {m.matchNo}
+                                            {matchWhen(m) ? ` · 🕒 ${matchWhen(m)}` : ""}
                                             {m.venue ? ` · ${m.venue}` : ""}
                                           </span>
                                           {m.status === "live" && (
@@ -570,7 +580,9 @@ export default function PlayPortal() {
                                       {offEntryName(ev.entries, m.entryAId)}{" "}
                                       <span className="text-slate-600">vs</span> {offEntryName(ev.entries, m.entryBId)}
                                     </span>
-                                    <span className="hidden text-xs text-slate-500 sm:inline">{m.venue ?? ""}</span>
+                                    <span className="hidden text-xs text-slate-500 sm:inline">
+                                      {[matchWhen(m), m.venue].filter(Boolean).join(" · ")}
+                                    </span>
                                     <span
                                       className={`w-20 shrink-0 text-right text-xs font-bold ${
                                         m.status === "live"

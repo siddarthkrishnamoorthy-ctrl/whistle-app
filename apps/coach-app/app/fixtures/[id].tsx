@@ -191,6 +191,11 @@ export default function FixtureDetailScreen() {
   const [winnerSide, setWinnerSide] = useState<"A" | "B" | "draw">("A");
   const [scoreDisplay, setScoreDisplay] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
+  const [schedVenue, setSchedVenue] = useState("");
+  const [scheduling, setScheduling] = useState(false);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -251,6 +256,26 @@ export default function FixtureDetailScreen() {
     }
   }
 
+  async function saveSchedule() {
+    if (!fixture) return;
+    setScheduling(true);
+    try {
+      const body: { scheduledAt?: string; venue?: string } = {};
+      if (/^\d{4}-\d{2}-\d{2}$/.test(schedDate.trim())) {
+        const time = /^\d{2}:\d{2}$/.test(schedTime.trim()) ? schedTime.trim() : "09:00";
+        body.scheduledAt = new Date(`${schedDate.trim()}T${time}:00`).toISOString();
+      }
+      if (schedVenue.trim()) body.venue = schedVenue.trim();
+      await apiJson(`/fixtures/${fixture.id}/schedule`, { method: "PATCH", body: JSON.stringify(body) });
+      setShowSchedule(false);
+      load();
+    } catch (e) {
+      Alert.alert("Couldn't schedule", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setScheduling(false);
+    }
+  }
+
   async function confirmResult() {
     if (!fixture) return;
     setSaving(true);
@@ -278,6 +303,13 @@ export default function FixtureDetailScreen() {
   // school's approval before it completes (backend rule).
   const canManual = SCORING_ROLES.includes(user?.role ?? "");
   const isOpen = !["completed", "abandoned"].includes(fixture.status);
+  // Scheduling is the HOST's call for event fixtures (backend enforces it);
+  // fixtures without an event (practice/internal) are open to scoring roles.
+  const eventHost = (fixture.event as { hostAcademyId?: string } | undefined)?.hostAcademyId;
+  const canSchedule = canScore && isOpen && (!eventHost || eventHost === user?.academyId);
+  const schedTimeLabel = fixture.scheduledAt
+    ? new Date(fixture.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
@@ -313,9 +345,47 @@ export default function FixtureDetailScreen() {
 
       <Card>
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-          {fixture.scheduledAt ? formatDate(fixture.scheduledAt) : "Unscheduled"}
-          {fixture.venue ? ` · ${fixture.venue}` : ""} · {fixture.matchType.replace("_", " ")}
+          {fixture.scheduledAt ? `📅 ${formatDate(fixture.scheduledAt)}${schedTimeLabel ? ` · 🕒 ${schedTimeLabel}` : ""}` : "Unscheduled"}
+          {fixture.venue ? ` · 📍 ${fixture.venue}` : ""} · {fixture.matchType.replace("_", " ")}
         </Text>
+        {canSchedule && (
+          <View style={{ marginTop: 10 }}>
+            <TouchableOpacity onPress={() => {
+              if (!showSchedule) {
+                // Prefill from the current schedule for quick tweaks.
+                if (fixture.scheduledAt) {
+                  const d = new Date(fixture.scheduledAt);
+                  setSchedDate(d.toISOString().slice(0, 10));
+                  setSchedTime(d.toTimeString().slice(0, 5));
+                }
+                setSchedVenue(fixture.venue ?? "");
+              }
+              setShowSchedule((v) => !v);
+            }} activeOpacity={0.7}>
+              <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600" }}>
+                {showSchedule ? "Hide scheduling" : "🕒 Set match time & court"}
+              </Text>
+            </TouchableOpacity>
+            {showSchedule && (
+              <View style={{ marginTop: 10 }}>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Field label="Date" value={schedDate} onChangeText={setSchedDate} placeholder="YYYY-MM-DD" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Field label="Time" value={schedTime} onChangeText={setSchedTime} placeholder="HH:MM" />
+                  </View>
+                </View>
+                <Field label="Court / ground" value={schedVenue} onChangeText={setSchedVenue} placeholder="e.g. Court 2" />
+                <PrimaryButton
+                  title={scheduling ? "Saving…" : "Save schedule"}
+                  onPress={saveSchedule}
+                  disabled={scheduling || (!/^\d{4}-\d{2}-\d{2}$/.test(schedDate.trim()) && !schedVenue.trim())}
+                />
+              </View>
+            )}
+          </View>
+        )}
         {fixture.resultSummary?.scoreDisplay ? (
           <Text style={{ color: colors.accent, fontSize: 20, fontWeight: "800", marginTop: 8 }}>
             {fixture.resultSummary.scoreDisplay}

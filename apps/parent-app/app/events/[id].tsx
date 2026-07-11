@@ -25,6 +25,15 @@ interface StandingsRow {
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+// "12 Sep · 09:30" — time shown once the host sets one (midnight = the
+// untouched default from fixture generation).
+function fixtureWhen(iso?: string | null): string {
+  if (!iso) return "Unscheduled";
+  const d = new Date(iso);
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+  return `${formatDate(iso)}${hasTime ? ` · 🕒 ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`;
+}
+
 const EVENT_TONE = { draft: "neutral", scheduled: "info", live: "warning", completed: "success", closed: "success" } as const;
 const FIXTURE_TONE = {
   draft: "neutral",
@@ -141,7 +150,7 @@ export default function EventDetailScreen() {
                 key={f.id}
                 title={`${f.sportKey} · ${f.matchType.replace("_", " ")}`}
                 subtitle={[
-                  f.scheduledAt ? formatDate(f.scheduledAt) : "Unscheduled",
+                  fixtureWhen(f.scheduledAt),
                   f.venue ?? undefined,
                   f.resultSummary?.scoreDisplay ?? undefined,
                 ]

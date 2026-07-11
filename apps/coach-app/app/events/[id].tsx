@@ -57,6 +57,15 @@ const FIXTURE_TONE = {
 } as const;
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+// "12 Sep · 09:30" — the time only once the host has actually set one
+// (midnight = the untouched default from fixture generation).
+function fixtureWhen(iso?: string | null): string {
+  if (!iso) return "Unscheduled";
+  const d = new Date(iso);
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+  return `${formatDate(iso)}${hasTime ? ` · 🕒 ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`;
+}
+
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -459,7 +468,7 @@ export default function EventDetailScreen() {
                   key={f.id}
                   title={`${f.sportKey} · ${f.matchType.replace("_", " ")}`}
                   subtitle={[
-                    f.scheduledAt ? formatDate(f.scheduledAt) : "Unscheduled",
+                    fixtureWhen(f.scheduledAt),
                     f.venue ?? undefined,
                     f.resultSummary?.scoreDisplay ?? undefined,
                   ]
