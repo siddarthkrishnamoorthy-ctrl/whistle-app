@@ -172,6 +172,10 @@ model Academy {
   allowanceMode    String  @default("true_up") @map("allowance_mode")
   // Suspended tenants (non-payment etc.) can't log in until reinstated.
   suspended        Boolean @default(false)
+  // Owner-granted sport access (2026-07): tenants only see/use these sports
+  // (dropdowns, drills, lesson plans). Empty array = all sports allowed, so
+  // pre-existing tenants keep working untouched.
+  allowedSports    String[] @default([]) @map("allowed_sports")
   createdAt     DateTime @default(now()) @map("created_at")
 
   centers            Center[]
@@ -593,7 +597,10 @@ model Invoice {
 
 model Drill {
   id                String      @id @default(uuid())
-  academyId         String      @map("academy_id")
+  // Nullable (2026-07): null = Whistle's platform drill library, curated by
+  // the operator; tenants read it but can't write to it. Non-null rows are
+  // legacy tenant-authored drills kept for their existing lesson plans.
+  academyId         String?     @map("academy_id")
   // Missing from the TDD's DDL for this table entirely, even though every
   // Drill Bank screen in the deck shows a drill name — added here.
   title             String
@@ -607,7 +614,7 @@ model Drill {
   media             Json?
   standardParameters Json?      @map("standard_parameters")
 
-  academy     Academy      @relation(fields: [academyId], references: [id])
+  academy     Academy?     @relation(fields: [academyId], references: [id])
   sport       Sport        @relation(fields: [sportKey], references: [key])
   assessments Assessment[]
 
@@ -635,7 +642,9 @@ model LessonPlan {
   // class_id): the Coach/Admin flow explicitly creates a lesson plan shell
   // first and assigns it to a class afterward (BRD 8.3/9.5), so classId can't
   // be the only way to know which academy owns a plan.
-  academyId         String   @map("academy_id")
+  // Nullable (2026-07): null = Whistle's platform lesson-plan repository —
+  // owner-curated; tenants view (per allowed sports) and adopt copies.
+  academyId         String?  @map("academy_id")
   classId           String?  @map("class_id")
   semesterId        String?  @map("semester_id")
   sessionId         String?  @map("session_id")
@@ -652,7 +661,7 @@ model LessonPlan {
   sessionFlow       Json     @map("session_flow")
   status            String   @default("active")
 
-  academy  Academy           @relation(fields: [academyId], references: [id])
+  academy  Academy?          @relation(fields: [academyId], references: [id])
   class    Class?            @relation(fields: [classId], references: [id])
   semester Semester?         @relation(fields: [semesterId], references: [id])
   session  ScheduledSession? @relation(fields: [sessionId], references: [id])

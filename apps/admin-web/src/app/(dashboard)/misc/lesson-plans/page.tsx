@@ -1,5 +1,10 @@
 "use client";
 
+// Tenant view of the lesson-plan repository (2026-07): the master library is
+// curated by Whistle (the platform operator) and filtered to the sports this
+// tenant has been granted. Tenants VIEW repository plans and adopt a copy
+// into their academy to assign/customise — they don't author masters here.
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -7,11 +12,10 @@ import { useApiList } from "@/lib/hooks";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, Field, SelectField, StatusPill, Tabs } from "@/components/ui";
 import type { LessonPlan, Sport } from "@/lib/types";
-import { NewLessonPlanModal, type CreateLessonPlanPayload } from "./new-lesson-plan-modal";
 
 type StatusTab = "active" | "upcoming" | "completed";
 const TABS: { key: StatusTab; label: string }[] = [
-  { key: "active", label: "Active" },
+  { key: "active", label: "Repository & Active" },
   { key: "upcoming", label: "Upcoming" },
   { key: "completed", label: "Completed" },
 ];
@@ -20,10 +24,10 @@ const STATUS_TONE = { active: "success", upcoming: "info", completed: "neutral" 
 export default function LessonPlansPage() {
   const router = useRouter();
   const [tab, setTab] = useState<StatusTab>("active");
-  const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState("");
-  const { data: plans, loading, error } = useApiList<LessonPlan>(`/lesson-plans?status=${tab}`);
+  const [adoptingId, setAdoptingId] = useState<string | null>(null);
+  const { data: plans, loading, error, refetch } = useApiList<LessonPlan>(`/lesson-plans?status=${tab}`);
   const { data: sports } = useApiList<Sport>("/sports");
 
   const visiblePlans = useMemo(() => {
@@ -35,19 +39,29 @@ export default function LessonPlansPage() {
     );
   }, [plans, search, sportKey]);
 
+  async function adopt(plan: LessonPlan) {
+    setAdoptingId(plan.id);
+    try {
+      const copy = await apiJson<LessonPlan>(`/lesson-plans/${plan.id}/duplicate`, { method: "POST" });
+      router.push(`/misc/lesson-plans/${copy.id}`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Could not adopt the plan.");
+      refetch();
+    } finally {
+      setAdoptingId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Lesson Plan Builder</h1>
-          <p className="text-sm text-text-secondary">Build session flows from the Drill Bank.</p>
+          <h1 className="text-xl font-semibold">Lesson Plans</h1>
+          <p className="text-sm text-text-secondary">
+            The <span className="font-semibold text-accent">Whistle repository</span> for your sports — use a plan to
+            bring an editable copy into your academy.
+          </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
-        >
-          Publish Plan
-        </button>
       </div>
 
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
@@ -80,39 +94,49 @@ export default function LessonPlansPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {visiblePlans.map((plan) => (
-            <Card key={plan.id} className="space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Link href={`/misc/lesson-plans/${plan.id}`} className="font-medium text-text-primary hover:text-accent">
-                    {plan.title}
-                  </Link>
-                  <p className="text-xs text-text-muted">{plan.class?.title ?? "Unassigned"}</p>
+          {visiblePlans.map((plan) => {
+            const isRepository = plan.academyId == null;
+            return (
+              <Card key={plan.id} className="space-y-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Link href={`/misc/lesson-plans/${plan.id}`} className="font-medium text-text-primary hover:text-accent">
+                      {plan.title}
+                    </Link>
+                    <p className="text-xs text-text-muted">
+                      {isRepository ? "Whistle repository" : (plan.class?.title ?? "Unassigned")}
+                    </p>
+                  </div>
+                  {isRepository ? (
+                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent">
+                      🏛 Repository
+                    </span>
+                  ) : (
+                    <StatusPill tone={STATUS_TONE[plan.status]}>{plan.status}</StatusPill>
+                  )}
                 </div>
-                <StatusPill tone={STATUS_TONE[plan.status]}>{plan.status}</StatusPill>
-              </div>
-              {plan.goals && <p className="text-sm text-text-secondary">{plan.goals}</p>}
-              <div className="flex gap-2 text-xs text-text-muted">
-                {plan.sport && <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.sport.name}</span>}
-                <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.sessionFlow.length} drills</span>
-                {plan.targetDurationMin && (
-                  <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.targetDurationMin} min target</span>
-                )}
-              </div>
-            </Card>
-          ))}
+                {plan.goals && <p className="text-sm text-text-secondary">{plan.goals}</p>}
+                <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                  {plan.sport && <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.sport.name}</span>}
+                  <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.sessionFlow.length} drills</span>
+                  {plan.targetDurationMin && (
+                    <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.targetDurationMin} min target</span>
+                  )}
+                  {isRepository && (
+                    <button
+                      onClick={() => adopt(plan)}
+                      disabled={adoptingId === plan.id}
+                      className="ml-auto rounded-full border border-accent/60 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/25 disabled:opacity-50"
+                    >
+                      {adoptingId === plan.id ? "Adopting…" : "Use in my academy"}
+                    </button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
-
-      <NewLessonPlanModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={async (dto: CreateLessonPlanPayload) => {
-          const created = await apiJson<LessonPlan>("/lesson-plans", { method: "POST", body: JSON.stringify(dto) });
-          setModalOpen(false);
-          router.push(`/misc/lesson-plans/${created.id}`);
-        }}
-      />
     </div>
   );
 }

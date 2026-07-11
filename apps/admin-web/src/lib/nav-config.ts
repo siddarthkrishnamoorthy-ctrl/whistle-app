@@ -6,7 +6,6 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardList,
-  Dumbbell,
   Flag,
   GraduationCap,
   Inbox,
@@ -66,8 +65,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Multisport Curriculum & Assessment",
     items: [
+      // Drill Bank removed from tenant nav (2026-07): the drill library and
+      // lesson-plan repository are curated by Whistle on the /platform
+      // console; tenants view lesson plans for their granted sports only.
       { label: "Lesson Plans", href: "/misc/lesson-plans", icon: BookOpen },
-      { label: "Drill Bank", href: "/misc/drill-bank", icon: Dumbbell },
       { label: "Curriculum", href: "/misc/curriculum", icon: ListOrdered },
       { label: "Grades", href: "/misc/grades", icon: Layers },
       { label: "Assessment Tests", href: "/misc/assessment-tests", icon: ClipboardList },

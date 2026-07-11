@@ -150,7 +150,8 @@ export interface SessionFlowStep {
 
 export interface LessonPlan {
   id: string;
-  academyId: string;
+  // null = Whistle's platform repository (owner-curated master)
+  academyId: string | null;
   classId: string | null;
   semesterId: string | null;
   title: string;

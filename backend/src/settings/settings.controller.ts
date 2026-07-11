@@ -13,6 +13,13 @@ import type { AuthenticatedUser } from "../auth/jwt-payload";
 export class SettingsController {
   constructor(private settingsService: SettingsService) {}
 
+  // No @Roles — every academy role (coach, parent, AM…) needs the tenant's
+  // branding to render the school/academy name + logo in their header.
+  @Get("branding")
+  branding(@CurrentUser() user: AuthenticatedUser) {
+    return this.settingsService.branding(user.academyId as string);
+  }
+
   @Get()
   get(@CurrentUser() user: AuthenticatedUser) {
     return this.settingsService.get(user.academyId as string);

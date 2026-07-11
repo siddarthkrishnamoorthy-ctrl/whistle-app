@@ -38,6 +38,7 @@ export class PlatformService implements OnModuleInit {
       });
       this.logger.log("Seeded platform owner account (owner@whistle.app).");
     }
+    await this.seedContentLibrary();
   }
 
   // ── Tenants ────────────────────────────────────────────────────────────────
@@ -69,6 +70,8 @@ export class PlatformService implements OnModuleInit {
         suspended: a.suspended,
         studentAllowance: a.studentAllowance,
         allowanceMode: a.allowanceMode,
+        allowedSports: a.allowedSports,
+        brandTheme: a.brandTheme,
         counts: a._count,
         subscription: a.platformSubscription
           ? {
@@ -86,16 +89,35 @@ export class PlatformService implements OnModuleInit {
     });
   }
 
-  // Operator dials: student allowance + hard/true-up mode + suspension.
+  // Operator dials: student allowance + hard/true-up mode + suspension +
+  // sport access grant + display branding (name/font/logo).
   async updateTenant(
     id: string,
-    dto: { name?: string; studentAllowance?: number | null; allowanceMode?: string; suspended?: boolean }
+    dto: {
+      name?: string;
+      studentAllowance?: number | null;
+      allowanceMode?: string;
+      suspended?: boolean;
+      allowedSports?: string[];
+      brandTheme?: { displayName?: string; fontKey?: string; logoUrl?: string } | null;
+    }
   ) {
     const academy = await this.prisma.academy.findUnique({ where: { id } });
     if (!academy) throw new NotFoundException("Tenant not found.");
     if (dto.allowanceMode && !["hard", "true_up"].includes(dto.allowanceMode)) {
       throw new BadRequestException('allowanceMode must be "hard" or "true_up".');
     }
+    if (dto.allowedSports !== undefined && !Array.isArray(dto.allowedSports)) {
+      throw new BadRequestException("allowedSports must be an array of sport keys.");
+    }
+    // Branding merges (rather than replaces) so setting the font doesn't wipe
+    // a logo uploaded earlier; explicit null clears it entirely.
+    const mergedBrand =
+      dto.brandTheme === null
+        ? null
+        : dto.brandTheme !== undefined
+          ? { ...((academy.brandTheme as object | null) ?? {}), ...dto.brandTheme }
+          : undefined;
     return this.prisma.academy.update({
       where: { id },
       data: {
@@ -103,6 +125,8 @@ export class PlatformService implements OnModuleInit {
         ...(dto.studentAllowance !== undefined ? { studentAllowance: dto.studentAllowance } : {}),
         ...(dto.allowanceMode !== undefined ? { allowanceMode: dto.allowanceMode } : {}),
         ...(dto.suspended !== undefined ? { suspended: dto.suspended } : {}),
+        ...(dto.allowedSports !== undefined ? { allowedSports: dto.allowedSports } : {}),
+        ...(mergedBrand !== undefined ? { brandTheme: mergedBrand as object } : {}),
       },
     });
   }
@@ -262,5 +286,203 @@ export class PlatformService implements OnModuleInit {
     const invoice = await this.prisma.platformInvoice.findUnique({ where: { id: invoiceId } });
     if (!invoice) throw new NotFoundException("Invoice not found.");
     return this.billing.markInvoicePaid(invoice.academyId, invoiceId);
+  }
+
+  // ── Content library: Whistle's drill bank + lesson plan repository ────────
+  // academyId null = platform-owned. Tenants read this library (filtered to
+  // their granted sports); only the operator writes to it.
+
+  listPlatformDrills(sportKey?: string) {
+    return this.prisma.drill.findMany({
+      where: { academyId: null, ...(sportKey ? { sportKey } : {}) },
+      include: { sport: true },
+      orderBy: [{ sportKey: "asc" }, { title: "asc" }],
+    });
+  }
+
+  createPlatformDrill(dto: {
+    title: string;
+    sportKey: string;
+    level?: string;
+    durationMin?: number;
+    description?: string;
+    equipment?: string[];
+    videoUrl?: string;
+  }) {
+    if (!dto.title?.trim() || !dto.sportKey) throw new BadRequestException("Title and sport are required.");
+    return this.prisma.drill.create({
+      data: {
+        academyId: null,
+        title: dto.title.trim(),
+        sportKey: dto.sportKey,
+        level: (dto.level as never) ?? undefined,
+        durationMin: dto.durationMin,
+        description: dto.description,
+        equipment: dto.equipment ?? [],
+        media: dto.videoUrl ? { videoUrl: dto.videoUrl } : undefined,
+      },
+      include: { sport: true },
+    });
+  }
+
+  private async platformDrillOrThrow(id: string) {
+    const drill = await this.prisma.drill.findUnique({ where: { id } });
+    if (!drill) throw new NotFoundException("Drill not found.");
+    if (drill.academyId !== null) throw new BadRequestException("That drill belongs to a tenant's legacy bank, not the platform library.");
+    return drill;
+  }
+
+  async updatePlatformDrill(
+    id: string,
+    dto: { title?: string; level?: string; durationMin?: number; description?: string; equipment?: string[]; videoUrl?: string }
+  ) {
+    const existing = await this.platformDrillOrThrow(id);
+    return this.prisma.drill.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.level !== undefined ? { level: dto.level as never } : {}),
+        ...(dto.durationMin !== undefined ? { durationMin: dto.durationMin } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.equipment !== undefined ? { equipment: dto.equipment } : {}),
+        ...(dto.videoUrl !== undefined
+          ? { media: { ...((existing.media as object | null) ?? {}), videoUrl: dto.videoUrl } }
+          : {}),
+      },
+      include: { sport: true },
+    });
+  }
+
+  async deletePlatformDrill(id: string) {
+    await this.platformDrillOrThrow(id);
+    await this.prisma.drill.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  listPlatformLessonPlans(sportKey?: string) {
+    return this.prisma.lessonPlan.findMany({
+      where: { academyId: null, ...(sportKey ? { sportKey } : {}) },
+      include: { sport: true },
+      orderBy: [{ sportKey: "asc" }, { title: "asc" }],
+    });
+  }
+
+  async createPlatformLessonPlan(dto: {
+    title: string;
+    sportKey: string;
+    level?: string;
+    goals?: string;
+    objectives?: string[];
+    targetDurationMin?: number;
+    drillIds?: string[];
+  }) {
+    if (!dto.title?.trim() || !dto.sportKey) throw new BadRequestException("Title and sport are required.");
+    const drills = dto.drillIds?.length
+      ? await this.prisma.drill.findMany({ where: { id: { in: dto.drillIds }, academyId: null } })
+      : [];
+    const sessionFlow = drills.map((d, i) => ({
+      order: i,
+      drillId: d.id,
+      drillTitle: d.title,
+      durationMin: d.durationMin ?? 10,
+    }));
+    return this.prisma.lessonPlan.create({
+      data: {
+        academyId: null,
+        title: dto.title.trim(),
+        sportKey: dto.sportKey,
+        level: dto.level,
+        goals: dto.goals,
+        objectives: dto.objectives ?? [],
+        targetDurationMin: dto.targetDurationMin ?? sessionFlow.reduce((s, f) => s + f.durationMin, 0),
+        sessionFlow: sessionFlow as unknown as object,
+        whatToBring: [...new Set(drills.flatMap((d) => d.equipment))],
+        status: "active",
+      },
+      include: { sport: true },
+    });
+  }
+
+  async deletePlatformLessonPlan(id: string) {
+    const plan = await this.prisma.lessonPlan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException("Lesson plan not found.");
+    if (plan.academyId !== null) throw new BadRequestException("That plan belongs to a tenant, not the repository.");
+    await this.prisma.lessonPlan.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ── Shared features: platform-wide tournaments + Match Center ─────────────
+
+  listAllTournaments() {
+    return this.prisma.tournament.findMany({
+      include: {
+        organizer: { select: { id: true, name: true, email: true } },
+        _count: { select: { events: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }
+
+  listAllEvents() {
+    return this.prisma.interschoolEvent.findMany({
+      include: {
+        hostAcademy: { select: { id: true, name: true } },
+        _count: { select: { fixtures: true, rosters: true } },
+      },
+      orderBy: { startDate: "desc" },
+      take: 100,
+    });
+  }
+
+  // ── Boot seed: starter drill + lesson-plan library ─────────────────────────
+  // Idempotent — only fires when the platform library is empty, so a fresh
+  // install demos the tenant read-only repository straight away.
+  private async seedContentLibrary() {
+    const existing = await this.prisma.drill.count({ where: { academyId: null } });
+    if (existing > 0) return;
+    const sports = await this.prisma.sport.findMany({ orderBy: { name: "asc" } });
+    for (const sport of sports) {
+      const warmup = await this.prisma.drill.create({
+        data: {
+          academyId: null,
+          title: `${sport.name} — Dynamic Warm-up`,
+          sportKey: sport.key,
+          level: "beginner",
+          durationMin: 10,
+          description: `Progressive pulse-raiser and mobility routine tailored to ${sport.name.toLowerCase()}: light movement, dynamic stretching, and sport-specific activation patterns.`,
+          equipment: ["Cones", "Markers"],
+        },
+      });
+      const core = await this.prisma.drill.create({
+        data: {
+          academyId: null,
+          title: `${sport.name} — Core Skills Circuit`,
+          sportKey: sport.key,
+          level: "intermediate",
+          durationMin: 25,
+          description: `Station-based circuit covering the fundamental techniques of ${sport.name.toLowerCase()}, with coach demonstrations and peer feedback rounds.`,
+          equipment: ["Cones", "Whistle"],
+        },
+      });
+      await this.prisma.lessonPlan.create({
+        data: {
+          academyId: null,
+          title: `${sport.name} — Foundation Session`,
+          sportKey: sport.key,
+          level: "beginner",
+          goals: `Introduce and consolidate the core movement and technique base for ${sport.name.toLowerCase()}.`,
+          objectives: ["Safe warm-up habits", "Fundamental technique", "Small-group game sense"],
+          targetDurationMin: 35,
+          sessionFlow: [
+            { order: 0, drillId: warmup.id, drillTitle: warmup.title, durationMin: 10 },
+            { order: 1, drillId: core.id, drillTitle: core.title, durationMin: 25 },
+          ] as unknown as object,
+          whatToBring: ["Cones", "Markers", "Whistle"],
+          status: "active",
+        },
+      });
+    }
+    this.logger.log(`Seeded platform content library for ${sports.length} sports.`);
   }
 }

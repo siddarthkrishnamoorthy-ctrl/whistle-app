@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { allowedSportsFor } from "../common/sport-access";
 import { SemestersService } from "../semesters/semesters.service";
 import type { CreateLessonPlanDto } from "./dto/create-lesson-plan.dto";
 import type { UpdateLessonPlanDto } from "./dto/update-lesson-plan.dto";
@@ -12,9 +13,15 @@ export class LessonPlansService {
     private semestersService: SemestersService
   ) {}
 
-  findAll(academyId: string, status?: string) {
+  // Tenants see Whistle's platform repository (academyId null, limited to
+  // their granted sports) alongside their own working copies (2026-07).
+  async findAll(academyId: string, status?: string) {
+    const allowed = await allowedSportsFor(this.prisma, academyId);
     return this.prisma.lessonPlan.findMany({
-      where: { academyId, ...(status ? { status } : {}) },
+      where: {
+        OR: [{ academyId }, { academyId: null, ...(allowed ? { sportKey: { in: allowed } } : {}) }],
+        ...(status ? { status } : {}),
+      },
       include: { class: true, sport: true },
       orderBy: { title: "asc" },
     });
@@ -26,7 +33,8 @@ export class LessonPlansService {
       include: { class: true, sport: true, semester: true },
     });
     if (!plan) throw new NotFoundException("Lesson plan not found.");
-    if (plan.academyId !== academyId) throw new ForbiddenException();
+    // Platform repository plans (academyId null) are readable by every tenant.
+    if (plan.academyId !== null && plan.academyId !== academyId) throw new ForbiddenException();
     return plan;
   }
 
@@ -51,7 +59,11 @@ export class LessonPlansService {
   }
 
   async update(academyId: string, id: string, dto: UpdateLessonPlanDto) {
-    await this.findOneOrThrow(academyId, id);
+    const existing = await this.findOneOrThrow(academyId, id);
+    // Repository masters are owner-curated — tenants adopt a copy instead.
+    if (existing.academyId === null) {
+      throw new ForbiddenException("This is a Whistle repository plan — duplicate it to customise a copy for your academy.");
+    }
     const whatToBring = dto.sessionFlow ? await this.aggregateEquipment(academyId, dto.sessionFlow) : undefined;
     return this.prisma.lessonPlan.update({
       where: { id },
@@ -65,10 +77,30 @@ export class LessonPlansService {
   }
 
   async assignToClass(academyId: string, id: string, classId: string) {
-    await this.findOneOrThrow(academyId, id);
+    const plan = await this.findOneOrThrow(academyId, id);
     const klass = await this.prisma.class.findUnique({ where: { id: classId }, include: { center: true } });
     if (!klass) throw new NotFoundException("Class not found.");
     if (klass.center.academyId !== academyId) throw new ForbiddenException();
+    // Assigning a repository master would leak one tenant's class onto the
+    // shared row — adopt a per-academy copy and assign that instead.
+    if (plan.academyId === null) {
+      return this.prisma.lessonPlan.create({
+        data: {
+          academyId,
+          classId,
+          title: plan.title,
+          sportKey: plan.sportKey,
+          level: plan.level,
+          goals: plan.goals,
+          objectives: plan.objectives,
+          targetDurationMin: plan.targetDurationMin,
+          sessionFlow: plan.sessionFlow as object,
+          whatToBring: plan.whatToBring,
+          status: "upcoming",
+        },
+        include: { class: true },
+      });
+    }
     return this.prisma.lessonPlan.update({ where: { id }, data: { classId }, include: { class: true } });
   }
 
@@ -92,6 +124,9 @@ export class LessonPlansService {
 
   async markComplete(academyId: string, id: string) {
     const existing = await this.findOneOrThrow(academyId, id);
+    if (existing.academyId === null) {
+      throw new ForbiddenException("Repository plans aren't completed directly — duplicate one into your academy first.");
+    }
     const updated = await this.prisma.lessonPlan.update({ where: { id }, data: { status: "completed" } });
     if (existing.semesterId) await this.semestersService.recomputeStatus(existing.semesterId);
     return updated;
@@ -101,7 +136,7 @@ export class LessonPlansService {
     if (!sessionFlow || sessionFlow.length === 0) return [];
     const drillIds = [...new Set(sessionFlow.map((s) => s.drillId))];
     const drills = await this.prisma.drill.findMany({
-      where: { id: { in: drillIds }, academyId },
+      where: { id: { in: drillIds }, OR: [{ academyId }, { academyId: null }] },
       select: { equipment: true },
     });
     return [...new Set(drills.flatMap((d) => d.equipment))];

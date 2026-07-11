@@ -1,13 +1,20 @@
 import { ConflictException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { allowedSportsFor } from "../common/sport-access";
 import type { CreateSportDto } from "./dto/create-sport.dto";
 
 @Injectable()
 export class SportsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.sport.findMany({ orderBy: { name: "asc" } });
+  // Filtered by the caller's tenant sport grant: a tenant only sees the
+  // sports Whistle gave them access to (every dropdown builds off this list).
+  async findAll(academyId?: string | null) {
+    const allowed = await allowedSportsFor(this.prisma, academyId);
+    return this.prisma.sport.findMany({
+      where: allowed ? { key: { in: allowed } } : undefined,
+      orderBy: { name: "asc" },
+    });
   }
 
   async create(dto: CreateSportDto) {

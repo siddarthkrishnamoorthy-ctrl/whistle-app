@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { NAV_SECTIONS } from "@/lib/nav-config";
+import { TenantBrand } from "@/components/tenant-brand";
 import { initials } from "@whistle/shared";
 import clsx from "clsx";
 
@@ -120,6 +121,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="flex items-center justify-between border-b border-border bg-white/[0.03] px-6 py-3 backdrop-blur-xl">
           <div className="text-sm text-text-secondary">Whistle Sports</div>
           <div className="flex items-center gap-4">
+            {/* The tenant's own school/academy identity — name in their font
+                + their logo — lives on the RIGHT side of the window. */}
+            <TenantBrand />
             <button
               onClick={() => signOut().then(() => router.replace("/login"))}
               className="text-xs text-text-secondary hover:text-danger"

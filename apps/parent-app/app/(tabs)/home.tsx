@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useChildren } from "@/lib/children-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, PrimaryButton, colors } from "@/components/ui";
+import { TenantBrand } from "@/components/tenant-brand";
 import { formatDate, formatTime, initials, type Assessment, type Rating, type ScheduledSession } from "@whistle/shared";
 
 interface Snapshot {
@@ -73,21 +74,25 @@ export default function HomeScreen() {
             <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: -2 }}>By School of Sports</Text>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => signOut().then(() => router.replace("/login"))}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: 999,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-          }}
-        >
-          <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>Log out</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {/* The child's school/academy identity sits on the RIGHT. */}
+          <TenantBrand />
+          <TouchableOpacity
+            onPress={() => signOut().then(() => router.replace("/login"))}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 999,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>Log out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Greeting */}
