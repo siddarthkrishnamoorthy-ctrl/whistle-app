@@ -217,6 +217,7 @@ export class InterschoolService {
         pricePerHead: dto.pricePerHead,
         isLbl: dto.isLbl ?? false,
         maxTeams: dto.maxTeams,
+        venue: dto.venue,
         status: "draft",
       },
     });
@@ -319,6 +320,8 @@ export class InterschoolService {
               matchType: "interschool",
               status: "scheduled",
               scheduledAt: event.startDate,
+              // Fixtures inherit the event's venue (the host's center).
+              venue: event.venue,
             },
           });
           created.push(fixture.id);

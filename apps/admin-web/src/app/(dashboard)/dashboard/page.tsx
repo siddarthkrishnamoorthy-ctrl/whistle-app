@@ -91,25 +91,92 @@ export default function DashboardPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load dashboard."));
   }, []);
 
+  const collectionRate =
+    snap && snap.invoices.totalInvoiced > 0
+      ? Math.round((snap.invoices.received / snap.invoices.totalInvoiced) * 100)
+      : 0;
+  const activeRate = snap && snap.totalClients > 0 ? Math.round((snap.activeClients / snap.totalClients) * 100) : 0;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  // Tile system in the style of current club-management dashboards: a tinted
+  // icon chip per metric, big number, quiet context line, optional meter.
   const stats = snap
     ? [
-        { label: "Active students", value: String(snap.activeClients), sub: `${snap.totalClients} total`, icon: Users, href: "/academy/clients" },
-        { label: "Sessions today", value: String(snap.sessionsToday), sub: "across all centers", icon: CalendarDays, href: "/academy/schedule" },
-        { label: "Fees received", value: inr(snap.invoices.received), sub: `of ${inr(snap.invoices.totalInvoiced)} invoiced`, icon: Wallet, href: "/sales/invoices" },
-        { label: "Outstanding", value: inr(snap.invoices.outstanding), sub: "pending collection", icon: IndianRupee, href: "/sales/invoices" },
+        {
+          label: "Active students",
+          value: String(snap.activeClients),
+          sub: `${activeRate}% of ${snap.totalClients} enrolled`,
+          icon: Users,
+          href: "/academy/clients",
+          chip: "bg-emerald-400/15 text-emerald-300",
+          bar: { pct: activeRate, cls: "bg-emerald-400" },
+        },
+        {
+          label: "Sessions today",
+          value: String(snap.sessionsToday),
+          sub: "across all centers",
+          icon: CalendarDays,
+          href: "/academy/schedule",
+          chip: "bg-sky-400/15 text-sky-300",
+        },
+        {
+          label: "Fees received",
+          value: inr(snap.invoices.received),
+          sub: `${collectionRate}% of ${inr(snap.invoices.totalInvoiced)} collected`,
+          icon: Wallet,
+          href: "/sales/invoices",
+          chip: "bg-amber-400/15 text-amber-300",
+          bar: { pct: collectionRate, cls: "bg-amber-400" },
+        },
+        {
+          label: "Open enquiries",
+          value: String(snap.openEnquiries),
+          sub: "leads waiting for follow-up",
+          icon: Inbox,
+          href: "/academy/enquiries",
+          chip: "bg-rose-400/15 text-rose-300",
+        },
       ]
     : [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Dashboard</h1>
-          <p className="text-sm text-text-secondary">Welcome back, {user?.name ?? "there"}.</p>
+      {/* Hero — gradient banner with the platform-enrollment chips inline */}
+      <div className="relative overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/15 via-white/[0.03] to-transparent p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">
+              {greeting}, {user?.name?.split(" ")[0] ?? "there"} 👋
+            </h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })} — here&apos;s
+              how your academy looks right now.
+            </p>
+          </div>
+          {snap?.enrollment && (
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "Academies on Whistle", value: snap.enrollment.academiesOnPlatform, icon: Building2, href: "/dashboard" },
+                { label: "Partner schools", value: snap.enrollment.mySchools, icon: School, href: "/academy/schools" },
+                { label: "Centers", value: snap.enrollment.myCenters, icon: MapPin, href: "/academy/centers" },
+              ].map((c) => {
+                const Icon = c.icon;
+                return (
+                  <Link
+                    key={c.label}
+                    href={c.href}
+                    className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 transition hover:border-accent/50"
+                  >
+                    <Icon className="h-4 w-4 text-accent" strokeWidth={1.8} />
+                    <span className="text-lg font-bold text-text-primary">{c.value}</span>
+                    <span className="text-xs text-text-secondary">{c.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
-        {/* Logo anchored at the top-right corner of the home screen */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/whistle-logo.png" alt="Whistle" className="h-12 w-auto" />
       </div>
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
@@ -117,65 +184,26 @@ export default function DashboardPage() {
 
       {snap && (
         <>
-          {/* Company-level enrollment strip (product ask: "overall admin
-              login should say how many academies or schools are enrolled") */}
-          {snap.enrollment && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {[
-                {
-                  label: "Academies on Whistle",
-                  value: snap.enrollment.academiesOnPlatform,
-                  sub: "enrolled on the platform",
-                  icon: Building2,
-                  href: "/dashboard",
-                },
-                {
-                  label: "Partner schools",
-                  value: snap.enrollment.mySchools,
-                  sub: "enrolled with your academy",
-                  icon: School,
-                  href: "/academy/schools",
-                },
-                {
-                  label: "Centers",
-                  value: snap.enrollment.myCenters,
-                  sub: "active venues",
-                  icon: MapPin,
-                  href: "/academy/centers",
-                },
-              ].map((s) => {
-                const Icon = s.icon;
-                return (
-                  <Link key={s.label} href={s.href}>
-                    <Card className="border-admin-action/30 bg-admin-action/5 transition hover:border-admin-action/60">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-text-muted">{s.label}</div>
-                          <div className="mt-2 text-2xl font-bold text-admin-action">{s.value}</div>
-                          <div className="mt-1 text-xs text-text-secondary">{s.sub}</div>
-                        </div>
-                        <Icon className="h-5 w-5 text-admin-action/70" strokeWidth={1.8} />
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((s) => {
               const Icon = s.icon;
               return (
                 <Link key={s.label} href={s.href}>
-                  <Card className="transition hover:border-accent/50">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-xs uppercase tracking-wide text-text-muted">{s.label}</div>
-                        <div className="mt-2 text-2xl font-bold text-text-primary">{s.value}</div>
-                        <div className="mt-1 text-xs text-text-secondary">{s.sub}</div>
+                  <Card className="h-full transition hover:-translate-y-0.5 hover:border-accent/50">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${s.chip}`}>
+                        <Icon className="h-5 w-5" strokeWidth={1.8} />
                       </div>
-                      <Icon className="h-5 w-5 text-accent" strokeWidth={1.8} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs uppercase tracking-wide text-text-muted">{s.label}</div>
+                        <div className="mt-1 truncate text-2xl font-bold text-text-primary">{s.value}</div>
+                        <div className="mt-0.5 text-xs text-text-secondary">{s.sub}</div>
+                        {s.bar && (
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
+                            <div className={`h-full rounded-full ${s.bar.cls}`} style={{ width: `${s.bar.pct}%` }} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 </Link>
@@ -241,17 +269,51 @@ export default function DashboardPage() {
               )}
             </Card>
 
+            {/* Collections ring gauge — received vs outstanding at a glance */}
             <Card>
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
-                  <Inbox className="h-4 w-4 text-info" strokeWidth={1.8} /> Enquiries
+                  <IndianRupee className="h-4 w-4 text-warning" strokeWidth={1.8} /> Collections
                 </div>
-                <Link href="/academy/enquiries" className="text-xs text-accent hover:underline">
-                  Open CRM →
+                <Link href="/sales/invoices" className="text-xs text-accent hover:underline">
+                  Invoices →
                 </Link>
               </div>
-              <div className="text-3xl font-bold text-text-primary">{snap.openEnquiries}</div>
-              <p className="mt-1 text-sm text-text-secondary">open leads waiting for follow-up</p>
+              <div className="flex items-center gap-5">
+                <div className="relative h-28 w-28 shrink-0">
+                  <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
+                    <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="13" />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="48"
+                      fill="none"
+                      stroke="#fbbf24"
+                      strokeWidth="13"
+                      strokeLinecap="round"
+                      strokeDasharray={String(2 * Math.PI * 48)}
+                      strokeDashoffset={String(2 * Math.PI * 48 * (1 - collectionRate / 100))}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xl font-bold text-text-primary">{collectionRate}%</span>
+                    <span className="text-[10px] text-text-muted">collected</span>
+                  </div>
+                </div>
+                <div className="min-w-0 space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                    <span className="text-text-secondary">Received</span>
+                    <span className="ml-auto font-semibold text-text-primary">{inr(snap.invoices.received)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
+                    <span className="text-text-secondary">Outstanding</span>
+                    <span className="ml-auto font-semibold text-text-primary">{inr(snap.invoices.outstanding)}</span>
+                  </div>
+                  <p className="text-xs text-text-muted">of {inr(snap.invoices.totalInvoiced)} invoiced</p>
+                </div>
+              </div>
             </Card>
           </div>
         </>

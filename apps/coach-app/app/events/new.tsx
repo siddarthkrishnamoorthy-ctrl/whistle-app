@@ -9,6 +9,11 @@ interface Sport {
   name: string;
 }
 
+interface Center {
+  id: string;
+  name: string;
+}
+
 const AGE_BANDS = ["U9", "U11", "U13", "U15", "U17", "Open"];
 const FORMATS = [
   { key: "individual", label: "Singles" },
@@ -72,6 +77,8 @@ export default function HostEventScreen() {
   const [formatType, setFormatType] = useState<(typeof FORMATS)[number]["key"]>("individual");
   const [ageBands, setAgeBands] = useState<string[]>([]);
   const [maxTeams, setMaxTeams] = useState("");
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [venue, setVenue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -79,6 +86,14 @@ export default function HostEventScreen() {
   useEffect(() => {
     apiJson<Sport[]>("/sports")
       .then(setSports)
+      .catch(() => undefined);
+    // Venue = one of the academy's centers, so visiting teams know where
+    // to go and every generated fixture carries the ground.
+    apiJson<Center[]>("/centers")
+      .then((all) => {
+        setCenters(all);
+        setVenue((prev) => prev || all[0]?.name || "");
+      })
       .catch(() => undefined);
   }, []);
 
@@ -113,6 +128,7 @@ export default function HostEventScreen() {
           startDate,
           endDate,
           maxTeams: maxTeams.trim() ? Number(maxTeams) : undefined,
+          venue: venue || undefined,
         }),
       });
       // Publish right away so network academies can discover it.
@@ -173,6 +189,21 @@ export default function HostEventScreen() {
           onToggle={toggle(ageBands, setAgeBands)}
         />
       </Card>
+
+      {centers.length > 0 && (
+        <Card>
+          <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 10 }}>Venue</Text>
+          <ChipRow
+            scroll
+            options={centers.map((c) => ({ key: c.name, label: c.name }))}
+            value={venue}
+            onChange={setVenue}
+          />
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>
+            Visiting teams see this ground; every fixture inherits it.
+          </Text>
+        </Card>
+      )}
 
       <Card>
         <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 12 }}>Team slots</Text>

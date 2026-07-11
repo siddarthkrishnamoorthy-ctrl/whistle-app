@@ -1,6 +1,7 @@
 import "./global.css";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
@@ -9,6 +10,28 @@ import { AuthProvider } from "@/lib/auth-context";
 import { ChildrenProvider } from "@/lib/children-context";
 import { colors } from "@/components/ui";
 import { colors as tokens } from "@whistle/shared";
+
+// Every detail screen gets the same two escape hatches: back to the
+// previous screen (or home when opened directly via a link) and a home
+// shortcut — nobody is ever stranded on an inner page.
+const BackButton = () => (
+  <TouchableOpacity
+    onPress={() => (router.canGoBack() ? router.back() : router.replace("/home"))}
+    style={{ paddingHorizontal: 6, paddingVertical: 4 }}
+    accessibilityLabel="Go back"
+  >
+    <Ionicons name="chevron-back" size={24} color={colors.accent} />
+  </TouchableOpacity>
+);
+const HomeButton = () => (
+  <TouchableOpacity
+    onPress={() => router.replace("/home")}
+    style={{ paddingHorizontal: 10, paddingVertical: 4 }}
+    accessibilityLabel="Go to home"
+  >
+    <Ionicons name="home-outline" size={20} color={colors.textSecondary} />
+  </TouchableOpacity>
+);
 
 // react-navigation paints each screen with its theme background; make it
 // transparent so the root gradient shows through everywhere.
@@ -35,6 +58,9 @@ export default function RootLayout() {
             screenOptions={{
               headerStyle: { backgroundColor: tokens.surfaceSolid },
               headerTintColor: colors.textPrimary,
+              headerTitleStyle: { fontWeight: "700" },
+              headerLeft: () => <BackButton />,
+              headerRight: () => <HomeButton />,
               // Transparent so the gradient shows through every screen.
               contentStyle: { backgroundColor: "transparent" },
             }}

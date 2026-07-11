@@ -51,4 +51,10 @@ export class CreateEventDto {
   @IsNumber()
   @Min(2)
   maxTeams?: number;
+
+  // Venue — one of the host academy's centers, shown to visiting teams and
+  // inherited by every generated fixture.
+  @IsOptional()
+  @IsString()
+  venue?: string;
 }

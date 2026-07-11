@@ -12,6 +12,7 @@ type EventDetail = InterschoolEvent & {
   fixtures?: Fixture[];
   invitations?: { status: string; invitedAcademy?: { id: string; name: string } }[];
   maxTeams?: number | null;
+  venue?: string | null;
 };
 
 interface EventMessage {
@@ -30,6 +31,19 @@ interface StandingsRow {
   lost: number;
   drawn: number;
   points: number;
+}
+
+interface RosterEntry {
+  id: string;
+  sportKey: string;
+  eligibilityStatus: string;
+  client: { id: string; name: string };
+  academy: { id: string; name: string };
+}
+
+interface ClientRef {
+  id: string;
+  name: string;
 }
 
 const EVENT_TONE = { draft: "neutral", scheduled: "info", live: "warning", completed: "success", closed: "success" } as const;
@@ -54,7 +68,10 @@ export default function EventDetailScreen() {
   const [busy, setBusy] = useState(false);
   // Same console layout as the tournament module: one tab open at a time
   // keeps the screen calm however many fixtures or messages pile up.
-  const [tab, setTab] = useState<"score" | "fixtures" | "standings" | "chat">("fixtures");
+  const [tab, setTab] = useState<"score" | "fixtures" | "roster" | "standings" | "chat">("fixtures");
+  const [rosters, setRosters] = useState<RosterEntry[]>([]);
+  const [clients, setClients] = useState<ClientRef[]>([]);
+  const [rosterSport, setRosterSport] = useState("");
   const chatScroll = useRef<ScrollView | null>(null);
 
   const load = useCallback(async () => {
@@ -69,6 +86,14 @@ export default function EventDetailScreen() {
       apiJson<EventMessage[]>(`/interschool/events/${id}/messages`)
         .then(setMessages)
         .catch(() => setMessages(null));
+      // Roster (members only): my nominated players + my students to add.
+      apiJson<RosterEntry[]>(`/interschool/events/${id}/rosters`)
+        .then(setRosters)
+        .catch(() => setRosters([]));
+      apiJson<ClientRef[]>("/clients")
+        .then(setClients)
+        .catch(() => setClients([]));
+      setRosterSport((prev) => prev || ev.sports[0] || "");
     }
   }, [id]);
 
@@ -132,6 +157,42 @@ export default function EventDetailScreen() {
     }
   }
 
+  async function closeEvent() {
+    setBusy(true);
+    try {
+      await apiJson(`/interschool/events/${id}/close`, { method: "POST", body: JSON.stringify({}) });
+      await load();
+    } catch (e) {
+      Alert.alert("Couldn't close", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function nominate(clientId: string) {
+    try {
+      await apiJson(`/interschool/events/${id}/rosters`, {
+        method: "POST",
+        body: JSON.stringify({ sportKey: rosterSport, clientId }),
+      });
+      const fresh = await apiJson<RosterEntry[]>(`/interschool/events/${id}/rosters`).catch(() => rosters);
+      setRosters(fresh);
+      // The last roster in can auto-generate fixtures — refresh everything.
+      await load();
+    } catch (e) {
+      Alert.alert("Couldn't nominate", e instanceof Error ? e.message : "Please try again.");
+    }
+  }
+
+  async function removeNomination(rosterId: string) {
+    try {
+      await apiJson(`/interschool/events/${id}/rosters/${rosterId}`, { method: "DELETE" });
+      setRosters((prev) => prev.filter((r) => r.id !== rosterId));
+    } catch (e) {
+      Alert.alert("Couldn't remove", e instanceof Error ? e.message : "Please try again.");
+    }
+  }
+
   async function send() {
     const text = draft.trim();
     if (!text) return;
@@ -169,6 +230,12 @@ export default function EventDetailScreen() {
           {event.sports.join(", ")} · {event.formatType}
           {event.ageBands?.length ? ` · ${event.ageBands.join(", ")}` : ""}
         </Text>
+        {event.venue ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5 }}>
+            <Ionicons name="location-outline" size={14} color={colors.accent} />
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{event.venue}</Text>
+          </View>
+        ) : null}
         {event.payToJoin ? (
           <Text style={{ color: colors.warning, fontSize: 12, marginTop: 4 }}>
             Pay to join{event.pricePerHead != null ? ` · ₹${Number(event.pricePerHead)} per head` : ""}
@@ -192,16 +259,29 @@ export default function EventDetailScreen() {
             <PrimaryButton title={busy ? "Joining…" : "Join this event"} onPress={join} disabled={busy} />
           </View>
         )}
-        {isHost && (
+        {isHost && event.status !== "closed" && (
           <View style={{ marginTop: 12 }}>
-            <PrimaryButton
-              title={busy ? "Working…" : "Generate fixtures (round robin)"}
-              onPress={generateFixtures}
-              disabled={busy}
-            />
-            <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
-              Builds every-team-plays-every-team fixtures for each sport whose rosters are in.
-            </Text>
+            {fixtures.length === 0 || openFixtures.length > 0 ? (
+              <>
+                <PrimaryButton
+                  title={busy ? "Working…" : "Generate fixtures (round robin)"}
+                  onPress={generateFixtures}
+                  disabled={busy}
+                />
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
+                  Builds every-team-plays-every-team fixtures for each sport whose rosters are in.
+                </Text>
+              </>
+            ) : (
+              <>
+                {/* All fixtures settled → the host wraps the event up, which
+                    locks the chat and freezes the final standings. */}
+                <PrimaryButton title={busy ? "Working…" : "🏁 Close event"} onPress={closeEvent} disabled={busy} />
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
+                  Every match has a result — closing ends the event and locks the team chat.
+                </Text>
+              </>
+            )}
           </View>
         )}
       </Card>
@@ -214,12 +294,110 @@ export default function EventDetailScreen() {
             ? [{ key: "score", label: `⚡ Score${openFixtures.length ? ` (${openFixtures.length})` : ""}` }]
             : []),
           { key: "fixtures", label: "Fixtures" },
+          ...(canScoreRole ? [{ key: "roster", label: "Roster" }] : []),
           { key: "standings", label: "Standings" },
           ...(messages !== null ? [{ key: "chat", label: "💬 Chat" }] : []),
         ]}
         value={tab}
         onChange={(v) => setTab(v as typeof tab)}
       />
+
+      {/* Roster — nominate my students per sport; the missing link that
+          makes fixtures possible entirely from the app */}
+      {tab === "roster" && (
+        <View style={{ gap: 12 }}>
+          {(event.sports.length > 1) && (
+            <ChipRow
+              scroll
+              options={event.sports.map((s) => ({ key: s, label: s.replace(/[-_]/g, " ") }))}
+              value={rosterSport}
+              onChange={setRosterSport}
+            />
+          )}
+          <Card>
+            <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 2 }}>
+              My {rosterSport.replace(/[-_]/g, " ")} roster
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 10 }}>
+              Fixtures generate once every team's roster is in.
+            </Text>
+            {rosters.filter((r) => r.sportKey === rosterSport && r.academy.id === user?.academyId).length === 0 ? (
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>No players nominated yet — add them below.</Text>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {rosters
+                  .filter((r) => r.sportKey === rosterSport && r.academy.id === user?.academyId)
+                  .map((r) => (
+                    <View key={r.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Ionicons name="person-circle-outline" size={20} color={colors.accent} />
+                      <Text style={{ color: colors.textPrimary, fontSize: 14, flex: 1 }}>{r.client.name}</Text>
+                      <Pill tone={r.eligibilityStatus === "eligible" ? "success" : "warning"}>
+                        {r.eligibilityStatus}
+                      </Pill>
+                      <TouchableOpacity onPress={() => removeNomination(r.id)} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+              </View>
+            )}
+          </Card>
+          <Card>
+            <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 10 }}>Add a player</Text>
+            {(() => {
+              const nominatedIds = new Set(
+                rosters.filter((r) => r.sportKey === rosterSport && r.academy.id === user?.academyId).map((r) => r.client.id)
+              );
+              const available = clients.filter((c) => !nominatedIds.has(c.id));
+              if (available.length === 0) {
+                return <Text style={{ color: colors.textMuted, fontSize: 13 }}>All your students are nominated.</Text>;
+              }
+              return (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {available.map((c) => (
+                      <TouchableOpacity
+                        key={c.id}
+                        onPress={() => nominate(c.id)}
+                        activeOpacity={0.7}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                          borderRadius: 999,
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                        }}
+                      >
+                        <Ionicons name="add-circle-outline" size={15} color={colors.accent} />
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600" }}>{c.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              );
+            })()}
+          </Card>
+          {rosters.some((r) => r.academy.id !== user?.academyId) && (
+            <Card>
+              <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 8 }}>Other teams</Text>
+              {[...new Set(rosters.filter((r) => r.academy.id !== user?.academyId).map((r) => r.academy.name))].map(
+                (name) => {
+                  const count = rosters.filter((r) => r.academy.name === name && r.sportKey === rosterSport).length;
+                  return (
+                    <Text key={name} style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 3 }}>
+                      {name} · {count} player{count === 1 ? "" : "s"} nominated
+                    </Text>
+                  );
+                }
+              )}
+            </Card>
+          )}
+        </View>
+      )}
 
       {/* Standings — from completed fixture results */}
       {tab === "standings" &&

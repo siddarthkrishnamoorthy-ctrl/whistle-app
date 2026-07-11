@@ -10,6 +10,7 @@ type EventDetail = InterschoolEvent & {
   fixtures?: Fixture[];
   invitations?: { status: string }[];
   maxTeams?: number | null;
+  venue?: string | null;
 };
 
 interface StandingsRow {
@@ -78,6 +79,9 @@ export default function EventDetailScreen() {
           {event.sports.join(", ")} · {event.formatType}
           {event.ageBands?.length ? ` · ${event.ageBands.join(", ")}` : ""}
         </Text>
+        {event.venue ? (
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>📍 {event.venue}</Text>
+        ) : null}
         {event.invitations && (
           <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
             👥 {1 + event.invitations.filter((i) => i.status === "accepted").length}

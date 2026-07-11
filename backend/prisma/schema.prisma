@@ -695,6 +695,9 @@ model InterschoolEvent {
   // teams. Joining closes at the cap, and fixtures auto-generate once the
   // last team's roster is in.
   maxTeams       Int?        @map("max_teams")
+  // Where the event is played — picked from the host academy's centers when
+  // hosting (fixtures inherit it), so visiting teams know where to go.
+  venue          String?
   // LBL tournament flag (2026-07): LBL events are open for self-service
   // school registration per sport (with payment) instead of invitations.
   isLbl          Boolean     @default(false) @map("is_lbl")

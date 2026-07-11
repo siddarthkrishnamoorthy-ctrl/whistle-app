@@ -97,6 +97,7 @@ export default function EventsScreen() {
   const [leaders, setLeaders] = useState<LeaderRow[]>([]);
   const [kidMatches, setKidMatches] = useState<KidMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -241,14 +242,21 @@ export default function EventsScreen() {
             </View>
           )}
 
-          {/* Tournaments timeline */}
+          {/* Tournaments timeline — a short feed with a View-all expander */}
           {events.length === 0 ? (
             <EmptyState message="No interschool events yet." />
           ) : (
             <View style={{ marginTop: 4 }}>
-              {events.map((e, i) => (
-                <TimelineItem key={e.id} event={e} isLast={i === events.length - 1} />
+              {(showAllEvents ? events : events.slice(0, 4)).map((e, i, arr) => (
+                <TimelineItem key={e.id} event={e} isLast={i === arr.length - 1} />
               ))}
+              {events.length > 4 && (
+                <TouchableOpacity onPress={() => setShowAllEvents((v) => !v)}>
+                  <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "center", paddingVertical: 4 }}>
+                    {showAllEvents ? "Show less" : `View all ${events.length} events`}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </>

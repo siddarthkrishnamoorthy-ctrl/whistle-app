@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
@@ -39,11 +40,17 @@ const STATUS_TONE = {
   closed: "success",
 } as const;
 
+const LIST_PREVIEW = 4;
+
+// Compact by default: the first few events with a "View all" expander, so
+// a long season never turns the tab into an endless wall.
 function EventList({ events, emptyMessage }: { events: EventRow[]; emptyMessage: string }) {
+  const [showAll, setShowAll] = useState(false);
   if (events.length === 0) return <EmptyState message={emptyMessage} />;
+  const visible = showAll ? events : events.slice(0, LIST_PREVIEW);
   return (
     <View style={{ gap: 8 }}>
-      {events.map((e) => (
+      {visible.map((e) => (
         <ListRow
           key={e.id}
           title={e.name}
@@ -64,6 +71,13 @@ function EventList({ events, emptyMessage }: { events: EventRow[]; emptyMessage:
           onPress={() => router.push(`/events/${e.id}`)}
         />
       ))}
+      {events.length > LIST_PREVIEW && (
+        <TouchableOpacity onPress={() => setShowAll((v) => !v)}>
+          <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "center", paddingVertical: 4 }}>
+            {showAll ? "Show less" : `View all ${events.length}`}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -75,6 +89,7 @@ export default function EventsScreen() {
   const [lbl, setLbl] = useState<LblEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyLbl, setBusyLbl] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(() => {
     if (!user?.academyId) {
@@ -135,6 +150,11 @@ export default function EventsScreen() {
     }
   }
 
+  const match = (e: EventRow) =>
+    !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase());
+  const mineShown = mine.filter(match);
+  const nearbyShown = nearby.filter(match);
+
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -148,6 +168,34 @@ export default function EventsScreen() {
         >
           <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 13 }}>+ Host</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Find an event fast instead of scrolling the whole season */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+        }}
+      >
+        <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search events…"
+          placeholderTextColor={colors.textMuted}
+          style={{ flex: 1, color: colors.textPrimary, paddingVertical: 9, fontSize: 14 }}
+        />
+        {search.trim().length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (
@@ -263,7 +311,10 @@ export default function EventsScreen() {
             <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
               Your academy
             </Text>
-            <EventList events={mine} emptyMessage="No events yet — host one with the + Host button." />
+            <EventList
+              events={mineShown}
+              emptyMessage={search ? "No events match your search." : "No events yet — host one with the + Host button."}
+            />
           </View>
 
           <View>
@@ -271,8 +322,10 @@ export default function EventsScreen() {
               Around you
             </Text>
             <EventList
-              events={nearby}
-              emptyMessage="No published events from other academies in your network yet."
+              events={nearbyShown}
+              emptyMessage={
+                search ? "No nearby events match your search." : "No published events from other academies in your network yet."
+              }
             />
           </View>
         </>

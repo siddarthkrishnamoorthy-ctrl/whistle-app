@@ -121,7 +121,9 @@ export class InterschoolController {
   }
 
   @Delete("events/:id/rosters/:rosterId")
-  @Roles("admin", "head_coach")
+  // "coach" included (2026-07): coaches nominate their Match Center rosters
+  // from the app; the service already limits removal to OWN nominations.
+  @Roles("admin", "head_coach", "coach")
   removeRoster(
     @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,

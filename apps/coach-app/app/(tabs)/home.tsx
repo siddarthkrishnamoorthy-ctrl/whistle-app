@@ -51,35 +51,53 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+      {/* Brand bar — logo + app name anchored top-left, like modern sports apps */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: colors.accent,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ color: colors.accentText, fontWeight: "700" }}>{user ? initials(user.name) : "?"}</Text>
-          </View>
-          <View>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Good to see you 👋</Text>
-            <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "700" }}>{user?.name ?? "Coach"}</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <TouchableOpacity onPress={() => signOut().then(() => router.replace("/login"))}>
-            <Text style={{ color: colors.danger, fontSize: 13 }}>Log out</Text>
-          </TouchableOpacity>
-          {/* Logo anchored at the top-right corner of the home screen */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Image
             source={require("../../assets/whistle-logo.png")}
-            style={{ width: 40, height: 36 }}
+            style={{ width: 36, height: 32 }}
             resizeMode="contain"
           />
+          <View>
+            <Text style={{ color: colors.accent, fontSize: 19, fontWeight: "800", letterSpacing: 0.3 }}>Whistle</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 10, marginTop: -2 }}>By School of Sports</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={() => signOut().then(() => router.replace("/login"))}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+          }}
+        >
+          <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>Log out</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Greeting */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.accent,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: colors.accentText, fontWeight: "700" }}>{user ? initials(user.name) : "?"}</Text>
+        </View>
+        <View>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Good to see you 👋</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "700" }}>{user?.name ?? "Coach"}</Text>
         </View>
       </View>
 
