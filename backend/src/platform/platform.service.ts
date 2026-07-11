@@ -319,7 +319,9 @@ export class PlatformService implements OnModuleInit {
         durationMin: dto.durationMin,
         description: dto.description,
         equipment: dto.equipment ?? [],
-        media: dto.videoUrl ? { videoUrl: dto.videoUrl } : undefined,
+        // Same media shape as tenant-era drills ([{type, url}]) so every
+        // existing renderer (admin cards, coach app) reads it unchanged.
+        media: dto.videoUrl ? [{ type: "video", url: dto.videoUrl }] : undefined,
       },
       include: { sport: true },
     });
@@ -346,7 +348,12 @@ export class PlatformService implements OnModuleInit {
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.equipment !== undefined ? { equipment: dto.equipment } : {}),
         ...(dto.videoUrl !== undefined
-          ? { media: { ...((existing.media as object | null) ?? {}), videoUrl: dto.videoUrl } }
+          ? {
+              media: [
+                ...((existing.media as { type: string; url: string }[] | null) ?? []).filter((m) => m.type !== "video"),
+                ...(dto.videoUrl ? [{ type: "video", url: dto.videoUrl }] : []),
+              ],
+            }
           : {}),
       },
       include: { sport: true },
