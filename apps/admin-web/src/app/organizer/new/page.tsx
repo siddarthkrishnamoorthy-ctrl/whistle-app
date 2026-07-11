@@ -6,7 +6,7 @@ import { Card, Field, PrimaryButton, OutlineButton, SelectField, TextareaField }
 import { tJson, tournamentSession } from "@/lib/tournament-client";
 
 // Sport catalogue for the open tournament module (broader than the academy
-// taxonomy — pickleball, squash, chess etc. are common open-tournament sports).
+// taxonomy — pickleball, squash, carrom etc. are common open-tournament sports).
 const SPORT_OPTIONS = [
   "Badminton",
   "Pickleball",
@@ -22,7 +22,6 @@ const SPORT_OPTIONS = [
   "Kabaddi",
   "Athletics (Track & Field)",
   "Swimming",
-  "Chess",
   "Carrom",
 ] as const;
 
