@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useChildren } from "@/lib/children-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, Pill, colors } from "@/components/ui";
 import { formatDate, type InterschoolEvent } from "@whistle/shared";
+import { RANK_MEDALS, sportEmoji } from "@/lib/sport-emoji";
 
 type EventRow = InterschoolEvent & {
   hostAcademy?: { id: string; name: string };
@@ -75,9 +77,16 @@ interface FixtureRow {
 }
 
 interface LeaderRow {
-  client?: { id: string; name: string };
+  client?: { id: string; name: string; academy?: { name: string } };
+  clientId?: string;
+  currentRating?: number | string;
   rating?: number | string;
   matchesPlayed?: number;
+}
+
+interface Sport {
+  key: string;
+  name: string;
 }
 
 interface KidMatch {
@@ -98,6 +107,10 @@ export default function EventsScreen() {
   const [kidMatches, setKidMatches] = useState<KidMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllEvents, setShowAllEvents] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sports, setSports] = useState<Sport[]>([]);
+  // Standings sport can be browsed — defaults to the child's sport.
+  const [standingsSport, setStandingsSport] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -107,33 +120,49 @@ export default function EventsScreen() {
       }
       let cancelled = false;
       setLoading(true);
-      const childSport = selectedChild?.enrollments?.[0]?.class?.sportKey ?? "badminton";
+      const childSport = selectedChild?.enrollments?.[0]?.class?.sportKey ?? "";
       Promise.all([
         apiJson<EventRow[]>("/interschool/events").catch(() => [] as EventRow[]),
         apiJson<EventRow[]>("/interschool/events?scope=discover").catch(() => [] as EventRow[]),
         apiJson<FixtureRow[]>("/fixtures").catch(() => [] as FixtureRow[]),
-        apiJson<LeaderRow[]>(`/ratings/leaderboard/students?sportKey=${childSport}&formatType=individual`).catch(
-          () => [] as LeaderRow[]
-        ),
         selectedChild
           ? apiJson<KidMatch[]>(`/player-stats/${selectedChild.id}`).catch(() => [] as KidMatch[])
           : Promise.resolve([] as KidMatch[]),
+        apiJson<Sport[]>("/sports").catch(() => [] as Sport[]),
       ])
-        .then(([own, nearby, fx, board, kid]) => {
+        .then(([own, nearby, fx, kid, sportList]) => {
           if (cancelled) return;
           const seen = new Set<string>();
           const merged = [...own, ...nearby].filter((e) => !seen.has(e.id) && seen.add(e.id));
           merged.sort((a, b) => a.startDate.localeCompare(b.startDate));
           setEvents(merged);
           setFixtures(fx.filter((f) => f.status === "live" || f.status === "scheduled").slice(0, 6));
-          setLeaders(board.slice(0, 5));
           setKidMatches(kid.slice(0, 5));
+          setSports(sportList);
+          // Seed the standings sport: child's sport if known, else the first.
+          setStandingsSport((prev) => prev || childSport || sportList[0]?.key || "");
         })
         .finally(() => !cancelled && setLoading(false));
       return () => {
         cancelled = true;
       };
     }, [user, selectedChild])
+  );
+
+  // Standings reload whenever the browsed sport changes.
+  useEffect(() => {
+    if (!standingsSport || !user?.academyId) return;
+    let cancelled = false;
+    apiJson<LeaderRow[]>(`/ratings/leaderboard/students?sportKey=${standingsSport}&formatType=individual`)
+      .then((board) => !cancelled && setLeaders(board.slice(0, 10)))
+      .catch(() => !cancelled && setLeaders([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [standingsSport, user]);
+
+  const shownEvents = events.filter(
+    (e) => !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
   return (
@@ -151,6 +180,34 @@ export default function EventsScreen() {
         <EmptyState message="Link your child first to see their academy's events." />
       ) : (
         <>
+          {/* Search the events feed */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+            }}
+          >
+            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search events…"
+              placeholderTextColor={colors.textMuted}
+              style={{ flex: 1, color: colors.textPrimary, paddingVertical: 9, fontSize: 14 }}
+            />
+            {search.trim().length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Matches being played right now / coming up */}
           {fixtures.length > 0 && (
             <View>
@@ -179,42 +236,85 @@ export default function EventsScreen() {
             </View>
           )}
 
-          {/* Whistle Standings — the leaderboard for the child's sport */}
-          {leaders.length > 0 && (
+          {/* Whistle Standings — browsable by sport, always available */}
+          {sports.length > 0 && (
             <View>
-              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>
-                Whistle Standings
-              </Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700" }}>Whistle Standings</Text>
               <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 8 }}>
-                Overall ranking — DUPR-style rating earned across every match played
+                DUPR-style rating earned across every match played — pick a sport to browse.
               </Text>
-              <Card>
-                {leaders.map((l, i) => (
-                  <View
-                    key={l.client?.id ?? i}
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      paddingVertical: 5,
-                      borderBottomWidth: i < leaders.length - 1 ? 1 : 0,
-                      borderBottomColor: "rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    <Text
+              {/* Scrollable emoji sport picker */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
+                {sports.map((s) => {
+                  const active = s.key === standingsSport;
+                  return (
+                    <TouchableOpacity
+                      key={s.key}
+                      onPress={() => setStandingsSport(s.key)}
+                      activeOpacity={0.8}
                       style={{
-                        color: l.client?.id === selectedChild?.id ? colors.accent : colors.textPrimary,
-                        fontWeight: l.client?.id === selectedChild?.id ? "800" : "500",
-                        fontSize: 13,
+                        width: 72,
+                        paddingVertical: 9,
+                        alignItems: "center",
+                        gap: 3,
+                        borderRadius: 13,
+                        borderWidth: 1,
+                        borderColor: active ? colors.accent : colors.border,
+                        backgroundColor: active ? colors.accent + "22" : colors.surface,
                       }}
                     >
-                      {i + 1}. {l.client?.name ?? "—"}
-                    </Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                      {l.rating != null ? Number(l.rating).toFixed(2) : "—"}
-                    </Text>
-                  </View>
-                ))}
-              </Card>
+                      <Text style={{ fontSize: 20 }}>{sportEmoji(s.key)}</Text>
+                      <Text
+                        numberOfLines={1}
+                        style={{ color: active ? colors.accent : colors.textSecondary, fontSize: 10, fontWeight: active ? "800" : "600" }}
+                      >
+                        {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {leaders.length === 0 ? (
+                <EmptyState message="No rated players in this sport yet." />
+              ) : (
+                <Card>
+                  {leaders.map((l, i) => {
+                    const cid = l.client?.id ?? l.clientId;
+                    const rating = l.currentRating ?? l.rating;
+                    const isMine = cid && cid === selectedChild?.id;
+                    return (
+                      <View
+                        key={cid ?? i}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          paddingVertical: 6,
+                          borderBottomWidth: i < leaders.length - 1 ? 1 : 0,
+                          borderBottomColor: "rgba(255,255,255,0.06)",
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                          <Text style={{ width: 24, textAlign: "center", fontSize: RANK_MEDALS[i] ? 15 : 12, color: colors.textMuted, fontWeight: "700" }}>
+                            {RANK_MEDALS[i] ?? `${i + 1}`}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            style={{ color: isMine ? colors.accent : colors.textPrimary, fontWeight: isMine ? "800" : "500", fontSize: 13, flex: 1 }}
+                          >
+                            {l.client?.name ?? "—"}
+                            {isMine ? "  (your child)" : ""}
+                          </Text>
+                        </View>
+                        <Text style={{ color: colors.accent, fontSize: 14, fontWeight: "700" }}>
+                          {rating != null ? Number(rating).toFixed(2) : "—"}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </Card>
+              )}
             </View>
           )}
 
@@ -243,17 +343,18 @@ export default function EventsScreen() {
           )}
 
           {/* Tournaments timeline — a short feed with a View-all expander */}
-          {events.length === 0 ? (
-            <EmptyState message="No interschool events yet." />
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginTop: 4 }}>Tournaments</Text>
+          {shownEvents.length === 0 ? (
+            <EmptyState message={search ? "No events match your search." : "No interschool events yet."} />
           ) : (
             <View style={{ marginTop: 4 }}>
-              {(showAllEvents ? events : events.slice(0, 4)).map((e, i, arr) => (
+              {(showAllEvents ? shownEvents : shownEvents.slice(0, 4)).map((e, i, arr) => (
                 <TimelineItem key={e.id} event={e} isLast={i === arr.length - 1} />
               ))}
-              {events.length > 4 && (
+              {shownEvents.length > 4 && (
                 <TouchableOpacity onPress={() => setShowAllEvents((v) => !v)}>
                   <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "center", paddingVertical: 4 }}>
-                    {showAllEvents ? "Show less" : `View all ${events.length} events`}
+                    {showAllEvents ? "Show less" : `View all ${shownEvents.length} events`}
                   </Text>
                 </TouchableOpacity>
               )}
