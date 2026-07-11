@@ -102,6 +102,13 @@ export class TournamentsController {
     return this.service.myTournaments(user.sub, series === "lbl" || series === "open" ? series : undefined);
   }
 
+  // Playable chess matches for the logged-in registrant (Chess BRD 5.7).
+  @Get("my-chess-matches")
+  @TournamentRoles("t_registrant", "t_organizer", "t_official")
+  myChessMatches(@CurrentUser() user: TUser) {
+    return this.service.myChessMatches(user.sub);
+  }
+
   @Get("officiating")
   @TournamentRoles("t_official", "t_organizer")
   officiating(@CurrentUser() user: TUser) {

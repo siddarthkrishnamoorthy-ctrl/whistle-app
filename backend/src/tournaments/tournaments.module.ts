@@ -15,5 +15,6 @@ import {
   imports: [JwtModule.register({})],
   controllers: [TournamentAuthController, TournamentPublicController, CricketController, TournamentsController],
   providers: [TournamentsService, CricketService],
+  exports: [TournamentsService],
 })
 export class TournamentsModule {}

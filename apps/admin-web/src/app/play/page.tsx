@@ -172,6 +172,9 @@ export default function PlayPortal() {
   const [open, setOpen] = useState<OpenTournament[]>([]);
   const [entries, setEntries] = useState<MyEntry[]>([]);
   const [officiating, setOfficiating] = useState<OffTournament[]>([]);
+  const [chessMatches, setChessMatches] = useState<
+    { id: string; round: number; matchNo: number; event: { name: string; tournament: { name: string } } }[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -197,6 +200,7 @@ export default function PlayPortal() {
       ]);
       setOpen(openRes);
       setEntries(entriesRes);
+      tJson<typeof chessMatches>("/tournaments/my-chess-matches").then(setChessMatches).catch(() => undefined);
       if (u.role === "official") setOfficiating(await tJson<OffTournament[]>("/tournaments/officiating"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load tournaments.");
@@ -451,6 +455,37 @@ export default function PlayPortal() {
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   {toScore.map((m) => {
                                     const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
+                                    // Chess plays ONLINE — the engine adjudicates, no number boxes.
+                                    if (ev.sportKey === "chess") {
+                                      return (
+                                        <button
+                                          key={m.id}
+                                          disabled={busy}
+                                          onClick={() =>
+                                            act(async () => {
+                                              const g = await tJson<{ id: string }>(`/tournaments/chess/matches/${m.id}/game`, {
+                                                method: "POST",
+                                                body: "{}",
+                                              });
+                                              window.location.href = `/play/chess/${g.id}`;
+                                            })
+                                          }
+                                          className="flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-left hover:border-amber-400/60"
+                                        >
+                                          <span>
+                                            <span className="block text-[11px] text-slate-500">
+                                              Round {m.round} · Match {m.matchNo}
+                                            </span>
+                                            <span className="text-sm font-semibold text-white">
+                                              {offEntryName(ev.entries, m.entryAId)} vs {offEntryName(ev.entries, m.entryBId)}
+                                            </span>
+                                          </span>
+                                          <span className="rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-900">
+                                            ♟ Open board →
+                                          </span>
+                                        </button>
+                                      );
+                                    }
                                     // Cricket uses the full ball-by-ball console, not number boxes.
                                     if (ev.sportKey === "cricket") {
                                       return (
@@ -693,6 +728,43 @@ export default function PlayPortal() {
                 </div>
                 );
               })}
+            </section>
+          )}
+
+          {/* Your playable chess matches — the board is online, right here */}
+          {chessMatches.length > 0 && (
+            <section className="mb-8">
+              <h2 className="mb-3 flex items-center gap-2 text-lg font-bold text-white">
+                ♟ Your chess matches
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {chessMatches.map((m) => (
+                  <button
+                    key={m.id}
+                    disabled={busy}
+                    onClick={() =>
+                      act(async () => {
+                        const g = await tJson<{ id: string }>(`/tournaments/chess/matches/${m.id}/game`, {
+                          method: "POST",
+                          body: "{}",
+                        });
+                        window.location.href = `/play/chess/${g.id}`;
+                      })
+                    }
+                    className="flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-left hover:border-amber-400/60"
+                  >
+                    <span>
+                      <span className="block text-[11px] text-slate-500">
+                        {m.event.tournament.name} · Round {m.round}
+                      </span>
+                      <span className="text-sm font-semibold text-white">{m.event.name}</span>
+                    </span>
+                    <span className="rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-900">
+                      ♟ Play online →
+                    </span>
+                  </button>
+                ))}
+              </div>
             </section>
           )}
 

@@ -179,6 +179,29 @@ export class TournamentsService {
     return t;
   }
 
+  // A registrant's playable chess matches — powers the "Play online" list
+  // on /play (Chess Module BRD 5.7: each paired fixture opens as a live
+  // chess game between the two students).
+  async myChessMatches(userId: string) {
+    const entries = await this.prisma.tournamentEntry.findMany({
+      where: { registrantId: userId },
+      select: { id: true },
+    });
+    const ids = entries.map((e) => e.id);
+    if (ids.length === 0) return [];
+    return this.prisma.tournamentMatch.findMany({
+      where: {
+        status: { not: "completed" },
+        entryAId: { not: null },
+        entryBId: { not: null },
+        event: { sportKey: "chess" },
+        OR: [{ entryAId: { in: ids } }, { entryBId: { in: ids } }],
+      },
+      include: { event: { select: { name: true, sportKey: true, tournament: { select: { name: true } } } } },
+      orderBy: { round: "asc" },
+    });
+  }
+
   // Tournaments this user is appointed to score — powers the public
   // official's scoring console (officials never see the admin panel).
   async officiating(userId: string) {
@@ -576,6 +599,32 @@ export class TournamentsService {
     const invalid = validateFinalScore(match.event.sportKey, dto.scoreA, dto.scoreB);
     if (invalid) throw new BadRequestException(invalid);
     return this.completeMatchInternal(matchId, dto.scoreA, dto.scoreB, dto.scoreDisplay, userId);
+  }
+
+  // Chess module: the engine adjudicates (checkmate/resignation/draw) and
+  // the result lands in the bracket/league exactly like a scored match.
+  // Knockout draws can't advance anyone — the match stays live for a replay.
+  async completeChessMatch(matchId: string, winner: "white" | "black" | "draw") {
+    const match = await this.prisma.tournamentMatch.findUnique({
+      where: { id: matchId },
+      include: { event: true },
+    });
+    if (!match || match.status === "completed") return match;
+    if (winner === "draw") {
+      if (match.event.format === "single_elim") {
+        // Reset the board for a replay — someone has to go through.
+        await this.prisma.chessGame.delete({ where: { tournamentMatchId: matchId } }).catch(() => undefined);
+        return this.prisma.tournamentMatch.update({
+          where: { id: matchId },
+          data: { status: "live", scoreDisplay: "½-½ — replay" },
+        });
+      }
+      return this.prisma.tournamentMatch.update({
+        where: { id: matchId },
+        data: { status: "completed", scoreA: 1, scoreB: 1, scoreDisplay: "½-½", winnerEntryId: null },
+      });
+    }
+    return this.completeMatchInternal(matchId, winner === "white" ? 1 : 0, winner === "black" ? 1 : 0, winner === "white" ? "1-0" : "0-1");
   }
 
   // Per-match scheduling (2026-07): the organizer staggers the game day —

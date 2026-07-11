@@ -31,6 +31,7 @@ import { AssessmentsModule } from "./assessments/assessments.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
+import { ChessModule } from "./chess/chess.module";
 import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-assessments.module";
 
 @Module({
@@ -67,6 +68,7 @@ import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-asses
     JobsModule,
     SchoolsModule,
     TournamentsModule,
+    ChessModule,
     PeriodicAssessmentsModule,
   ],
 })

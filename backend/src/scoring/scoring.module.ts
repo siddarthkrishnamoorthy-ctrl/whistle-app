@@ -7,5 +7,6 @@ import { RatingModule } from "../rating/rating.module";
   imports: [RatingModule],
   controllers: [ScoringController],
   providers: [ScoringService],
+  exports: [ScoringService],
 })
 export class ScoringModule {}

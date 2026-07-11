@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, ChipRow, EmptyState, Field, LoadingView, Pill, PrimaryButton, colors } from "@/components/ui";
@@ -398,7 +398,29 @@ export default function FixtureDetailScreen() {
         ) : null}
       </Card>
 
-      {isOpen && canScore && !sessionId ? (
+      {/* Chess plays ONLINE on the shared engine board — no number scoring */}
+      {isOpen && canScore && fixture.sportKey === "chess" ? (
+        <PrimaryButton
+          title={starting ? "Opening board…" : "♟ Open online chess board"}
+          onPress={async () => {
+            setStarting(true);
+            try {
+              const g = await apiJson<{ id: string }>(`/chess/fixtures/${fixture.id}/game`, {
+                method: "POST",
+                body: JSON.stringify({}),
+              });
+              router.push(`/chess/${g.id}`);
+            } catch (e) {
+              Alert.alert("Couldn't open board", e instanceof Error ? e.message : "Please try again.");
+            } finally {
+              setStarting(false);
+            }
+          }}
+          disabled={starting}
+        />
+      ) : null}
+
+      {isOpen && canScore && !sessionId && fixture.sportKey !== "chess" ? (
         <PrimaryButton title={starting ? "Starting…" : "▶ Start live scoring"} onPress={startScoring} disabled={starting} />
       ) : null}
 
@@ -406,7 +428,7 @@ export default function FixtureDetailScreen() {
         <PrimaryButton title={saving ? "Confirming…" : "Confirm result"} onPress={confirmResult} disabled={saving} />
       ) : null}
 
-      {isOpen && canManual && !sessionId ? (
+      {isOpen && canManual && !sessionId && fixture.sportKey !== "chess" ? (
         <View>
           <TouchableOpacity onPress={() => setShowManual((v) => !v)} activeOpacity={0.7}>
             <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: "center", paddingVertical: 4 }}>

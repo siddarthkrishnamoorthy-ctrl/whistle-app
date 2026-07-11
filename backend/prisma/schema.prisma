@@ -1335,6 +1335,47 @@ model TournamentMatch {
   @@map("tournament_matches")
 }
 
+// ── Chess module (Whistle Chess Module v1.0) ───────────────────────────────
+// One chess-playing surface reused everywhere (BRD 5.7): friendly games
+// between students, Match Center fixtures, and tournament matches all play
+// on the same server-validated engine. whiteId/blackId are clientIds for
+// academy games and tournament-user ids for tournament games.
+model ChessGame {
+  id                String    @id @default(uuid())
+  context           String // "friendly" | "fixture" | "tournament"
+  academyId         String?   @map("academy_id")
+  fixtureId         String?   @unique @map("fixture_id")
+  tournamentMatchId String?   @unique @map("tournament_match_id")
+  whiteId           String    @map("white_id")
+  blackId           String    @map("black_id")
+  whiteName         String    @map("white_name")
+  blackName         String    @map("black_name")
+  fen               String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  // [{ from, to, promotion?, fen }] — the full move history, server-applied.
+  moves             Json      @default("[]")
+  status            String    @default("active") // active | checkmate | stalemate | draw | resigned
+  winner            String? // "white" | "black" | "draw"
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("chess_games")
+}
+
+// Cross-center invitation (BRD 5.4): same-center students play directly;
+// a student from another center must accept before the game begins.
+model ChessChallenge {
+  id                 String   @id @default(uuid())
+  academyId          String   @map("academy_id")
+  challengerClientId String   @map("challenger_client_id")
+  opponentClientId   String   @map("opponent_client_id")
+  sameCenter         Boolean  @default(false) @map("same_center")
+  status             String   @default("pending") // pending | accepted | declined
+  gameId             String?  @map("game_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("chess_challenges")
+}
+
 // ── Cricket ball-by-ball scoring (Cricket Scoring Requirements v1.0) ───────
 // Match setup (BRD Cricket 4.1): limited-overs with ANY overs count, toss
 // choice, playing XI per side. DLS is stored as a toggle; school-level

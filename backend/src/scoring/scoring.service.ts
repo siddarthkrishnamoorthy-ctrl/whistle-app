@@ -275,6 +275,27 @@ export class ScoringService implements OnModuleInit {
     return this.finalizeResult(session.fixtureId, dto, { ...by, enteredManually: false });
   }
 
+  // Engine-adjudicated completion (chess module): the chess engine itself is
+  // the referee — checkmate/resignation/stalemate is final immediately, no
+  // opponent-confirmation round, and rates like any refereed result.
+  async completeFixtureFromEngine(fixtureId: string, winnerSide: "A" | "B" | "draw", scoreDisplay: string) {
+    const fixture = await this.prisma.fixture.findUniqueOrThrow({ where: { id: fixtureId } });
+    if (fixture.status === "completed" || fixture.status === "abandoned") return fixture;
+    const updated = await this.prisma.fixture.update({
+      where: { id: fixtureId },
+      data: {
+        status: "completed",
+        resultSummary: { winnerSide, scoreDisplay, enteredManually: false, scoredByRole: "engine" },
+      },
+    });
+    if (fixture.matchType !== "practice") {
+      await this.recalculateRating(fixtureId).catch((e) =>
+        this.logger.warn(`Rating skipped for fixture ${fixtureId}: ${e instanceof Error ? e.message : e}`)
+      );
+    }
+    return updated;
+  }
+
   // Per-fixture scheduling (2026-07): the HOST sets each match's date/time
   // and court after fixtures generate — staggering a game day instead of
   // every fixture inheriting the event's start date.
