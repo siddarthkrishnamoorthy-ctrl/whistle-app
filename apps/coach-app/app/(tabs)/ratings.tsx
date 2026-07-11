@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, ChipRow, EmptyState, Pill, colors } from "@/components/ui";
+import { RANK_MEDALS, sportEmoji } from "@/lib/sport-emoji";
 
 interface Sport {
   key: string;
@@ -78,7 +79,47 @@ export default function RatingsScreen() {
         <EmptyState message="No sports configured yet." />
       ) : (
         <>
-          <ChipRow options={sports.map((s) => ({ key: s.key, label: s.name }))} value={sportKey} onChange={setSportKey} />
+          {/* Sport picker — horizontally scrollable tiles with the sport emoji,
+              so a big taxonomy stays a single tidy row instead of a wall. */}
+          <View>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 }}>
+              SPORT
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+              {sports.map((s) => {
+                const active = s.key === sportKey;
+                return (
+                  <TouchableOpacity
+                    key={s.key}
+                    onPress={() => setSportKey(s.key)}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 76,
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      gap: 4,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: active ? colors.accent : colors.border,
+                      backgroundColor: active ? colors.accent + "22" : colors.surface,
+                      ...(active
+                        ? { shadowColor: colors.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 3 }
+                        : {}),
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{sportEmoji(s.key)}</Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{ color: active ? colors.accent : colors.textSecondary, fontSize: 11, fontWeight: active ? "800" : "600" }}
+                    >
+                      {s.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           <ChipRow
             options={FORMATS.map((f) => ({ key: f.key, label: f.label }))}
             value={formatType}
@@ -89,26 +130,32 @@ export default function RatingsScreen() {
             <EmptyState message="No rated players for this sport & format yet." />
           ) : (
             <View style={{ gap: 8 }}>
-              {rows.map((r, i) => (
-                <Card key={`${r.clientId}-${i}`}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <Text style={{ color: colors.textMuted, fontSize: 15, fontWeight: "700", width: 28 }}>#{i + 1}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.textPrimary, fontWeight: "600" }}>{r.client.name}</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                        {r.client.academy?.name ?? ""} · {r.matchesPlayed} match{r.matchesPlayed === 1 ? "" : "es"}
-                        {r.reliabilityPct != null ? ` · ${r.reliabilityPct}% reliable` : ""}
+              {rows.map((r, i) => {
+                const medal = RANK_MEDALS[i];
+                const top = i < 3;
+                return (
+                  <Card key={`${r.clientId}-${i}`} style={top ? { borderColor: colors.accent + "55" } : undefined}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <Text style={{ fontSize: medal ? 20 : 15, fontWeight: "700", color: colors.textMuted, width: 30, textAlign: "center" }}>
+                        {medal ?? `#${i + 1}`}
                       </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: top ? colors.accent : colors.textPrimary, fontWeight: "700" }}>{r.client.name}</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                          {r.client.academy?.name ?? ""} · {r.matchesPlayed} match{r.matchesPlayed === 1 ? "" : "es"}
+                          {r.reliabilityPct != null ? ` · ${r.reliabilityPct}% reliable` : ""}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <Text style={{ color: colors.accent, fontSize: 20, fontWeight: "700" }}>
+                          {Number(r.currentRating).toFixed(2)}
+                        </Text>
+                        {r.isProvisional ? <Pill tone="warning">provisional</Pill> : null}
+                      </View>
                     </View>
-                    <View style={{ alignItems: "flex-end", gap: 4 }}>
-                      <Text style={{ color: colors.accent, fontSize: 20, fontWeight: "700" }}>
-                        {Number(r.currentRating).toFixed(2)}
-                      </Text>
-                      {r.isProvisional ? <Pill tone="warning">provisional</Pill> : null}
-                    </View>
-                  </View>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </View>
           )}
         </>

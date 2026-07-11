@@ -4,8 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, ListRow, Pill, colors } from "@/components/ui";
+import { Card, ChipRow, EmptyState, ListRow, Pill, colors } from "@/components/ui";
 import { formatDate, type InterschoolEvent } from "@whistle/shared";
+import { sportEmoji } from "@/lib/sport-emoji";
 
 type EventRow = InterschoolEvent & {
   hostAcademy?: { id: string; name: string };
@@ -43,33 +44,66 @@ const STATUS_TONE = {
 const LIST_PREVIEW = 4;
 
 // Compact by default: the first few events with a "View all" expander, so
-// a long season never turns the tab into an endless wall.
-function EventList({ events, emptyMessage }: { events: EventRow[]; emptyMessage: string }) {
+// a long season never turns the tab into an endless wall. On the Registered
+// tab each row also gets a quick "💬 Chat" shortcut into the event's team
+// thread (where the members message each other about the tournament).
+function EventList({
+  events,
+  emptyMessage,
+  showChat,
+}: {
+  events: EventRow[];
+  emptyMessage: string;
+  showChat?: boolean;
+}) {
   const [showAll, setShowAll] = useState(false);
   if (events.length === 0) return <EmptyState message={emptyMessage} />;
   const visible = showAll ? events : events.slice(0, LIST_PREVIEW);
   return (
     <View style={{ gap: 8 }}>
       {visible.map((e) => (
-        <ListRow
-          key={e.id}
-          title={e.name}
-          subtitle={[
-            `${formatDate(e.startDate)} – ${formatDate(e.endDate)}`,
-            e.sports.join(", "),
-            e.hostAcademy ? `Host: ${e.hostAcademy.name}` : undefined,
-            e.teamsJoined != null
-              ? `👥 ${e.teamsJoined}${e.maxTeams != null ? `/${e.maxTeams}` : ""} teams${
-                  e.maxTeams != null && e.teamsJoined >= e.maxTeams ? " · full" : e.myAcademyJoined ? " · joined" : ""
-                }`
-              : undefined,
-            e.distanceKm != null ? `📍 ≈${e.distanceKm} km away${e.nearestVenue ? ` (${e.nearestVenue})` : ""}` : undefined,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          right={<Pill tone={STATUS_TONE[e.status as keyof typeof STATUS_TONE] ?? "neutral"}>{e.status}</Pill>}
-          onPress={() => router.push(`/events/${e.id}`)}
-        />
+        <View key={e.id} style={{ position: "relative" }}>
+          <ListRow
+            title={`${sportEmoji(e.sports[0])}  ${e.name}`}
+            subtitle={[
+              `${formatDate(e.startDate)} – ${formatDate(e.endDate)}`,
+              e.sports.join(", "),
+              e.hostAcademy ? `Host: ${e.hostAcademy.name}` : undefined,
+              e.teamsJoined != null
+                ? `👥 ${e.teamsJoined}${e.maxTeams != null ? `/${e.maxTeams}` : ""} teams${
+                    e.maxTeams != null && e.teamsJoined >= e.maxTeams ? " · full" : e.myAcademyJoined ? " · joined" : ""
+                  }`
+                : undefined,
+              e.distanceKm != null ? `📍 ≈${e.distanceKm} km away${e.nearestVenue ? ` (${e.nearestVenue})` : ""}` : undefined,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            right={<Pill tone={STATUS_TONE[e.status as keyof typeof STATUS_TONE] ?? "neutral"}>{e.status}</Pill>}
+            onPress={() => router.push(`/events/${e.id}`)}
+          />
+          {showChat && (
+            <TouchableOpacity
+              onPress={() => router.push(`/events/${e.id}?tab=chat`)}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                alignSelf: "flex-start",
+                marginTop: 6,
+                marginLeft: 4,
+                borderWidth: 1,
+                borderColor: colors.accent,
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+              }}
+            >
+              <Ionicons name="chatbubbles-outline" size={13} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700" }}>Team chat</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ))}
       {events.length > LIST_PREVIEW && (
         <TouchableOpacity onPress={() => setShowAll((v) => !v)}>
@@ -90,6 +124,8 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [busyLbl, setBusyLbl] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Sub-tabs inside Match Center: what I'm in vs. what I can join.
+  const [tab, setTab] = useState<"registered" | "discover">("registered");
 
   const load = useCallback(() => {
     if (!user?.academyId) {
@@ -155,6 +191,118 @@ export default function EventsScreen() {
   const mineShown = mine.filter(match);
   const nearbyShown = nearby.filter(match);
 
+  // LBL split: events my academy has registered/paid for vs. ones still open
+  // to register. Registered LBL live under "Registered" with the rest of my
+  // events; unregistered LBL live under "Discover".
+  const lblMatch = (e: LblEvent) => !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase());
+  const lblRegistered = lbl.filter(
+    (e) => lblMatch(e) && (e.hostAcademy?.id === user?.academyId || e.lblRegistrations.length > 0)
+  );
+  const lblOpen = lbl.filter(
+    (e) => lblMatch(e) && e.hostAcademy?.id !== user?.academyId && e.lblRegistrations.length === 0
+  );
+
+  const registeredCount = mineShown.length + lblRegistered.length;
+  const discoverCount = nearbyShown.length + lblOpen.length;
+
+  function LblCard({ event }: { event: LblEvent }) {
+    const isHost = event.hostAcademy?.id === user?.academyId;
+    const regBySport = new Map(event.lblRegistrations.map((r) => [r.sportKey, r]));
+    const anyRegistered = event.lblRegistrations.length > 0;
+    return (
+      <Card>
+        <TouchableOpacity onPress={() => router.push(`/events/${event.id}`)} activeOpacity={0.75}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 15, flex: 1 }}>
+              {sportEmoji(event.sports[0])}  {event.name}
+            </Text>
+            <Pill tone="info">{isHost ? "hosting" : event.status}</Pill>
+          </View>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>
+            {formatDate(event.startDate)} – {formatDate(event.endDate)} · Host: {event.hostAcademy?.name ?? "—"}
+            {event.payToJoin && event.pricePerHead != null ? ` · ₹${Number(event.pricePerHead)} per sport` : " · free entry"}
+          </Text>
+        </TouchableOpacity>
+
+        {!isHost ? (
+          <View style={{ gap: 6, marginTop: 10 }}>
+            {event.sports.map((sportKey) => {
+              const reg = regBySport.get(sportKey);
+              const busy = busyLbl === event.id + sportKey;
+              return (
+                <View key={sportKey} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600" }}>
+                    {sportEmoji(sportKey)} {sportKey}
+                  </Text>
+                  {!reg ? (
+                    <TouchableOpacity
+                      disabled={busy}
+                      onPress={() => lblAction(event, "register", sportKey)}
+                      style={{ backgroundColor: colors.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}
+                    >
+                      <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 12 }}>{busy ? "…" : "Register"}</Text>
+                    </TouchableOpacity>
+                  ) : reg.status === "pending_payment" ? (
+                    <TouchableOpacity
+                      disabled={busy}
+                      onPress={() => lblAction(event, "pay", sportKey)}
+                      style={{ backgroundColor: colors.warning, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}
+                    >
+                      <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 12 }}>
+                        {busy ? "…" : `Pay ₹${Number(reg.amount ?? 0)}`}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Pill tone="success">registered ✓</Pill>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={{ marginTop: 10 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+              {event._count?.lblRegistrations ?? 0} school registration(s) · {event._count?.fixtures ?? 0} fixture(s)
+            </Text>
+            <TouchableOpacity
+              disabled={busyLbl === event.id}
+              onPress={() => lblAction(event, "generate")}
+              style={{ backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}
+            >
+              <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 13 }}>
+                {busyLbl === event.id ? "Generating…" : "Generate fixtures"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Team chat for registered/hosting LBL events — this is where the
+            registration conversation happens. */}
+        {(isHost || anyRegistered) && (
+          <TouchableOpacity
+            onPress={() => router.push(`/events/${event.id}?tab=chat`)}
+            activeOpacity={0.7}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              alignSelf: "flex-start",
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: colors.accent,
+              borderRadius: 999,
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+            }}
+          >
+            <Ionicons name="chatbubbles-outline" size={13} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700" }}>Team chat</Text>
+          </TouchableOpacity>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -198,133 +346,78 @@ export default function EventsScreen() {
         )}
       </View>
 
+      {/* Sub-tabs: what I'm in vs. what I can join */}
+      <ChipRow
+        options={[
+          { key: "registered", label: `Registered${registeredCount ? ` (${registeredCount})` : ""}` },
+          { key: "discover", label: `Discover${discoverCount ? ` (${discoverCount})` : ""}` },
+        ]}
+        value={tab}
+        onChange={(v) => setTab(v as typeof tab)}
+      />
+
       {loading ? (
         <Text style={{ color: colors.textSecondary }}>Loading…</Text>
-      ) : (
+      ) : tab === "registered" ? (
         <>
-          {lbl.length > 0 ? (
+          {/* Registered LBL tournaments — with team chat where registration happens */}
+          {lblRegistered.length > 0 && (
             <View>
-              {/* Exclusive LBL header */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 10,
-                  borderLeftWidth: 3,
-                  borderLeftColor: colors.accent,
-                  paddingLeft: 10,
-                }}
-              >
-                <Text style={{ color: colors.accent, fontSize: 16, fontWeight: "800", letterSpacing: 1 }}>
-                  LBL TOURNAMENTS
-                </Text>
-                <Pill tone="warning">exclusive</Pill>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: colors.accent, paddingLeft: 10 }}>
+                <Text style={{ color: colors.accent, fontSize: 15, fontWeight: "800", letterSpacing: 0.5 }}>LBL TOURNAMENTS</Text>
+                <Pill tone="warning">registered</Pill>
               </View>
               <View style={{ gap: 10 }}>
-                {lbl.map((event) => {
-                  const isHost = event.hostAcademy?.id === user?.academyId;
-                  const regBySport = new Map(event.lblRegistrations.map((r) => [r.sportKey, r]));
-                  return (
-                    <Card key={event.id}>
-                      <TouchableOpacity onPress={() => router.push(`/events/${event.id}`)} activeOpacity={0.75}>
-                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                          <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 15, flex: 1 }}>
-                            {event.name}
-                          </Text>
-                          <Pill tone="info">{isHost ? "hosting" : event.status}</Pill>
-                        </View>
-                        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>
-                          {formatDate(event.startDate)} – {formatDate(event.endDate)} · Host:{" "}
-                          {event.hostAcademy?.name ?? "—"}
-                          {event.payToJoin && event.pricePerHead != null
-                            ? ` · ₹${Number(event.pricePerHead)} per sport`
-                            : " · free entry"}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {!isHost ? (
-                        <View style={{ gap: 6, marginTop: 10 }}>
-                          {event.sports.map((sportKey) => {
-                            const reg = regBySport.get(sportKey);
-                            const busy = busyLbl === event.id + sportKey;
-                            return (
-                              <View
-                                key={sportKey}
-                                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                              >
-                                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "600" }}>
-                                  {sportKey}
-                                </Text>
-                                {!reg ? (
-                                  <TouchableOpacity
-                                    disabled={busy}
-                                    onPress={() => lblAction(event, "register", sportKey)}
-                                    style={{ backgroundColor: colors.accent, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}
-                                  >
-                                    <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 12 }}>
-                                      {busy ? "…" : "Register"}
-                                    </Text>
-                                  </TouchableOpacity>
-                                ) : reg.status === "pending_payment" ? (
-                                  <TouchableOpacity
-                                    disabled={busy}
-                                    onPress={() => lblAction(event, "pay", sportKey)}
-                                    style={{ backgroundColor: colors.warning, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}
-                                  >
-                                    <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 12 }}>
-                                      {busy ? "…" : `Pay ₹${Number(reg.amount ?? 0)}`}
-                                    </Text>
-                                  </TouchableOpacity>
-                                ) : (
-                                  <Pill tone="success">registered ✓</Pill>
-                                )}
-                              </View>
-                            );
-                          })}
-                        </View>
-                      ) : (
-                        <View style={{ marginTop: 10 }}>
-                          <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
-                            {event._count?.lblRegistrations ?? 0} school registration(s) · {event._count?.fixtures ?? 0}{" "}
-                            fixture(s)
-                          </Text>
-                          <TouchableOpacity
-                            disabled={busyLbl === event.id}
-                            onPress={() => lblAction(event, "generate")}
-                            style={{ backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}
-                          >
-                            <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 13 }}>
-                              {busyLbl === event.id ? "Generating…" : "Generate fixtures"}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </Card>
-                  );
-                })}
+                {lblRegistered.map((event) => (
+                  <LblCard key={event.id} event={event} />
+                ))}
               </View>
             </View>
-          ) : null}
+          )}
 
           <View>
             <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
-              Your academy
+              My events &amp; joined
             </Text>
             <EventList
               events={mineShown}
-              emptyMessage={search ? "No events match your search." : "No events yet — host one with the + Host button."}
+              showChat
+              emptyMessage={
+                search
+                  ? "No registered events match your search."
+                  : "You haven't hosted or joined an event yet — check Discover, or host one with + Host."
+              }
             />
           </View>
+        </>
+      ) : (
+        <>
+          {/* Open LBL tournaments you can still register for */}
+          {lblOpen.length > 0 && (
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: colors.accent, paddingLeft: 10 }}>
+                <Text style={{ color: colors.accent, fontSize: 15, fontWeight: "800", letterSpacing: 0.5 }}>LBL TOURNAMENTS</Text>
+                <Pill tone="warning">open to register</Pill>
+              </View>
+              <View style={{ gap: 10 }}>
+                {lblOpen.map((event) => (
+                  <LblCard key={event.id} event={event} />
+                ))}
+              </View>
+            </View>
+          )}
 
           <View>
-            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 4 }}>
               Around you
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+              Open events hosted within 15 km — tap to view and join.
             </Text>
             <EventList
               events={nearbyShown}
               emptyMessage={
-                search ? "No nearby events match your search." : "No published events from other academies in your network yet."
+                search ? "No nearby events match your search." : "No open events hosted within 15 km of your center right now."
               }
             />
           </View>

@@ -13,6 +13,10 @@ interface AcademySettingsShape {
   interschool?: { showReliabilityScore?: boolean };
 }
 
+// Match Center discovery radius (2026-07): a coach only discovers hosted
+// events whose host center is within this many km of the coach's own center.
+const DISCOVERY_RADIUS_KM = 15;
+
 // BRD 11.2 age bands are written "U-8"/"U-10"/... ("Under N"); this parses
 // the numeric cutoff so a client's age (computed from dob as of the event's
 // start date) can be checked against the bands an event declares.
@@ -98,6 +102,9 @@ export class InterschoolService {
             // event with team slots (maxTeams) — the act of setting a cap and
             // publishing IS opting that event in for open discovery/join.
             OR: [{ hostAcademy: { networkOptIn: true } }, { maxTeams: { not: null } }],
+            // Discover = events I'm NOT already in. Once my academy joins, the
+            // event moves to my "registered" list, not "discover".
+            invitations: { none: { invitedAcademyId: academyId, status: "accepted" as const } },
           }
         : {
             ...(status ? { status } : {}),
@@ -121,8 +128,12 @@ export class InterschoolService {
       teamsJoined: 1 + invitations.filter((i) => i.status === "accepted").length,
       myAcademyJoined: invitations.some((i) => i.invitedAcademyId === academyId && i.status === "accepted"),
     }));
-    // Discovery is ranked by distance from the coach's own center pin
-    // (2026-07): nearest host first; hosts with no pinned center sort last.
+    // Discovery is scoped to the coach's neighbourhood (2026-07): only events
+    // whose host center is within DISCOVERY_RADIUS_KM of the coach's own
+    // center are shown, nearest first. This keeps the Match Center listing
+    // local — a coach sees game days they could realistically travel to.
+    // (Explicitly invited schools still see the event via the "mine" scope,
+    // regardless of distance.)
     if (scope === "discover" && userId) {
       const me = await this.coachCenterPin(academyId, userId);
       if (me) {
@@ -139,7 +150,11 @@ export class InterschoolService {
           }
           return { ...e, distanceKm: best?.km ?? null, nearestVenue: best?.center ?? null };
         });
-        return withDistance.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
+        return withDistance
+          // Keep only events with a locatable host center within the radius —
+          // a host we can't place can't be confirmed as "within 15 km".
+          .filter((e) => e.distanceKm != null && e.distanceKm <= DISCOVERY_RADIUS_KM)
+          .sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
       }
     }
     return events;

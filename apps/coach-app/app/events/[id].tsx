@@ -67,7 +67,7 @@ function fixtureWhen(iso?: string | null): string {
 }
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const { user } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [standings, setStandings] = useState<{ sportKey: string; rows: StandingsRow[] }[]>([]);
@@ -76,8 +76,13 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   // Same console layout as the tournament module: one tab open at a time
-  // keeps the screen calm however many fixtures or messages pile up.
-  const [tab, setTab] = useState<"score" | "fixtures" | "roster" | "standings" | "chat">("fixtures");
+  // keeps the screen calm however many fixtures or messages pile up. The
+  // Matches list can deep-link straight to a tab (e.g. ?tab=chat).
+  const [tab, setTab] = useState<"score" | "fixtures" | "roster" | "standings" | "chat">(
+    initialTab === "chat" || initialTab === "score" || initialTab === "roster" || initialTab === "standings"
+      ? (initialTab as "score" | "roster" | "standings" | "chat")
+      : "fixtures"
+  );
   const [rosters, setRosters] = useState<RosterEntry[]>([]);
   const [clients, setClients] = useState<ClientRef[]>([]);
   const [rosterSport, setRosterSport] = useState("");
