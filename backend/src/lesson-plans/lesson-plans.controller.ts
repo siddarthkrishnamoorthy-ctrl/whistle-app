@@ -26,25 +26,25 @@ export class LessonPlansController {
   }
 
   @Post()
-  @Roles("admin", "head_coach")
+  @Roles("admin", "account_manager", "head_coach")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateLessonPlanDto) {
     return this.lessonPlansService.create(user.academyId as string, dto);
   }
 
   @Patch(":id")
-  @Roles("admin", "head_coach")
+  @Roles("admin", "account_manager", "head_coach")
   update(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateLessonPlanDto) {
     return this.lessonPlansService.update(user.academyId as string, id, dto);
   }
 
   @Post(":id/assign")
-  @Roles("admin", "head_coach")
+  @Roles("admin", "account_manager", "head_coach")
   assign(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: AssignClassDto) {
     return this.lessonPlansService.assignToClass(user.academyId as string, id, dto.classId);
   }
 
   @Post(":id/duplicate")
-  @Roles("admin", "head_coach")
+  @Roles("admin", "account_manager", "head_coach")
   duplicate(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.lessonPlansService.duplicate(user.academyId as string, id);
   }

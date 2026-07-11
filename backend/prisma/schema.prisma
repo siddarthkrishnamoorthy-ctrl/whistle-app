@@ -373,6 +373,10 @@ model School {
   contactPhone             String?  @map("contact_phone")
   // "calendar" | "grade_sequence" | null (null = inherit academy default)
   lessonPlanAssignmentMode String?  @map("lesson_plan_assignment_mode")
+  // Student allowance for this school's access (2026-07): enrolling a
+  // student into any of the school's classes beyond this cap is rejected.
+  // null = unlimited.
+  maxStudents              Int?     @map("max_students")
   createdAt                DateTime @default(now()) @map("created_at")
 
   academy Academy @relation(fields: [academyId], references: [id])

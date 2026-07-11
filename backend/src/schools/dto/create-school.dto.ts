@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, Min, MinLength } from "class-validator";
 
 export class CreateSchoolDto {
   @IsString()
@@ -22,4 +22,11 @@ export class CreateSchoolDto {
   @IsOptional()
   @IsIn(["calendar", "grade_sequence"])
   lessonPlanAssignmentMode?: "calendar" | "grade_sequence";
+
+  // Student allowance for this school's access — enrolling beyond this
+  // count into the school's classes is rejected. Omit for unlimited.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxStudents?: number;
 }

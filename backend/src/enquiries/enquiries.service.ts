@@ -80,6 +80,27 @@ export class EnquiriesService {
     const log = (enquiry.activityLog as unknown as ActivityEntry[]) ?? [];
     log.push({ text: `Converted to client on ${plan.title}`, at: new Date().toISOString() });
 
+    // School student allowance (2026-07): same cap as direct student
+    // creation — conversion cannot sneak a student past the school's limit.
+    if (klass.schoolId) {
+      const school = await this.prisma.school.findUnique({
+        where: { id: klass.schoolId },
+        select: { name: true, maxStudents: true },
+      });
+      if (school?.maxStudents != null) {
+        const enrolled = await this.prisma.enrollment.findMany({
+          where: { status: "active", class: { schoolId: klass.schoolId } },
+          select: { clientId: true },
+          distinct: ["clientId"],
+        });
+        if (enrolled.length >= school.maxStudents) {
+          throw new ForbiddenException(
+            `${school.name} has reached its ${school.maxStudents}-student allowance — upgrade the school's access to enroll more.`
+          );
+        }
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const client = await tx.client.create({
         data: {

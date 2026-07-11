@@ -12,6 +12,7 @@ interface School {
   contactName?: string | null;
   contactPhone?: string | null;
   lessonPlanAssignmentMode?: "calendar" | "grade_sequence" | null;
+  maxStudents?: number | null;
   _count?: { classes: number };
 }
 
@@ -32,6 +33,7 @@ export default function SchoolsPage() {
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [mode, setMode] = useState<"" | "calendar" | "grade_sequence">("");
+  const [maxStudents, setMaxStudents] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const refetch = useCallback(() => {
@@ -55,6 +57,7 @@ export default function SchoolsPage() {
           contactName: contactName.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
           lessonPlanAssignmentMode: mode || undefined,
+          maxStudents: maxStudents.trim() ? Number(maxStudents) : undefined,
         }),
       });
       setName("");
@@ -62,6 +65,7 @@ export default function SchoolsPage() {
       setContactName("");
       setContactPhone("");
       setMode("");
+      setMaxStudents("");
       setModalOpen(false);
       refetch();
     } catch (e) {
@@ -105,7 +109,7 @@ export default function SchoolsPage() {
           <EmptyState message="No schools yet. Add one, then assign classes to it from the Classes page." />
         </Card>
       ) : (
-        <Table columns={["School", "Contact", "Classes", "Lesson plan scheduling"]}>
+        <Table columns={["School", "Contact", "Classes", "Student allowance", "Lesson plan scheduling"]}>
           {schools.map((s) => (
             <tr key={s.id}>
               <td className="px-4 py-3">
@@ -117,6 +121,7 @@ export default function SchoolsPage() {
                 {s.contactPhone ? ` · ${s.contactPhone}` : ""}
               </td>
               <td className="px-4 py-3 text-text-secondary">{s._count?.classes ?? 0}</td>
+              <td className="px-4 py-3 text-text-secondary">{s.maxStudents ?? "Unlimited"}</td>
               <td className="px-4 py-3">
                 <select
                   value={s.lessonPlanAssignmentMode ?? ""}
@@ -164,6 +169,14 @@ export default function SchoolsPage() {
           <option value="calendar">Via class calendar</option>
           <option value="grade_sequence">Grade-wise sequential</option>
         </SelectField>
+        <Field
+          label="Student allowance (optional)"
+          type="number"
+          min={1}
+          value={maxStudents}
+          onChange={(e) => setMaxStudents(e.target.value)}
+          placeholder="e.g. 200 — enrollment blocks past this count"
+        />
       </Modal>
     </div>
   );

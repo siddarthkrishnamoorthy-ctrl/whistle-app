@@ -20,14 +20,16 @@ export class GradesController {
     return this.gradesService.findAll(user.academyId as string);
   }
 
+  // account_manager included (2026-07): AMs set up their school's grade
+  // taxonomy alongside the timetable.
   @Post()
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateGradeDto) {
     return this.gradesService.create(user.academyId as string, dto);
   }
 
   @Patch(":id")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   update(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: UpdateGradeDto) {
     return this.gradesService.update(user.academyId as string, id, dto);
   }

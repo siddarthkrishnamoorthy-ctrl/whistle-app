@@ -48,6 +48,29 @@ export class ClientsService {
       if (planId && classId) {
         const plan = await tx.plan.findUnique({ where: { id: planId } });
         if (!plan || plan.academyId !== academyId) throw new ForbiddenException("Plan not in this academy.");
+
+        // School student allowance (2026-07): a school's access is sold for a
+        // set number of students — the cap counts DISTINCT students actively
+        // enrolled across all of the school's classes.
+        const klass = await tx.class.findUnique({ where: { id: classId }, select: { schoolId: true } });
+        if (klass?.schoolId) {
+          const school = await tx.school.findUnique({
+            where: { id: klass.schoolId },
+            select: { name: true, maxStudents: true },
+          });
+          if (school?.maxStudents != null) {
+            const enrolled = await tx.enrollment.findMany({
+              where: { status: "active", class: { schoolId: klass.schoolId } },
+              select: { clientId: true },
+              distinct: ["clientId"],
+            });
+            if (enrolled.length >= school.maxStudents) {
+              throw new ForbiddenException(
+                `${school.name} has reached its ${school.maxStudents}-student allowance — upgrade the school's access to enroll more.`
+              );
+            }
+          }
+        }
         const start = startDate ? new Date(startDate) : new Date();
         const end = new Date(start);
         if (plan.durationUnit === "day") end.setDate(end.getDate() + (plan.durationValue ?? 1));

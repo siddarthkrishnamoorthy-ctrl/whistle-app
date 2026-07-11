@@ -20,7 +20,9 @@ import type { AuthenticatedUser } from "../auth/jwt-payload";
 
 @Controller("timetables")
 @UseGuards(JwtAuthGuard, AcademyRequiredGuard, RolesGuard)
-@Roles("admin")
+// account_manager included (2026-07): AMs run their school's operations —
+// uploading the term timetable is theirs (same rationale as classes/students).
+@Roles("admin", "account_manager")
 export class TimetablesController {
   constructor(private timetablesService: TimetablesService) {}
 

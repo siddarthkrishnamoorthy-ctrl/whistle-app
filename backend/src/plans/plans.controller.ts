@@ -26,25 +26,25 @@ export class PlansController {
   }
 
   @Post()
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePlanDto) {
     return this.plansService.create(user.academyId as string, dto);
   }
 
   @Patch(":id")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   update(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: UpdatePlanDto) {
     return this.plansService.update(user.academyId as string, id, dto);
   }
 
   @Delete(":id")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   remove(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Query("force") force?: string) {
     return this.plansService.remove(user.academyId as string, id, force === "true");
   }
 
   @Post(":id/link-class")
-  @Roles("admin")
+  @Roles("admin", "account_manager")
   linkClass(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: LinkClassDto) {
     return this.plansService.linkClass(user.academyId as string, id, dto.classId);
   }
