@@ -137,6 +137,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResult> {
     const user = await this.validateUser(dto.email, dto.password);
     if (!user) throw new UnauthorizedException("Invalid email or password.");
+    await this.assertTenantNotSuspended(user.academyId);
     return this.issueTokensForUser(user, Boolean(dto.rememberMe));
   }
 
@@ -147,6 +148,7 @@ export class AuthService {
       include: { user: true },
     });
     if (!record) throw new UnauthorizedException("Invalid or expired refresh token.");
+    await this.assertTenantNotSuspended(record.user.academyId);
 
     await this.prisma.refreshToken.update({
       where: { id: record.id },
@@ -205,6 +207,19 @@ export class AuthService {
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+  }
+
+  // Operator-suspended tenants (2026-07): every user of a suspended academy
+  // is locked out at login AND refresh until Whistle reinstates the tenant.
+  private async assertTenantNotSuspended(academyId: string | null): Promise<void> {
+    if (!academyId) return;
+    const academy = await this.prisma.academy.findUnique({
+      where: { id: academyId },
+      select: { suspended: true },
+    });
+    if (academy?.suspended) {
+      throw new UnauthorizedException("This academy's Whistle access is suspended — contact Whistle support.");
+    }
   }
 
   private async issueTokensForUser(user: User, rememberMe: boolean): Promise<AuthResult> {

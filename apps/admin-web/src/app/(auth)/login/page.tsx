@@ -20,8 +20,10 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await signIn(email, password, rememberMe);
-      router.replace("/dashboard");
+      const result = await signIn(email, password, rememberMe);
+      // Whistle the operator lands on the cross-tenant console; a tenant's
+      // admin lands on their own academy dashboard.
+      router.replace(result?.role === "platform_owner" ? "/platform" : "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not log in. Please try again.");
     } finally {

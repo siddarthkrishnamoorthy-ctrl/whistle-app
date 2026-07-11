@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, CalendarDays, IndianRupee, Inbox, MapPin, RefreshCw, School, Swords, Trophy, Users, Wallet } from "lucide-react";
+import { CalendarDays, IndianRupee, Inbox, MapPin, RefreshCw, School, Swords, Trophy, Users, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
 import { Card, StatusPill } from "@/components/ui";
@@ -157,7 +157,8 @@ export default function DashboardPage() {
           {snap?.enrollment && (
             <div className="flex flex-wrap gap-2">
               {[
-                { label: "Academies on Whistle", value: snap.enrollment.academiesOnPlatform, icon: Building2, href: "/dashboard" },
+                // Tenant dashboards are scoped to THEIR school/academy only —
+                // platform-wide counts live on Whistle's /platform console.
                 { label: "Partner schools", value: snap.enrollment.mySchools, icon: School, href: "/academy/schools" },
                 { label: "Centers", value: snap.enrollment.myCenters, icon: MapPin, href: "/academy/centers" },
               ].map((c) => {

@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateLinkCode } from "../common/prisma-selects";
+import { assertTenantCapacity } from "../common/tenant-allowance";
 import type { CreateEnquiryDto } from "./dto/create-enquiry.dto";
 import type { UpdateEnquiryDto } from "./dto/update-enquiry.dto";
 import type { ConvertEnquiryDto } from "./dto/convert-enquiry.dto";
@@ -102,6 +103,9 @@ export class EnquiriesService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // Tenant-level allowance — conversion is a student-creation path too.
+      await assertTenantCapacity(tx, academyId);
+
       const client = await tx.client.create({
         data: {
           academyId,

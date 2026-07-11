@@ -270,8 +270,21 @@ export interface Invoice {
   amount: string;
   status: "pending" | "paid";
   issuedAt: string;
+  batchId?: string | null;
   client: { id: string; name: string };
   plan: { id: string; title: string } | null;
+}
+
+// Bulk payment: N invoices settled by one consolidated payment.
+export interface InvoiceBatch {
+  id: string;
+  title: string;
+  payerName: string | null;
+  totalAmount: string;
+  status: "pending" | "paid";
+  paidAt: string | null;
+  createdAt: string;
+  invoices: { id: string; invoiceNumber: string; amount: string; status: string; client: { id: string; name: string } }[];
 }
 
 export interface AttendanceSummary {

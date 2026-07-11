@@ -33,6 +33,7 @@ import { SchoolsModule } from "./schools/schools.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 import { ChessModule } from "./chess/chess.module";
 import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-assessments.module";
+import { PlatformModule } from "./platform/platform.module";
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-asses
     TournamentsModule,
     ChessModule,
     PeriodicAssessmentsModule,
+    PlatformModule,
   ],
 })
 export class AppModule {}

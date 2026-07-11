@@ -9,7 +9,7 @@ interface AuthContextValue {
   accessToken: string | null;
   loading: boolean;
   apiUnreachable: boolean;
-  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<AuthUser>;
   signUp: (fullName: string, email: string, password: string, declaredStrength?: number) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         applyToken(data.accessToken);
         setUser(data.user);
+        return data.user as AuthUser;
       },
       async signUp(fullName, email, password, declaredStrength) {
         let res: Response;

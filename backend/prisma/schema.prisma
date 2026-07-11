@@ -16,6 +16,9 @@ datasource db {
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
 enum UserRole {
+  // Whistle the company (2026-07): the platform operator — no academy
+  // attached; manages every tenant from the operator console.
+  platform_owner
   admin
   account_manager
   venue_manager
@@ -161,6 +164,14 @@ model Academy {
   settings      Json?
   networkOptIn  Boolean  @default(false) @map("network_opt_in")
   brandTheme    Json?    @map("brand_theme")
+  // Platform tier (2026-07): the operator sells access per student.
+  // studentAllowance = the purchased count (null -> subscription's declared
+  // strength); allowanceMode "hard" blocks the N+1th student, "true_up"
+  // lets the tenant grow and bills the real count at period close.
+  studentAllowance Int?    @map("student_allowance")
+  allowanceMode    String  @default("true_up") @map("allowance_mode")
+  // Suspended tenants (non-payment etc.) can't log in until reinstated.
+  suspended        Boolean @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
 
   centers            Center[]
@@ -563,11 +574,16 @@ model Invoice {
   status        InvoiceStatus @default(pending)
   gatewayTxnId  String?       @map("gateway_txn_id")
   issuedAt      DateTime      @default(now()) @map("issued_at")
+  // Bulk settlement (2026-07): invoices grouped into a batch are paid by
+  // ONE consolidated payment (term collection, sponsor paying for a group,
+  // a parent paying for siblings).
+  batchId       String?       @map("batch_id")
 
   academy     Academy      @relation(fields: [academyId], references: [id])
   client      Client       @relation(fields: [clientId], references: [id])
   plan        Plan?        @relation(fields: [planId], references: [id])
   eventRoster EventRoster?
+  batch       InvoiceBatch? @relation(fields: [batchId], references: [id])
 
   @@unique([academyId, invoiceNumber])
   @@map("invoices")
@@ -792,6 +808,23 @@ model EventRoster {
 
   @@unique([eventId, clientId, sportKey])
   @@map("event_rosters")
+}
+
+// One consolidated payable over many student invoices — one payment marks
+// every member invoice paid (2026-07).
+model InvoiceBatch {
+  id          String    @id @default(uuid())
+  academyId   String    @map("academy_id")
+  title       String
+  payerName   String?   @map("payer_name")
+  totalAmount Decimal   @map("total_amount") @db.Decimal(12, 2)
+  status      String    @default("pending") // pending | paid
+  paidAt      DateTime? @map("paid_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  invoices Invoice[]
+
+  @@map("invoice_batches")
 }
 
 model ScoringTemplate {

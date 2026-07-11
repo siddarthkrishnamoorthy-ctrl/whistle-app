@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { InvoicesService } from "./invoices.service";
 import { CreateInvoiceDto } from "./dto/create-invoice.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -32,5 +32,30 @@ export class InvoicesController {
   @Post(":id/mark-paid")
   markPaid(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.invoicesService.markPaid(user.academyId as string, id);
+  }
+
+  // ── Bulk payment: invoice batches ─────────────────────────────────────────
+
+  @Get("batches")
+  listBatches(@CurrentUser() user: AuthenticatedUser) {
+    return this.invoicesService.listBatches(user.academyId as string);
+  }
+
+  @Post("batches")
+  createBatch(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: { invoiceIds: string[]; title?: string; payerName?: string }
+  ) {
+    return this.invoicesService.createBatch(user.academyId as string, dto);
+  }
+
+  @Post("batches/:id/pay")
+  payBatch(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.invoicesService.payBatch(user.academyId as string, id);
+  }
+
+  @Delete("batches/:id")
+  deleteBatch(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.invoicesService.deleteBatch(user.academyId as string, id);
   }
 }

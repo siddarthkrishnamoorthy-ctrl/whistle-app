@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import type { SkillLevel } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateLinkCode } from "../common/prisma-selects";
+import { assertTenantCapacity } from "../common/tenant-allowance";
 import type { CreateClientDto } from "./dto/create-client.dto";
 import type { BulkImportClientsDto } from "./dto/bulk-import.dto";
 import type { UpdateClientDto } from "./dto/update-client.dto";
@@ -41,6 +42,9 @@ export class ClientsService {
     const { planId, classId, startDate, ...clientFields } = dto;
 
     return this.prisma.$transaction(async (tx) => {
+      // Tenant-level allowance (hard mode blocks the N+1th student).
+      await assertTenantCapacity(tx, academyId);
+
       const client = await tx.client.create({
         data: { ...clientFields, academyId, linkCode: generateLinkCode() },
       });

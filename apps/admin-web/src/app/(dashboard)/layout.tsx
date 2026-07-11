@@ -15,6 +15,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
+    // Whistle the operator has no academy — their console is /platform, not
+    // a tenant dashboard.
+    if (!loading && user?.role === "platform_owner") router.replace("/platform");
   }, [loading, user, router]);
 
   if (loading || !user) {
