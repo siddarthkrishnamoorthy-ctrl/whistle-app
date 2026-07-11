@@ -28,6 +28,9 @@ interface Match {
   scoreDisplay: string | null;
   winnerEntryId: string | null;
   venue: string | null;
+  stage?: string;
+  groupNo?: number | null;
+  roundLabel?: string | null;
 }
 
 interface TEvent {
@@ -38,6 +41,8 @@ interface TEvent {
   discipline: string;
   format: string;
   unit: string;
+  groupCount?: number;
+  playoffMode?: string;
   duprRated: boolean;
   entryFee: string | null;
   entries: Entry[];
@@ -422,7 +427,28 @@ export default function ManageTournamentPage() {
                 </PrimaryButton>
               ) : (
                 <div>
-                  <h3 className="mb-2 text-sm font-semibold">Matches</h3>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Matches</h3>
+                    {/* The organizer's post-league confirmation: once every
+                        group match is done, build the configured bracket. */}
+                    {(ev.format === "round_robin" || ev.format === "league") &&
+                      (ev.playoffMode ?? "none") !== "none" &&
+                      !ev.matches.some((m) => m.stage === "playoff") && (
+                        <OutlineButton
+                          className="w-auto px-4 py-1.5 text-xs"
+                          disabled={busy || ev.matches.some((m) => m.status !== "completed")}
+                          title={
+                            ev.matches.some((m) => m.status !== "completed")
+                              ? "Available once every league match is completed"
+                              : undefined
+                          }
+                          onClick={() => act(() => tJson(`/tournaments/events/${ev.id}/playoffs`, { method: "POST", body: "{}" }))}
+                        >
+                          🏆 Proceed to{" "}
+                          {ev.playoffMode === "final" ? "the Final" : ev.playoffMode === "semis" ? "Semi-finals" : "Quarter-finals"}
+                        </OutlineButton>
+                      )}
+                  </div>
                   <div className="divide-y divide-border">
                     {ev.matches.map((m) => {
                       const s = scores[m.id] ?? { a: String(m.scoreA), b: String(m.scoreB) };
@@ -438,8 +464,20 @@ export default function ManageTournamentPage() {
                       return (
                         <div key={m.id}>
                         <div className="flex flex-wrap items-center gap-3 py-2 text-sm">
-                          <span className="w-20 text-xs text-text-secondary">
-                            R{m.round} · M{m.matchNo}
+                          <span className="w-28 text-xs text-text-secondary">
+                            {m.stage === "playoff" ? (
+                              <span className="rounded-full bg-accent/15 px-2 py-0.5 font-semibold text-accent">
+                                🏆 {m.roundLabel ?? "Playoff"}
+                              </span>
+                            ) : m.groupNo ? (
+                              <>
+                                Grp {String.fromCharCode(64 + m.groupNo)} · M{m.matchNo}
+                              </>
+                            ) : (
+                              <>
+                                R{m.round} · M{m.matchNo}
+                              </>
+                            )}
                           </span>
                           <span className="min-w-[220px] flex-1 font-medium text-text-primary">
                             {entryName(ev.entries, m.entryAId)} vs {entryName(ev.entries, m.entryBId)}

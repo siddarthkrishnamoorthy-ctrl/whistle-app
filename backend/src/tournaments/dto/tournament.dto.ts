@@ -74,6 +74,18 @@ export class CreateEventInputDto {
   @IsOptional()
   @IsBoolean()
   duprRated?: boolean;
+
+  // League progression (2026-07), decided when the tournament is set:
+  // split the league stage into groups, then resolve it per playoffMode.
+  @IsOptional()
+  @IsIn([1, 2, 4])
+  groupCount?: number;
+
+  // "none" = table decides · "final" = top 2 · "semis" = top 4 (cross-group
+  // A1 vs B2 / B1 vs A2) · "quarters" = top 8 (World Cup cross-over).
+  @IsOptional()
+  @IsIn(["none", "final", "semis", "quarters"])
+  playoffMode?: "none" | "final" | "semis" | "quarters";
 }
 
 export class CreateTournamentDto {

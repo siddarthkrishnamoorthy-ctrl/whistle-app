@@ -727,6 +727,10 @@ model InterschoolEvent {
   // Where the event is played — picked from the host academy's centers when
   // hosting (fixtures inherit it), so visiting teams know where to go.
   venue          String?
+  // League progression (2026-07), set by the host when listing the event —
+  // same model as tournaments: groups then none | final | semis | quarters.
+  groupCount     Int         @default(1) @map("group_count")
+  playoffMode    String      @default("none") @map("playoff_mode")
   // LBL tournament flag (2026-07): LBL events are open for self-service
   // school registration per sport (with payment) instead of invitations.
   isLbl          Boolean     @default(false) @map("is_lbl")
@@ -871,6 +875,12 @@ model Fixture {
   // persists the final result once a session ends.
   resultConfirmations Json?  @map("result_confirmations")
   resultSummary       Json?  @map("result_summary")
+  // Match Center league progression (2026-07): "group" fixtures feed the
+  // event points table; "playoff" fixtures are the post-league rounds the
+  // host generates once the league stage completes.
+  stage        String        @default("group")
+  groupNo      Int?          @map("group_no")
+  roundLabel   String?       @map("round_label")
 
   event             InterschoolEvent?   @relation(fields: [eventId], references: [id])
   sport             Sport               @relation(fields: [sportKey], references: [key])
@@ -1320,6 +1330,13 @@ model TournamentEvent {
   // Pickleball: when true, completed results are queued for DUPR submission
   // (real sync activates once DUPR_API_KEY is configured — see .env.example).
   duprRated        Boolean @default(false) @map("dupr_rated")
+  // League progression (2026-07), decided at creation: split the league
+  // stage into N groups (1/2/4, snake-seeded), then after the league —
+  // playoffMode "none" (table decides), "final" (top 2), "semis" (top 4,
+  // cross-group A1 vs B2 / B1 vs A2), or "quarters" (top 8, World Cup
+  // style cross-over).
+  groupCount       Int     @default(1) @map("group_count")
+  playoffMode      String  @default("none") @map("playoff_mode")
 
   tournament   Tournament              @relation(fields: [tournamentId], references: [id])
   entries      TournamentEntry[]
@@ -1369,6 +1386,12 @@ model TournamentMatch {
   scoreDisplay  String?   @map("score_display")
   winnerEntryId String?   @map("winner_entry_id")
   officialId    String?   @map("official_id")
+  // "group" matches feed the points table; "playoff" matches are the
+  // post-league bracket. groupNo tags which group a league match is in;
+  // roundLabel names playoff rounds ("Quarterfinal"/"Semifinal"/"Final").
+  stage         String    @default("group")
+  groupNo       Int?      @map("group_no")
+  roundLabel    String?   @map("round_label")
 
   event         TournamentEvent          @relation(fields: [eventId], references: [id])
   cricketConfig TournamentCricketConfig?

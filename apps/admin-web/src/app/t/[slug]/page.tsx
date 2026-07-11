@@ -19,6 +19,9 @@ interface PublicEntry {
 interface PublicMatch {
   round: number;
   matchNo: number;
+  stage?: string;
+  groupNo?: number | null;
+  roundLabel?: string | null;
   entryAId: string | null;
   entryBId: string | null;
   status: string;
@@ -309,7 +312,17 @@ export default function PublicTournamentPage() {
                 <tbody>
                   {ev.matches.map((m) => (
                     <tr key={m.matchNo} className="border-b border-white/5">
-                      <td className="py-2 pr-2 text-slate-500">R{m.round}</td>
+                      <td className="py-2 pr-2 text-slate-500">
+                        {m.roundLabel ? (
+                          <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                            🏆 {m.roundLabel}
+                          </span>
+                        ) : m.groupNo ? (
+                          `Grp ${String.fromCharCode(64 + m.groupNo)}`
+                        ) : (
+                          `R${m.round}`
+                        )}
+                      </td>
                       <td className="py-2 pr-2">
                         <span className={m.winnerEntryId && m.winnerEntryId === m.entryAId ? "text-amber-300 font-semibold" : ""}>
                           {entryName(ev.entries, m.entryAId)}

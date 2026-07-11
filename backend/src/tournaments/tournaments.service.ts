@@ -165,6 +165,10 @@ export class TournamentsService {
             requiresApproval: e.requiresApproval ?? false,
             category: e.category,
             duprRated: (e.duprRated ?? false) && e.sportKey === "pickleball",
+            // Group/playoff plan only applies to league-style formats — a
+            // knockout event is already its own bracket.
+            groupCount: e.format === "round_robin" || e.format === "league" ? (e.groupCount ?? 1) : 1,
+            playoffMode: e.format === "round_robin" || e.format === "league" ? (e.playoffMode ?? "none") : "none",
           })),
         },
       },
@@ -474,33 +478,51 @@ export class TournamentsService {
     const nextVenue = () => venues[venueIdx++ % venues.length];
 
     if (event.format === "round_robin" || event.format === "league") {
-      // Every pair meets once via the circle method; a league runs the whole
-      // schedule twice with home/away swapped (double round robin).
+      // Snake-seed the entrants into the configured groups (1 = single
+      // table), then every pair meets once per group via the circle method;
+      // a league runs each group's schedule twice with home/away swapped.
+      const groupCount = Math.max(1, event.groupCount ?? 1);
+      if (ordered.length < groupCount * 2) {
+        throw new BadRequestException(
+          `${groupCount} groups need at least ${groupCount * 2} confirmed entries (each group needs 2+).`
+        );
+      }
+      const groups: (typeof ordered)[] = Array.from({ length: groupCount }, () => []);
+      ordered.forEach((e, i) => {
+        const row = Math.floor(i / groupCount);
+        const col = i % groupCount;
+        groups[row % 2 === 0 ? col : groupCount - 1 - col].push(e);
+      });
+
       const legs = event.format === "league" ? 2 : 1;
-      const list: (typeof ordered)[number][] = [...ordered];
-      const oddBye = list.length % 2 === 1;
-      const n = oddBye ? list.length + 1 : list.length;
-      const rounds = n - 1;
       let matchNo = 1;
-      for (let leg = 0; leg < legs; leg++) {
-        for (let r = 0; r < rounds; r++) {
-          for (let i = 0; i < n / 2; i++) {
-            const aIdx = (r + i) % (n - 1);
-            const bIdx = i === 0 ? n - 1 : (r + n - 1 - i) % (n - 1);
-            const a = list[aIdx];
-            const b = bIdx === n - 1 && oddBye ? undefined : list[bIdx === n - 1 ? n - 1 : bIdx];
-            if (!a || !b || a.id === b.id) continue;
-            const [home, away] = leg === 0 ? [a, b] : [b, a];
-            await this.prisma.tournamentMatch.create({
-              data: {
-                eventId,
-                round: leg * rounds + r + 1,
-                matchNo: matchNo++,
-                entryAId: home.id,
-                entryBId: away.id,
-                venue: nextVenue(),
-              },
-            });
+      for (let g = 0; g < groupCount; g++) {
+        const list = groups[g];
+        const oddBye = list.length % 2 === 1;
+        const n = oddBye ? list.length + 1 : list.length;
+        const rounds = n - 1;
+        for (let leg = 0; leg < legs; leg++) {
+          for (let r = 0; r < rounds; r++) {
+            for (let i = 0; i < n / 2; i++) {
+              const aIdx = (r + i) % (n - 1);
+              const bIdx = i === 0 ? n - 1 : (r + n - 1 - i) % (n - 1);
+              const a = list[aIdx];
+              const b = bIdx === n - 1 && oddBye ? undefined : list[bIdx === n - 1 ? n - 1 : bIdx];
+              if (!a || !b || a.id === b.id) continue;
+              const [home, away] = leg === 0 ? [a, b] : [b, a];
+              await this.prisma.tournamentMatch.create({
+                data: {
+                  eventId,
+                  round: leg * rounds + r + 1,
+                  matchNo: matchNo++,
+                  entryAId: home.id,
+                  entryBId: away.id,
+                  venue: nextVenue(),
+                  stage: "group",
+                  groupNo: groupCount > 1 ? g + 1 : null,
+                },
+              });
+            }
           }
         }
       }
@@ -564,6 +586,129 @@ export class TournamentsService {
       data: { status: "in_progress" },
     });
     return this.prisma.tournamentMatch.findMany({ where: { eventId }, orderBy: [{ round: "asc" }, { matchNo: "asc" }] });
+  }
+
+  // ── Playoff bracket after the league stage (2026-07) ──────────────────────
+  // The organizer confirmed at creation time how the league resolves
+  // (playoffMode + groupCount); once every group match is completed they
+  // trigger this to build the knockout rounds. Pairings follow the market
+  // standard: single group → seeded bracket (1v4, 2v3…); two groups → the
+  // classic cross-over (A1 vs B2, B1 vs A2); four groups → World Cup style
+  // (A1 vs B2, C1 vs D2, B1 vs A2, D1 vs C2). Winners propagate through the
+  // same nextMatchId chain knockout events already use, all the way to the
+  // Final.
+
+  private playoffLabel(matchesInRound: number): string {
+    return matchesInRound === 1 ? "Final" : matchesInRound === 2 ? "Semifinal" : "Quarterfinal";
+  }
+
+  async generatePlayoffs(organizerId: string, eventId: string) {
+    const event = await this.eventOrThrow(eventId);
+    if (event.tournament.organizerId !== organizerId) throw new ForbiddenException();
+    if (event.format !== "round_robin" && event.format !== "league") {
+      throw new BadRequestException("Playoffs apply to league-style events — knockouts already are a bracket.");
+    }
+    if (event.playoffMode === "none") {
+      throw new BadRequestException("This event was set to be decided by the league table — no playoff round was configured.");
+    }
+    const existingPlayoffs = await this.prisma.tournamentMatch.count({ where: { eventId, stage: "playoff" } });
+    if (existingPlayoffs > 0) throw new BadRequestException("The playoff bracket has already been generated.");
+
+    const groupMatches = await this.prisma.tournamentMatch.findMany({ where: { eventId, stage: "group" } });
+    if (groupMatches.length === 0) throw new BadRequestException("Generate the league fixtures first.");
+    const pending = groupMatches.filter((m) => m.status !== "completed");
+    if (pending.length > 0) {
+      throw new BadRequestException(`${pending.length} league match(es) still to be played before the playoffs.`);
+    }
+
+    const totalQualifiers = event.playoffMode === "final" ? 2 : event.playoffMode === "semis" ? 4 : 8;
+    const groupCount = Math.max(1, event.groupCount ?? 1);
+    const perGroup = totalQualifiers / groupCount;
+    if (!Number.isInteger(perGroup) || perGroup < 1) {
+      throw new BadRequestException(
+        `${event.playoffMode} playoffs don't divide across ${groupCount} groups — adjust the event configuration.`
+      );
+    }
+
+    // Rank each group off the same points logic as the public table.
+    const table = await this.standings(eventId);
+    const rankOf = new Map(table.map((r, i) => [r.entryId, i]));
+    const groupsRanked: string[][] = [];
+    for (let g = 1; g <= groupCount; g++) {
+      const members = new Set<string>();
+      for (const m of groupMatches) {
+        if (groupCount === 1 || m.groupNo === g) {
+          if (m.entryAId) members.add(m.entryAId);
+          if (m.entryBId) members.add(m.entryBId);
+        }
+      }
+      const ranked = [...members].sort((a, b) => (rankOf.get(a) ?? 999) - (rankOf.get(b) ?? 999));
+      if (ranked.length < perGroup) {
+        throw new BadRequestException(`Group ${g} has only ${ranked.length} entrants — needs ${perGroup} qualifiers.`);
+      }
+      groupsRanked.push(ranked);
+    }
+
+    // First-round pairings, [entryA, entryB] per match.
+    const G = (g: number, rank: number) => groupsRanked[g][rank]; // 0-based
+    let pairs: [string, string][];
+    if (groupCount === 1) {
+      const seedPairs: Record<number, [number, number][]> = {
+        2: [[0, 1]],
+        4: [[0, 3], [1, 2]],
+        8: [[0, 7], [3, 4], [2, 5], [1, 6]],
+      };
+      pairs = seedPairs[totalQualifiers].map(([a, b]) => [G(0, a), G(0, b)]);
+    } else if (groupCount === 2) {
+      if (totalQualifiers === 2) pairs = [[G(0, 0), G(1, 0)]];
+      else if (totalQualifiers === 4) pairs = [[G(0, 0), G(1, 1)], [G(1, 0), G(0, 1)]];
+      else pairs = [[G(0, 0), G(1, 3)], [G(0, 2), G(1, 1)], [G(1, 0), G(0, 3)], [G(1, 2), G(0, 1)]];
+    } else {
+      // 4 groups: semis = the four winners; quarters = World Cup cross-over.
+      if (totalQualifiers === 4) pairs = [[G(0, 0), G(2, 0)], [G(1, 0), G(3, 0)]];
+      else pairs = [[G(0, 0), G(1, 1)], [G(2, 0), G(3, 1)], [G(1, 0), G(0, 1)], [G(3, 0), G(2, 1)]];
+    }
+
+    // Build the bracket rounds and wire the winner-advance chain.
+    const baseRound = Math.max(...groupMatches.map((m) => m.round)) + 1;
+    const maxNo = await this.prisma.tournamentMatch.aggregate({ where: { eventId }, _max: { matchNo: true } });
+    let matchNo = (maxNo._max.matchNo ?? 0) + 1;
+    const venues = event.tournament.venues.length ? event.tournament.venues : [null];
+    let venueIdx = 0;
+
+    const byRound: { id: string }[][] = [];
+    let matchesInRound = pairs.length;
+    for (let r = 0; matchesInRound >= 1; r++, matchesInRound /= 2) {
+      const roundMatches: { id: string }[] = [];
+      for (let m = 0; m < matchesInRound; m++) {
+        const match = await this.prisma.tournamentMatch.create({
+          data: {
+            eventId,
+            round: baseRound + r,
+            matchNo: matchNo++,
+            entryAId: r === 0 ? pairs[m][0] : null,
+            entryBId: r === 0 ? pairs[m][1] : null,
+            venue: venues[venueIdx++ % venues.length],
+            stage: "playoff",
+            roundLabel: this.playoffLabel(matchesInRound),
+          },
+        });
+        roundMatches.push(match);
+      }
+      byRound.push(roundMatches);
+    }
+    for (let r = 0; r < byRound.length - 1; r++) {
+      for (let m = 0; m < byRound[r].length; m++) {
+        await this.prisma.tournamentMatch.update({
+          where: { id: byRound[r][m].id },
+          data: { nextMatchId: byRound[r + 1][Math.floor(m / 2)].id, slotInNext: m % 2 === 0 ? "A" : "B" },
+        });
+      }
+    }
+    return this.prisma.tournamentMatch.findMany({
+      where: { eventId, stage: "playoff" },
+      orderBy: [{ round: "asc" }, { matchNo: "asc" }],
+    });
   }
 
   // ── Scoring (BRD 7) ───────────────────────────────────────────────────────
@@ -752,7 +897,9 @@ export class TournamentsService {
   async standings(eventId: string) {
     const event = await this.prisma.tournamentEvent.findUnique({ where: { id: eventId } });
     const matches = await this.prisma.tournamentMatch.findMany({
-      where: { eventId, status: "completed" },
+      // The points table is the LEAGUE table — playoff results live on the
+      // bracket, not in the standings (legacy rows all default to "group").
+      where: { eventId, status: "completed", stage: "group" },
     });
     const entries = await this.prisma.tournamentEntry.findMany({ where: { eventId, status: "confirmed" } });
     const rows = new Map(
@@ -853,6 +1000,8 @@ export class TournamentsService {
         kind: e.kind,
         discipline: e.discipline,
         format: e.format,
+        groupCount: e.groupCount,
+        playoffMode: e.playoffMode,
         duprRated: e.duprRated,
         entryFee: e.entryFee,
         entries: (e.entries as { id: string; teamName: string | null; players: unknown; seed: number | null }[]).map(
@@ -865,6 +1014,9 @@ export class TournamentsService {
         matches: e.matches.map((m) => ({
           round: m.round,
           matchNo: m.matchNo,
+          stage: m.stage,
+          groupNo: m.groupNo,
+          roundLabel: m.roundLabel,
           entryAId: m.entryAId,
           entryBId: m.entryBId,
           status: m.status,
@@ -908,9 +1060,12 @@ export class TournamentsService {
       // top — but only once results exist, never off an unplayed table.
       let champion = rows[0]?.played > 0 ? rows[0].name : null;
       let runnerUp = champion && rows[1]?.played > 0 ? rows[1].name : null;
-      if (ev.format === "single_elim") {
+      // A decided bracket outranks the table: knockout events always, and
+      // league events whose configured playoff Final has been played.
+      const hasPlayoffs = ev.matches.some((m) => m.stage === "playoff");
+      if (ev.format === "single_elim" || hasPlayoffs) {
         const final = ev.matches
-          .filter((m) => m.status === "completed" && !m.nextMatchId)
+          .filter((m) => m.status === "completed" && !m.nextMatchId && (ev.format === "single_elim" || m.stage === "playoff"))
           .sort((a, b) => b.round - a.round)[0];
         if (final?.winnerEntryId) {
           const loserId = final.winnerEntryId === final.entryAId ? final.entryBId : final.entryAId;

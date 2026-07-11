@@ -151,6 +151,14 @@ export class InterschoolController {
     return this.interschoolService.generateFixtures(user.academyId as string, id);
   }
 
+  // After the league stage: the host confirms each playoff round (opening
+  // round per the configured mode, then winners of the last round).
+  @Post("events/:id/playoffs")
+  @Roles("admin", "account_manager", "head_coach", "coach")
+  generatePlayoffs(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.interschoolService.generatePlayoffs(user.academyId as string, id);
+  }
+
   @Get("events/:id/messages")
   @Roles("admin", "head_coach", "coach")
   messages(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {

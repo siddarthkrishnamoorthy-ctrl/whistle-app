@@ -57,4 +57,16 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   venue?: string;
+
+  // League progression (2026-07), set by the host when listing the event:
+  // split the league into groups, then resolve per playoffMode — "none"
+  // (table decides), "final" (top 2), "semis" (top 4, cross-group), or
+  // "quarters" (top 8, World Cup cross-over).
+  @IsOptional()
+  @IsIn([1, 2, 4])
+  groupCount?: number;
+
+  @IsOptional()
+  @IsIn(["none", "final", "semis", "quarters"])
+  playoffMode?: "none" | "final" | "semis" | "quarters";
 }

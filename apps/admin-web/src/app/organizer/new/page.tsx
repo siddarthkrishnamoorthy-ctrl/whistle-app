@@ -39,7 +39,32 @@ interface EventDraft {
   entryFee: string;
   maxEntrants: string;
   duprRated: "no" | "yes";
+  groupCount: "1" | "2" | "4";
+  playoffMode: "none" | "final" | "semis" | "quarters";
 }
+
+// How the league stage resolves — the pairing previews follow the standard
+// models used in real tournaments (seeded bracket / World Cup cross-over).
+export const PLAYOFF_HINTS: Record<string, Record<string, string>> = {
+  "1": {
+    none: "The points table decides the champion.",
+    final: "Final: 1st vs 2nd on the table.",
+    semis: "Semis: 1st vs 4th, 2nd vs 3rd — winners meet in the Final.",
+    quarters: "Quarters: 1v8, 4v5, 3v6, 2v7 — seeded bracket to the Final.",
+  },
+  "2": {
+    none: "Each group's table stands on its own.",
+    final: "Final: winner of Group A vs winner of Group B.",
+    semis: "Cross-over semis: A1 vs B2 and B1 vs A2 — winners meet in the Final.",
+    quarters: "Top 4 per group, cross-paired (A1 vs B4, A3 vs B2…) down to the Final.",
+  },
+  "4": {
+    none: "Each group's table stands on its own.",
+    final: "Not available with 4 groups — pick semis or quarters.",
+    semis: "Semis: the four group winners (A1 vs C1, B1 vs D1).",
+    quarters: "World Cup style: A1 vs B2, C1 vs D2, B1 vs A2, D1 vs C2.",
+  },
+};
 
 const BLANK: EventDraft = {
   name: "",
@@ -52,6 +77,8 @@ const BLANK: EventDraft = {
   entryFee: "",
   maxEntrants: "",
   duprRated: "no",
+  groupCount: "1",
+  playoffMode: "none",
 };
 
 // BRD 6.2 — Create Tournament wizard: basics, events, fees, courts/venues.
@@ -99,7 +126,14 @@ export default function NewTournamentPage() {
           entryFee: e.feeMode === "paid" && e.entryFee ? Number(e.entryFee) : undefined,
           maxEntrants: e.maxEntrants ? Number(e.maxEntrants) : undefined,
           duprRated: e.sport === "Pickleball" && e.duprRated === "yes",
+          ...(e.discipline === "match" && e.format !== "single_elim"
+            ? { groupCount: Number(e.groupCount), playoffMode: e.playoffMode }
+            : {}),
         }));
+      const badPlan = events.find(
+        (e) => e.name.trim() && e.discipline === "match" && e.format !== "single_elim" && e.groupCount === "4" && e.playoffMode === "final"
+      );
+      if (badPlan) throw new Error(`${badPlan.name}: a single Final doesn't work with 4 groups — pick semis or quarters.`);
       if (!eventBodies.length) throw new Error("Add at least one event.");
       if (events.some((e) => e.name.trim() && e.feeMode === "paid" && (!e.entryFee || Number(e.entryFee) <= 0))) {
         throw new Error("Paid events need an entry fee amount — or switch them to free entry.");
@@ -215,6 +249,34 @@ export default function NewTournamentPage() {
           </div>
           {ev.feeMode === "paid" && (
             <Field label="Max entrants (optional)" type="number" placeholder="32" value={ev.maxEntrants} onChange={(e) => update(i, { maxEntrants: e.target.value })} />
+          )}
+          {ev.discipline === "match" && ev.format !== "single_elim" && (
+            <div className="rounded-lg border border-border bg-surface-alt/50 p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <SelectField
+                  label="Group stage"
+                  value={ev.groupCount}
+                  onChange={(e) => update(i, { groupCount: e.target.value as EventDraft["groupCount"] })}
+                >
+                  <option value="1">One table — everyone together</option>
+                  <option value="2">Two groups (A & B)</option>
+                  <option value="4">Four groups (A–D)</option>
+                </SelectField>
+                <SelectField
+                  label="After the league stage"
+                  value={ev.playoffMode}
+                  onChange={(e) => update(i, { playoffMode: e.target.value as EventDraft["playoffMode"] })}
+                >
+                  <option value="none">League table decides</option>
+                  <option value="final">Final — top 2</option>
+                  <option value="semis">Semi-finals — top 4</option>
+                  <option value="quarters">Quarter-finals — top 8</option>
+                </SelectField>
+              </div>
+              <p className="mt-2 text-xs text-text-secondary">
+                {PLAYOFF_HINTS[ev.groupCount][ev.playoffMode]}
+              </p>
+            </div>
           )}
           {ev.sport === "Pickleball" && ev.discipline === "match" && (
             <div className="rounded-lg border border-border bg-surface-alt/50 p-3">

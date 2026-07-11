@@ -218,6 +218,8 @@ export class InterschoolService {
         isLbl: dto.isLbl ?? false,
         maxTeams: dto.maxTeams,
         venue: dto.venue,
+        groupCount: dto.groupCount ?? 1,
+        playoffMode: dto.playoffMode ?? "none",
         status: "draft",
       },
     });
@@ -308,27 +310,193 @@ export class InterschoolService {
         skipped.push({ sportKey, reason: `waiting for rosters from ${missing.length} team(s)` });
         continue;
       }
-      for (let i = 0; i < participantIds.length; i++) {
-        for (let j = i + 1; j < participantIds.length; j++) {
-          const fixture = await this.prisma.fixture.create({
-            data: {
-              eventId,
-              sportKey,
-              formatType: event.formatType,
-              entrantA: rosters.get(participantIds[i]) ?? [],
-              entrantB: rosters.get(participantIds[j]) ?? [],
-              matchType: "interschool",
-              status: "scheduled",
-              scheduledAt: event.startDate,
-              // Fixtures inherit the event's venue (the host's center).
-              venue: event.venue,
-            },
-          });
-          created.push(fixture.id);
+      // Split into the host-configured groups (snake by join order) and run
+      // a round robin inside each; groupNo tags feed the per-group tables
+      // the playoff pairings read later.
+      const groupCount = Math.max(1, event.groupCount ?? 1);
+      const usableGroups = participantIds.length >= groupCount * 2 ? groupCount : 1;
+      const groups: string[][] = Array.from({ length: usableGroups }, () => []);
+      participantIds.forEach((aId, i) => {
+        const row = Math.floor(i / usableGroups);
+        const col = i % usableGroups;
+        groups[row % 2 === 0 ? col : usableGroups - 1 - col].push(aId);
+      });
+      for (let g = 0; g < usableGroups; g++) {
+        const members = groups[g];
+        for (let i = 0; i < members.length; i++) {
+          for (let j = i + 1; j < members.length; j++) {
+            const fixture = await this.prisma.fixture.create({
+              data: {
+                eventId,
+                sportKey,
+                formatType: event.formatType,
+                entrantA: rosters.get(members[i]) ?? [],
+                entrantB: rosters.get(members[j]) ?? [],
+                matchType: "interschool",
+                status: "scheduled",
+                scheduledAt: event.startDate,
+                // Fixtures inherit the event's venue (the host's center).
+                venue: event.venue,
+                stage: "group",
+                groupNo: usableGroups > 1 ? g + 1 : null,
+              },
+            });
+            created.push(fixture.id);
+          }
         }
       }
     }
     return { created: created.length, skipped };
+  }
+
+  // ── Playoffs after the Match Center league stage (2026-07) ────────────────
+  // The host configured groups + playoffMode when listing the event; once a
+  // sport's league fixtures are all completed, the host confirms each playoff
+  // round here. Match Center fixtures have no winner-advance chain, so this
+  // is iterative: first call builds the opening round (Final / Semifinals /
+  // Quarterfinals per the config), later calls pair the winners of the last
+  // completed round until the Final is played.
+  async generatePlayoffs(academyId: string, eventId: string) {
+    const { event, isHost } = await this.assertEventMember(academyId, eventId);
+    if (!isHost) throw new ForbiddenException("Only the host academy can generate playoff rounds.");
+    if (event.playoffMode === "none") {
+      throw new BadRequestException("This event was listed as league-only — the points table decides it.");
+    }
+
+    const [fixtures, rosterRows] = await Promise.all([
+      this.prisma.fixture.findMany({ where: { eventId } }),
+      this.prisma.eventRoster.findMany({ where: { eventId } }),
+    ]);
+    const academyOf = new Map(rosterRows.map((r) => [r.clientId, r.academyId]));
+    const rosterOf = new Map<string, Map<string, string[]>>(); // sportKey -> academyId -> clientIds
+    for (const r of rosterRows) {
+      if (!rosterOf.has(r.sportKey)) rosterOf.set(r.sportKey, new Map());
+      const bySport = rosterOf.get(r.sportKey)!;
+      bySport.set(r.academyId, [...(bySport.get(r.academyId) ?? []), r.clientId]);
+    }
+    const winnerAcademy = (f: (typeof fixtures)[number]): string | null => {
+      const summary = f.resultSummary as { winnerSide?: "A" | "B" | "draw" } | null;
+      if (!summary?.winnerSide || summary.winnerSide === "draw") return null;
+      const side = summary.winnerSide === "A" ? f.entrantA : f.entrantB;
+      return academyOf.get(side[0] ?? "") ?? null;
+    };
+
+    const LABEL: Record<number, string> = { 1: "Final", 2: "Semifinal", 4: "Quarterfinal" };
+    const created: { sportKey: string; round: string; matches: number }[] = [];
+    const skipped: { sportKey: string; reason: string }[] = [];
+
+    for (const sportKey of event.sports) {
+      const sportFixtures = fixtures.filter((f) => f.sportKey === sportKey);
+      const groupFixtures = sportFixtures.filter((f) => f.stage === "group");
+      if (groupFixtures.length === 0) {
+        skipped.push({ sportKey, reason: "league fixtures not generated yet" });
+        continue;
+      }
+      if (groupFixtures.some((f) => f.status !== "completed")) {
+        skipped.push({ sportKey, reason: "league stage still in progress" });
+        continue;
+      }
+
+      const playoff = sportFixtures
+        .filter((f) => f.stage === "playoff")
+        .sort((a, b) => (a.roundLabel === b.roundLabel ? 0 : a.roundLabel === "Final" ? 1 : -1));
+      const lastRoundLabel = playoff.length
+        ? (playoff.find((f) => f.roundLabel === "Final") ? "Final" : playoff.find((f) => f.roundLabel === "Semifinal") ? "Semifinal" : "Quarterfinal")
+        : null;
+
+      let pairs: [string, string][] = []; // [academyA, academyB]
+      let label: string;
+
+      if (!lastRoundLabel) {
+        // Opening playoff round from the per-group league tables.
+        const totalQualifiers = event.playoffMode === "final" ? 2 : event.playoffMode === "semis" ? 4 : 8;
+        const groupNos = [...new Set(groupFixtures.map((f) => f.groupNo ?? 1))].sort((a, b) => a - b);
+        const perGroup = totalQualifiers / groupNos.length;
+        if (!Number.isInteger(perGroup) || perGroup < 1) {
+          skipped.push({ sportKey, reason: `${event.playoffMode} playoffs don't divide across ${groupNos.length} groups` });
+          continue;
+        }
+        // Per-group table: 2 points a win, 1 a draw (same as the standings).
+        const tables = new Map<number, Map<string, { pts: number; won: number }>>();
+        for (const f of groupFixtures) {
+          const g = f.groupNo ?? 1;
+          if (!tables.has(g)) tables.set(g, new Map());
+          const table = tables.get(g)!;
+          const aAc = academyOf.get(f.entrantA[0] ?? "");
+          const bAc = academyOf.get(f.entrantB[0] ?? "");
+          if (!aAc || !bAc) continue;
+          const row = (id: string) => table.get(id) ?? table.set(id, { pts: 0, won: 0 }).get(id)!;
+          const summary = f.resultSummary as { winnerSide?: "A" | "B" | "draw" } | null;
+          const a = row(aAc);
+          const b = row(bAc);
+          if (summary?.winnerSide === "draw") {
+            a.pts++; b.pts++;
+          } else if (summary?.winnerSide === "A") {
+            a.pts += 2; a.won++;
+          } else if (summary?.winnerSide === "B") {
+            b.pts += 2; b.won++;
+          }
+        }
+        const ranked: string[][] = groupNos.map((g) =>
+          [...(tables.get(g) ?? new Map()).entries()].sort((x, y) => y[1].pts - x[1].pts || y[1].won - x[1].won).map(([id]) => id)
+        );
+        if (ranked.some((r) => r.length < perGroup)) {
+          skipped.push({ sportKey, reason: "a group has fewer teams than qualifiers needed" });
+          continue;
+        }
+        const G = (g: number, r: number) => ranked[g][r];
+        if (ranked.length === 1) {
+          const seedPairs: Record<number, [number, number][]> = { 2: [[0, 1]], 4: [[0, 3], [1, 2]], 8: [[0, 7], [3, 4], [2, 5], [1, 6]] };
+          pairs = seedPairs[totalQualifiers].map(([a, b]) => [G(0, a), G(0, b)]);
+        } else if (ranked.length === 2) {
+          if (totalQualifiers === 2) pairs = [[G(0, 0), G(1, 0)]];
+          else if (totalQualifiers === 4) pairs = [[G(0, 0), G(1, 1)], [G(1, 0), G(0, 1)]];
+          else pairs = [[G(0, 0), G(1, 3)], [G(0, 2), G(1, 1)], [G(1, 0), G(0, 3)], [G(1, 2), G(0, 1)]];
+        } else {
+          if (totalQualifiers === 4) pairs = [[G(0, 0), G(2, 0)], [G(1, 0), G(3, 0)]];
+          else pairs = [[G(0, 0), G(1, 1)], [G(2, 0), G(3, 1)], [G(1, 0), G(0, 1)], [G(3, 0), G(2, 1)]];
+        }
+        label = LABEL[pairs.length];
+      } else {
+        // Pair the winners of the last playoff round.
+        if (lastRoundLabel === "Final") {
+          skipped.push({ sportKey, reason: "the Final has already been generated" });
+          continue;
+        }
+        const lastRound = playoff.filter((f) => f.roundLabel === lastRoundLabel);
+        if (lastRound.some((f) => f.status !== "completed")) {
+          skipped.push({ sportKey, reason: `${lastRoundLabel} round still in progress` });
+          continue;
+        }
+        const winners = lastRound.map(winnerAcademy);
+        if (winners.some((w) => !w)) {
+          skipped.push({ sportKey, reason: "a playoff match ended in a draw — replay or decide it first" });
+          continue;
+        }
+        for (let i = 0; i < winners.length; i += 2) pairs.push([winners[i]!, winners[i + 1]!]);
+        label = LABEL[pairs.length];
+      }
+
+      for (const [aAc, bAc] of pairs) {
+        await this.prisma.fixture.create({
+          data: {
+            eventId,
+            sportKey,
+            formatType: event.formatType,
+            entrantA: rosterOf.get(sportKey)?.get(aAc) ?? [],
+            entrantB: rosterOf.get(sportKey)?.get(bAc) ?? [],
+            matchType: "interschool",
+            status: "scheduled",
+            scheduledAt: event.startDate,
+            venue: event.venue,
+            stage: "playoff",
+            roundLabel: label,
+          },
+        });
+      }
+      created.push({ sportKey, round: label, matches: pairs.length });
+    }
+    return { created, skipped };
   }
 
   // Team chat: host + joined schools message each other; the thread locks
@@ -368,7 +536,9 @@ export class InterschoolService {
     });
     if (!event) throw new NotFoundException("Event not found.");
     const [fixtures, rosters] = await Promise.all([
-      this.prisma.fixture.findMany({ where: { eventId, status: "completed" } }),
+      // The points table is the LEAGUE table — playoff results show on the
+      // fixtures list with their round labels, not in the standings.
+      this.prisma.fixture.findMany({ where: { eventId, status: "completed", stage: "group" } }),
       this.prisma.eventRoster.findMany({ where: { eventId }, select: { clientId: true, academyId: true } }),
     ]);
     const academyOf = new Map(rosters.map((r) => [r.clientId, r.academyId]));

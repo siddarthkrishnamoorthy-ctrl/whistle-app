@@ -181,6 +181,14 @@ export class TournamentsController {
     return this.service.generateFixtures(user.sub, eventId, dto);
   }
 
+  // After the league stage: build the configured playoff bracket (the
+  // organizer's explicit "proceed to playoffs" confirmation).
+  @Post("events/:eventId/playoffs")
+  @TournamentRoles("t_organizer")
+  generatePlayoffs(@CurrentUser() user: TUser, @Param("eventId") eventId: string) {
+    return this.service.generatePlayoffs(user.sub, eventId);
+  }
+
   // ── Scoring (organizer or appointed official) ────────────────────────────
 
   // Per-match scheduling — organizer staggers times and courts.

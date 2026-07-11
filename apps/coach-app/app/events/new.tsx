@@ -77,6 +77,10 @@ export default function HostEventScreen() {
   const [formatType, setFormatType] = useState<(typeof FORMATS)[number]["key"]>("individual");
   const [ageBands, setAgeBands] = useState<string[]>([]);
   const [maxTeams, setMaxTeams] = useState("");
+  // League progression, confirmed while setting the tournament up: groups
+  // then how the league resolves (table / final / cross-group semis / quarters).
+  const [groupCount, setGroupCount] = useState<"1" | "2" | "4">("1");
+  const [playoffMode, setPlayoffMode] = useState<"none" | "final" | "semis" | "quarters">("none");
   const [centers, setCenters] = useState<Center[]>([]);
   const [venue, setVenue] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -129,6 +133,8 @@ export default function HostEventScreen() {
           endDate,
           maxTeams: maxTeams.trim() ? Number(maxTeams) : undefined,
           venue: venue || undefined,
+          groupCount: Number(groupCount),
+          playoffMode,
         }),
       });
       // Publish right away so network academies can discover it.
@@ -216,6 +222,49 @@ export default function HostEventScreen() {
         />
         <Text style={{ color: colors.textMuted, fontSize: 12 }}>
           You count as one team. When the last slot fills and rosters are in, fixtures generate automatically.
+        </Text>
+      </Card>
+
+      <Card>
+        <Text style={{ color: colors.textPrimary, fontWeight: "700", marginBottom: 10 }}>League & playoffs</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 8 }}>Group stage</Text>
+        <ChipRow
+          options={[
+            { key: "1", label: "One table" },
+            { key: "2", label: "2 groups" },
+            { key: "4", label: "4 groups" },
+          ]}
+          value={groupCount}
+          onChange={(v) => setGroupCount(v as typeof groupCount)}
+        />
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 12, marginBottom: 8 }}>
+          After the league stage
+        </Text>
+        <ChipRow
+          scroll
+          options={[
+            { key: "none", label: "Table decides" },
+            { key: "final", label: "Final (top 2)" },
+            { key: "semis", label: "Semi-finals (top 4)" },
+            { key: "quarters", label: "Quarter-finals (top 8)" },
+          ]}
+          value={playoffMode}
+          onChange={(v) => setPlayoffMode(v as typeof playoffMode)}
+        />
+        <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>
+          {playoffMode === "none"
+            ? "The points table decides the champion."
+            : groupCount === "1"
+              ? playoffMode === "final"
+                ? "Top 2 on the table meet in the Final."
+                : playoffMode === "semis"
+                  ? "Seeded semis: 1st vs 4th, 2nd vs 3rd — winners meet in the Final."
+                  : "Seeded quarters (1v8, 4v5, 3v6, 2v7) down to the Final."
+              : groupCount === "2"
+                ? playoffMode === "final"
+                  ? "Group A winner vs Group B winner in the Final."
+                  : "Cross-group knockout (A1 vs B2, B1 vs A2…) down to the Final."
+                : "World Cup style cross-over (A1 vs B2, C1 vs D2…) down to the Final."}
         </Text>
       </Card>
 

@@ -166,6 +166,29 @@ export default function EventDetailScreen() {
     }
   }
 
+  // Post-league confirmation: the host set groups + playoff mode when the
+  // event was listed; each tap builds the next playoff round (Semis → Final).
+  async function generatePlayoffs() {
+    setBusy(true);
+    try {
+      const res = await apiJson<{
+        created: { sportKey: string; round: string; matches: number }[];
+        skipped: { sportKey: string; reason: string }[];
+      }>(`/interschool/events/${id}/playoffs`, { method: "POST", body: JSON.stringify({}) });
+      await load();
+      const madeLines = res.created.map((c) => `${c.sportKey}: ${c.round} (${c.matches} match${c.matches === 1 ? "" : "es"})`);
+      const skipLines = res.skipped.map((s) => `${s.sportKey}: ${s.reason}`);
+      Alert.alert(
+        res.created.length ? "Playoff round ready 🏆" : "Nothing to generate yet",
+        [...madeLines, ...skipLines].join("\n") || "All playoff rounds are done."
+      );
+    } catch (e) {
+      Alert.alert("Couldn't generate playoffs", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function closeEvent() {
     setBusy(true);
     try {
@@ -279,6 +302,27 @@ export default function EventDetailScreen() {
                 />
                 <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
                   Builds every-team-plays-every-team fixtures for each sport whose rosters are in.
+                </Text>
+              </>
+            ) : (event as { playoffMode?: string }).playoffMode &&
+              (event as { playoffMode?: string }).playoffMode !== "none" &&
+              !event.sports.every((sk) =>
+                fixtures.some(
+                  (f) => f.sportKey === sk && (f as { roundLabel?: string | null }).roundLabel === "Final" && f.status === "completed"
+                )
+              ) ? (
+              <>
+                {/* League stage done, playoffs configured — the host confirms
+                    each round here (opening round, then winners onward). */}
+                <PrimaryButton title={busy ? "Working…" : "🏆 Generate playoff round"} onPress={generatePlayoffs} disabled={busy} />
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6, textAlign: "center" }}>
+                  You set this event to finish with{" "}
+                  {(event as { playoffMode?: string }).playoffMode === "final"
+                    ? "a Final (top 2)"
+                    : (event as { playoffMode?: string }).playoffMode === "semis"
+                      ? "Semi-finals (top 4)"
+                      : "Quarter-finals (top 8)"}
+                  {" — "}each tap builds the next round from the standings/winners.
                 </Text>
               </>
             ) : (
@@ -466,7 +510,13 @@ export default function EventDetailScreen() {
               return (
                 <ListRow
                   key={f.id}
-                  title={`${f.sportKey} · ${f.matchType.replace("_", " ")}`}
+                  title={`${f.sportKey} · ${
+                    (f as { roundLabel?: string | null }).roundLabel
+                      ? `🏆 ${(f as { roundLabel?: string | null }).roundLabel}`
+                      : (f as { groupNo?: number | null }).groupNo
+                        ? `Group ${String.fromCharCode(64 + ((f as { groupNo?: number | null }).groupNo ?? 1))}`
+                        : f.matchType.replace("_", " ")
+                  }`}
                   subtitle={[
                     fixtureWhen(f.scheduledAt),
                     f.venue ?? undefined,
