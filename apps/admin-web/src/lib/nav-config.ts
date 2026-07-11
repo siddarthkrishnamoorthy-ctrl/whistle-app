@@ -50,7 +50,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Classes", href: "/academy/classes", icon: GraduationCap },
       { label: "Enquiries", href: "/academy/enquiries", icon: Inbox },
       { label: "Students", href: "/academy/clients", icon: Users },
-      { label: "Schools", href: "/academy/schools", icon: Building2 },
+      // Schools removed from tenant nav (2026-07): academies organise around
+      // Centers, not a separate Schools entity. Whistle onboards each school
+      // as its own tenant from the operator console.
       { label: "Centers", href: "/academy/centers", icon: MapPin },
       { label: "Attendance", href: "/academy/attendance", icon: UserCheck },
     ],

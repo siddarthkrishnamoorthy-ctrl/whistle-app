@@ -39,6 +39,9 @@ export class PlatformService implements OnModuleInit {
       this.logger.log("Seeded platform owner account (owner@whistle.app).");
     }
     await this.seedContentLibrary();
+    // Independent of the drill/plan seed — older installs already have content
+    // but not yet the assessment library.
+    await this.seedAssessmentLibrary();
   }
 
   // ── Tenants ────────────────────────────────────────────────────────────────
@@ -442,6 +445,152 @@ export class PlatformService implements OnModuleInit {
     });
   }
 
+  // ── Assessment test library (owner-curated, adopted by academies) ─────────
+  listPlatformAssessmentTests() {
+    return this.prisma.assessmentTest.findMany({
+      where: { academyId: null },
+      include: { zones: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    });
+  }
+
+  createPlatformAssessmentTest(dto: {
+    name: string;
+    category: string;
+    metricType: string;
+    unit: string;
+    precisionDecimals?: number;
+    attemptsAllowed?: number;
+    instructions?: string;
+  }) {
+    if (!dto.name?.trim() || !dto.category || !dto.metricType || !dto.unit) {
+      throw new BadRequestException("Name, category, metric type and unit are required.");
+    }
+    if (!["time", "repetitions", "distance_height"].includes(dto.metricType)) {
+      throw new BadRequestException("metricType must be time, repetitions or distance_height.");
+    }
+    return this.prisma.assessmentTest.create({
+      data: {
+        academyId: null,
+        name: dto.name.trim(),
+        category: dto.category,
+        metricType: dto.metricType,
+        unit: dto.unit,
+        precisionDecimals: dto.precisionDecimals ?? 0,
+        attemptsAllowed: dto.attemptsAllowed ?? 1,
+        instructions: dto.instructions,
+        applicableGradeIds: [],
+      },
+    });
+  }
+
+  async deletePlatformAssessmentTest(id: string) {
+    const test = await this.prisma.assessmentTest.findUnique({ where: { id } });
+    if (!test) throw new NotFoundException("Test not found.");
+    if (test.academyId !== null) throw new BadRequestException("That test belongs to an academy, not the platform library.");
+    await this.prisma.assessmentBenchmarkZone.deleteMany({ where: { testId: id } });
+    await this.prisma.assessmentTest.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ── CRM: enrolment + pipeline across every academy ────────────────────────
+  async crm() {
+    const academies = await this.prisma.academy.findMany({
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { clients: true, enquiries: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    const enquiriesByStage = await this.prisma.enquiry.groupBy({ by: ["stage"], _count: true });
+    const totalEnquiries = enquiriesByStage.reduce((s, r) => s + r._count, 0);
+    const totalStudents = academies.reduce((s, a) => s + a._count.clients, 0);
+    return {
+      totals: {
+        students: totalStudents,
+        enquiries: totalEnquiries,
+        academies: academies.length,
+      },
+      pipeline: Object.fromEntries(enquiriesByStage.map((r) => [r.stage, r._count])),
+      byAcademy: academies.map((a) => ({
+        id: a.id,
+        name: a.name,
+        students: a._count.clients,
+        enquiries: a._count.enquiries,
+      })),
+    };
+  }
+
+  // ── Match Center oversight: standings + reports across all schools ────────
+  async matchCenter() {
+    const events = await this.prisma.interschoolEvent.findMany({
+      include: {
+        hostAcademy: { select: { id: true, name: true } },
+        _count: { select: { fixtures: true, rosters: true } },
+      },
+      orderBy: { startDate: "desc" },
+      take: 60,
+    });
+
+    // Cross-event school rating: a light Elo-free tally of interschool wins
+    // aggregated from completed fixtures' resultSummary + rosters.
+    const fixtures = await this.prisma.fixture.findMany({
+      where: { status: "completed", eventId: { not: null } },
+      select: { eventId: true, entrantA: true, entrantB: true, resultSummary: true, sportKey: true },
+    });
+    const rosters = await this.prisma.eventRoster.findMany({ select: { clientId: true, academyId: true } });
+    const academyOf = new Map(rosters.map((r) => [r.clientId, r.academyId]));
+    const academies = await this.prisma.academy.findMany({ select: { id: true, name: true } });
+    const nameOf = new Map(academies.map((a) => [a.id, a.name]));
+
+    type Row = { academyId: string; name: string; played: number; won: number; drawn: number; lost: number; points: number };
+    const table = new Map<string, Row>();
+    const rowFor = (id: string) => {
+      if (!table.has(id)) table.set(id, { academyId: id, name: nameOf.get(id) ?? "School", played: 0, won: 0, drawn: 0, lost: 0, points: 0 });
+      return table.get(id)!;
+    };
+    for (const f of fixtures) {
+      const summary = f.resultSummary as { winnerSide?: "A" | "B" | "draw" } | null;
+      if (!summary?.winnerSide) continue;
+      const aAc = academyOf.get(f.entrantA[0] ?? "");
+      const bAc = academyOf.get(f.entrantB[0] ?? "");
+      if (!aAc || !bAc) continue;
+      const a = rowFor(aAc);
+      const b = rowFor(bAc);
+      a.played++;
+      b.played++;
+      if (summary.winnerSide === "draw") {
+        a.drawn++; b.drawn++; a.points++; b.points++;
+      } else {
+        const w = summary.winnerSide === "A" ? a : b;
+        const l = summary.winnerSide === "A" ? b : a;
+        w.won++; w.points += 2; l.lost++;
+      }
+    }
+    const schoolTable = [...table.values()].sort((x, y) => y.points - x.points || y.won - x.won);
+
+    return {
+      totals: {
+        events: events.length,
+        live: events.filter((e) => e.status === "live" || e.status === "scheduled").length,
+        completed: events.filter((e) => e.status === "closed" || e.status === "completed").length,
+        matchesPlayed: fixtures.length,
+      },
+      schoolTable,
+      events: events.map((e) => ({
+        id: e.id,
+        name: e.name,
+        host: e.hostAcademy.name,
+        sports: e.sports,
+        status: e.status,
+        startDate: e.startDate,
+        fixtures: e._count.fixtures,
+        rosters: e._count.rosters,
+      })),
+    };
+  }
+
   // ── Boot seed: starter drill + lesson-plan library ─────────────────────────
   // Idempotent — only fires when the platform library is empty, so a fresh
   // install demos the tenant read-only repository straight away.
@@ -491,5 +640,26 @@ export class PlatformService implements OnModuleInit {
       });
     }
     this.logger.log(`Seeded platform content library for ${sports.length} sports.`);
+  }
+
+  // Standard fitness-test battery every academy can adopt (FitnessGram-style).
+  private async seedAssessmentLibrary() {
+    const existing = await this.prisma.assessmentTest.count({ where: { academyId: null } });
+    if (existing > 0) return;
+    const TESTS = [
+      { name: "40m Sprint", category: "speed", metricType: "time", unit: "seconds", precisionDecimals: 2, instructions: "Timed 40-metre sprint from a standing start. Best of two attempts." },
+      { name: "Illinois Agility Run", category: "agility", metricType: "time", unit: "seconds", precisionDecimals: 2, instructions: "Standard Illinois agility course. Record completion time." },
+      { name: "Standing Broad Jump", category: "power", metricType: "distance_height", unit: "cm", precisionDecimals: 0, instructions: "Two-footed horizontal jump. Measure heel to take-off line." },
+      { name: "Vertical Jump", category: "power", metricType: "distance_height", unit: "cm", precisionDecimals: 0, instructions: "Counter-movement jump reach minus standing reach." },
+      { name: "Beep Test (level)", category: "endurance", metricType: "repetitions", unit: "count", precisionDecimals: 0, instructions: "20m multi-stage shuttle run. Record final level reached." },
+      { name: "Push-ups (1 min)", category: "strength", metricType: "repetitions", unit: "count", precisionDecimals: 0, instructions: "Maximum full-range push-ups in 60 seconds." },
+      { name: "Sit-and-Reach", category: "flexibility", metricType: "distance_height", unit: "cm", precisionDecimals: 0, instructions: "Seated forward reach on a sit-and-reach box." },
+    ];
+    for (const t of TESTS) {
+      await this.prisma.assessmentTest.create({
+        data: { academyId: null, applicableGradeIds: [], attemptsAllowed: 2, ...t },
+      });
+    }
+    this.logger.log(`Seeded platform assessment library (${TESTS.length} tests).`);
   }
 }

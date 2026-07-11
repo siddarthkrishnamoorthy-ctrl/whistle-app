@@ -5,7 +5,7 @@
 // declared strength, sport access grant, branding, suspension.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, CheckCircle2, ChevronDown, ChevronUp, ReceiptText, Search } from "lucide-react";
+import { Ban, Building2, CheckCircle2, ChevronDown, ChevronUp, IndianRupee, ReceiptText, Search, Users } from "lucide-react";
 import { apiJson } from "@/lib/api-client";
 import { Card, Field, PrimaryButton, SelectField } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
@@ -36,27 +36,57 @@ export default function PlatformTenantsPage() {
     return q ? tenants.filter((t) => t.name.toLowerCase().includes(q) || (t.contactEmail ?? "").toLowerCase().includes(q)) : tenants;
   }, [tenants, search]);
 
+  const totalStudents = tenants.reduce((s, t) => s + t.counts.clients, 0);
+  const totalCenters = tenants.reduce((s, t) => s + t.counts.centers, 0);
+  const collected = tenants.reduce((s, t) => s + t.revenue.collected, 0);
+  const activeSubs = tenants.filter((t) => t.subscription?.status === "active" || t.subscription?.status === "trial").length;
+  const suspended = tenants.filter((t) => t.suspended).length;
+
+  const stats = [
+    { label: "Academies & Schools", value: String(tenants.length), sub: `${suspended} suspended`, icon: Building2, chip: "bg-sky-400/15 text-sky-300" },
+    { label: "Students", value: totalStudents.toLocaleString("en-IN"), sub: `${totalCenters} centers`, icon: Users, chip: "bg-emerald-400/15 text-emerald-300" },
+    { label: "Active subscriptions", value: String(activeSubs), sub: `of ${tenants.length}`, icon: CheckCircle2, chip: "bg-violet-400/15 text-violet-300" },
+    { label: "Revenue collected", value: inr(collected), sub: "lifetime", icon: IndianRupee, chip: "bg-amber-400/15 text-amber-300" },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tenants"
-        subtitle={`${tenants.length} schools & academies on Whistle`}
+        title="Academies & Schools"
+        subtitle="Every academy and school on Whistle — onboard, brand, meter and manage."
         action={
           <button
             onClick={() => setCreateOpen(true)}
             className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
           >
-            + New Tenant
+            + Onboard Academy / School
           </button>
         }
       />
+
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-xl border border-border bg-surface p-4">
+              <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg ${s.chip}`}>
+                <Icon className="h-4 w-4" strokeWidth={1.8} />
+              </div>
+              <div className="text-xl font-bold text-text-primary">{s.value}</div>
+              <div className="text-xs font-medium text-text-secondary">{s.label}</div>
+              <div className="text-[11px] text-text-muted">{s.sub}</div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="relative max-w-xs">
         <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-muted" strokeWidth={1.8} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tenants…"
+          placeholder="Search academies & schools…"
           className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
         />
       </div>
@@ -76,7 +106,7 @@ export default function PlatformTenantsPage() {
         ))}
         {visible.length === 0 && (
           <Card className="p-8 text-center text-sm text-text-secondary">
-            {tenants.length === 0 ? "No tenants yet — onboard the first school or academy." : "No tenants match your search."}
+            {tenants.length === 0 ? "No academies yet — onboard the first school or academy." : "Nothing matches your search."}
           </Card>
         )}
       </div>

@@ -808,6 +808,7 @@ export class TournamentsService {
         scoreDisplay: display,
         winnerEntryId,
         officialId: officialId ?? match.officialId,
+        completedAt: new Date(),
       },
     });
     // Winner advances into the next bracket slot (standings/brackets update
@@ -1122,6 +1123,96 @@ export class TournamentsService {
         bestAttack: best((a, b) => b.scoreFor - a.scoreFor),
         bestDefense: best((a, b) => a.scoreAgainst - b.scoreAgainst || b.played - a.played),
       },
+    };
+  }
+
+  // ── Pulse: the public excitement dashboard (2026-07) ──────────────────────
+  // What referees, players and organizers open the app for: who's hot this
+  // week, this month, who just lifted a trophy. Windows read completedAt
+  // (backfilled from tournament start dates for older results).
+  async pulse() {
+    const now = Date.now();
+    const weekAgo = new Date(now - 7 * 864e5);
+    const monthAgo = new Date(now - 30 * 864e5);
+
+    const matches = await this.prisma.tournamentMatch.findMany({
+      where: { status: "completed", completedAt: { not: null }, NOT: { scoreDisplay: "bye" } },
+      include: { event: { select: { id: true, name: true, sportKey: true, tournament: { select: { name: true, publicSlug: true } } } } },
+      orderBy: { completedAt: "desc" },
+      take: 3000,
+    });
+
+    // Resolve entry display names in one query.
+    const entryIds = [...new Set(matches.flatMap((m) => [m.entryAId, m.entryBId, m.winnerEntryId]).filter(Boolean))] as string[];
+    const entries = await this.prisma.tournamentEntry.findMany({ where: { id: { in: entryIds } } });
+    const nameOf = new Map(
+      entries.map((e) => [e.id, e.teamName ?? (e.players as { name: string }[])[0]?.name ?? "—"])
+    );
+
+    type Agg = { name: string; sportKey: string; played: number; won: number };
+    const aggregate = (since: Date) => {
+      const map = new Map<string, Agg>();
+      for (const m of matches) {
+        if (!m.completedAt || m.completedAt < since) continue;
+        for (const side of [m.entryAId, m.entryBId]) {
+          if (!side) continue;
+          const key = `${nameOf.get(side)}|${m.event.sportKey}`;
+          const row = map.get(key) ?? { name: nameOf.get(side)!, sportKey: m.event.sportKey, played: 0, won: 0 };
+          row.played++;
+          if (m.winnerEntryId === side) row.won++;
+          map.set(key, row);
+        }
+      }
+      return [...map.values()].sort((a, b) => b.won - a.won || b.played - a.played).slice(0, 5);
+    };
+
+    // "Recent winners": the latest decided Finals — knockout finals have no
+    // nextMatchId; league playoffs carry the explicit Final label.
+    const finals = matches
+      .filter((m) => m.winnerEntryId && (m.roundLabel === "Final" || !m.nextMatchId))
+      .slice(0, 30);
+    const seenEvents = new Set<string>();
+    const recentWinners = [];
+    for (const m of finals) {
+      if (seenEvents.has(m.event.id)) continue;
+      seenEvents.add(m.event.id);
+      const loserId = m.winnerEntryId === m.entryAId ? m.entryBId : m.entryAId;
+      recentWinners.push({
+        tournament: m.event.tournament.name,
+        slug: m.event.tournament.publicSlug,
+        event: m.event.name,
+        sportKey: m.event.sportKey,
+        champion: nameOf.get(m.winnerEntryId!) ?? "—",
+        runnerUp: loserId ? (nameOf.get(loserId) ?? null) : null,
+        scoreDisplay: m.scoreDisplay,
+        when: m.completedAt,
+      });
+      if (recentWinners.length >= 6) break;
+    }
+
+    const monthMap = new Map<string, { name: string; played: number }>();
+    for (const m of matches) {
+      if (!m.completedAt || m.completedAt < monthAgo) continue;
+      for (const side of [m.entryAId, m.entryBId]) {
+        if (!side) continue;
+        const n = nameOf.get(side)!;
+        const row = monthMap.get(n) ?? { name: n, played: 0 };
+        row.played++;
+        monthMap.set(n, row);
+      }
+    }
+
+    const [tournaments, players] = await Promise.all([
+      this.prisma.tournament.count(),
+      this.prisma.tournamentUser.count(),
+    ]);
+
+    return {
+      totals: { tournaments, players, matchesCompleted: matches.length },
+      topWeek: aggregate(weekAgo),
+      topMonth: aggregate(monthAgo),
+      mostActive: [...monthMap.values()].sort((a, b) => b.played - a.played).slice(0, 5),
+      recentWinners,
     };
   }
 

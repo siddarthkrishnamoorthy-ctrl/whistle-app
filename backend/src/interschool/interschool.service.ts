@@ -92,8 +92,12 @@ export class InterschoolService {
       scope === "discover"
         ? {
             hostAcademyId: { not: academyId },
-            hostAcademy: { networkOptIn: true },
             status: status ?? { in: ["scheduled", "live"] as EventStatus[] },
+            // Discoverable when the host either opted the whole academy into
+            // the network OR explicitly listed this as an open Match Center
+            // event with team slots (maxTeams) — the act of setting a cap and
+            // publishing IS opting that event in for open discovery/join.
+            OR: [{ hostAcademy: { networkOptIn: true } }, { maxTeams: { not: null } }],
           }
         : {
             ...(status ? { status } : {}),
@@ -187,8 +191,8 @@ export class InterschoolService {
         where: { id: eventId },
         include: { hostAcademy: { select: { networkOptIn: true } } },
       });
-      const isPublicNetworkEvent =
-        event.hostAcademy.networkOptIn && (event.status === "scheduled" || event.status === "live");
+      const isOpenListing = event.maxTeams != null || event.hostAcademy.networkOptIn;
+      const isPublicNetworkEvent = isOpenListing && (event.status === "scheduled" || event.status === "live");
       if (!isPublicNetworkEvent) throw e;
     }
     return this.prisma.interschoolEvent.findUnique({

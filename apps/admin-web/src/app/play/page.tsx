@@ -251,18 +251,23 @@ export default function PlayPortal() {
 
   return (
     <main className="min-h-screen px-4 py-10 md:px-10 max-w-3xl mx-auto text-slate-200">
-      <header className="mb-8 text-center">
+      <header className="mb-8 overflow-hidden rounded-3xl border border-amber-400/20 bg-gradient-to-br from-amber-400/15 via-white/[0.03] to-transparent px-6 py-9 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-14 w-auto" />
-        <p className="text-xs uppercase tracking-widest text-amber-400/80">Whistle Tournaments</p>
-        <h1 className="text-3xl font-extrabold text-white mt-1">Play or officiate</h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Open to everyone — no academy account needed. Register for events, pay your entry fee, and follow results.
+        <p className="text-xs uppercase tracking-widest text-amber-400/80">🏆 Whistle Tournaments</p>
+        <h1 className="mt-1 text-4xl font-black text-white">Play or officiate</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-300">
+          Open to everyone — no academy account needed. Register for events, pay your entry fee, and follow results live.
         </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <a href="/rankings" className="rounded-full bg-amber-400 px-4 py-1.5 text-xs font-bold text-slate-900 hover:opacity-90">
+            📈 Whistle Pulse — rankings & champions
+          </a>
+        </div>
       </header>
 
       {!user ? (
-        <section className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+        <section className="mx-auto max-w-md overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.4)]">
           <div className="mb-4 flex gap-2">
             {(["signup", "login"] as const).map((m) => (
               <button
@@ -376,9 +381,9 @@ export default function PlayPortal() {
             </div>
             <a
               href="/rankings"
-              className="flex items-center gap-1.5 rounded-full border border-amber-400/50 px-4 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-400/10"
+              className="flex items-center gap-1.5 rounded-full bg-amber-400 px-4 py-1.5 text-xs font-bold text-slate-900 hover:opacity-90"
             >
-              <Trophy size={13} /> Player rankings
+              <Trophy size={13} /> Whistle Pulse — rankings & champions
             </a>
           </div>
 

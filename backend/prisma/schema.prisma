@@ -1386,6 +1386,9 @@ model TournamentMatch {
   scoreDisplay  String?   @map("score_display")
   winnerEntryId String?   @map("winner_entry_id")
   officialId    String?   @map("official_id")
+  // When the result became final (2026-07) — powers the public Pulse
+  // dashboard's "top players of the week/month" windows.
+  completedAt   DateTime? @map("completed_at")
   // "group" matches feed the points table; "playoff" matches are the
   // post-league bracket. groupNo tags which group a league match is in;
   // roundLabel names playoff rounds ("Quarterfinal"/"Semifinal"/"Final").
@@ -1506,7 +1509,10 @@ model CricketCorrection {
 // Numeric data only — no photo/video anywhere in this module (BRD 4.4).
 model AssessmentTest {
   id                 String   @id @default(uuid())
-  academyId          String   @map("academy_id")
+  // Nullable (2026-07): null = Whistle's platform assessment-test library,
+  // curated by the operator; academies read it and can adopt copies. Same
+  // pattern as platform drills / lesson plans.
+  academyId          String?  @map("academy_id")
   name               String
   category           String // speed|agility|power|endurance|strength|flexibility|sport_skill
   applicableGradeIds String[] @map("applicable_grade_ids")

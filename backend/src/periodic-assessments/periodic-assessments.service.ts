@@ -43,8 +43,10 @@ export class PeriodicAssessmentsService {
   // ── Test Library (BRD 4.1) — Admin/Account Manager maintain it ───────────
 
   listTests(academyId: string) {
+    // Academies see Whistle's platform test library (academyId null, curated
+    // by the operator) alongside any tests they authored themselves.
     return this.prisma.assessmentTest.findMany({
-      where: { academyId },
+      where: { OR: [{ academyId }, { academyId: null }] },
       include: { zones: true },
       orderBy: { name: "asc" },
     });

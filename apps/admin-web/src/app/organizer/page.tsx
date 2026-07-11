@@ -104,59 +104,69 @@ export default function TournamentsPage() {
   // ── Gate: the tournament module has its own open user master ──
   if (!user) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold">{consoleTitle}</h1>
-          <p className="text-sm text-text-secondary">
-            Standalone open tournaments — separate from your academy. Anyone can organize, officiate or play; log in
-            with a tournament account (your academy login doesn&apos;t apply here).
-          </p>
-        </div>
-        <Card className="max-w-md">
-          <div className="mb-4 flex gap-2">
-            {(["login", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold ${
-                  mode === m ? "bg-accent text-accent-text" : "border border-border text-text-secondary"
-                }`}
-              >
-                {m === "login" ? "Login" : "Create Account"}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-3">
-            {mode === "signup" && (
-              <>
-                <Field label="Full name *" value={name} onChange={(e) => setName(e.target.value)} />
-                <SelectField label="I am a…" value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="organizer">Organizer</option>
-                  <option value="official">Official / Scorer</option>
-                  <option value="registrant">Player / Team</option>
-                </SelectField>
-                {role === "organizer" && (
-                  <Field label="Organization (optional)" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+      <div className="flex min-h-[80vh] items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          {/* Centered auth card — modern glass panel with amber accent header */}
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+            <div className="border-b border-border bg-gradient-to-br from-accent/15 via-white/[0.03] to-transparent px-7 pb-6 pt-7 text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/whistle-logo.png" alt="Whistle" className="mx-auto mb-3 h-12 w-auto" />
+              <p className="text-[11px] uppercase tracking-widest text-accent/80">🏆 {consoleTitle}</p>
+              <h1 className="mt-1 text-2xl font-extrabold text-text-primary">
+                {mode === "login" ? "Welcome back" : "Join the circuit"}
+              </h1>
+              <p className="mt-1 text-xs text-text-secondary">
+                Standalone tournaments — separate from any academy login.
+              </p>
+            </div>
+
+            <div className="p-7">
+              <div className="mb-5 flex gap-2 rounded-full border border-border bg-white/[0.03] p-1">
+                {(["login", "signup"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      mode === m ? "bg-accent text-accent-text shadow" : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {m === "login" ? "Login" : "Create Account"}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {mode === "signup" && (
+                  <>
+                    <Field label="Full name *" value={name} onChange={(e) => setName(e.target.value)} />
+                    <SelectField label="I am a…" value={role} onChange={(e) => setRole(e.target.value)}>
+                      <option value="organizer">Organizer</option>
+                      <option value="official">Official / Scorer</option>
+                      <option value="registrant">Player / Team</option>
+                    </SelectField>
+                    {role === "organizer" && (
+                      <Field label="Organization (optional)" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+                    )}
+                  </>
                 )}
-              </>
-            )}
-            <Field label="Email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Field label="Password *" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <PrimaryButton onClick={submitAuth} disabled={submitting} className="w-full">
-              {submitting ? "Please wait…" : mode === "login" ? "Login" : "Create Account"}
-            </PrimaryButton>
-            <p className="text-xs text-text-secondary">
-              Demo organizer: organizer@tourney.test / whistle123
-            </p>
-            <p className="text-xs text-text-secondary">
-              Players and officials don&apos;t sign up here — send them the public portal:{" "}
-              <a href="/play" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                /play
-              </a>
-            </p>
+                <Field label="Email *" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Field label="Password *" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                {error && <p className="text-sm text-danger">{error}</p>}
+                <PrimaryButton onClick={submitAuth} disabled={submitting} className="w-full">
+                  {submitting ? "Please wait…" : mode === "login" ? "Login" : "Create Account"}
+                </PrimaryButton>
+                <p className="pt-1 text-center text-xs text-text-muted">
+                  Demo organizer: <span className="text-text-secondary">organizer@tourney.test / whistle123</span>
+                </p>
+                <p className="text-center text-xs text-text-secondary">
+                  Players &amp; officials use the public portal:{" "}
+                  <a href="/play" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+                    /play
+                  </a>
+                </p>
+              </div>
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
     );
   }

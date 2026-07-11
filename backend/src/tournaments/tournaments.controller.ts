@@ -49,6 +49,13 @@ export class TournamentPublicController {
     return this.service.globalLeaderboard(sportKey);
   }
 
+  // Pulse — top players of the week/month, recent champions, totals. The
+  // engagement feed for players, referees and organizers alike.
+  @Get("pulse")
+  pulse() {
+    return this.service.pulse();
+  }
+
   @Get(":slug")
   publicPage(@Param("slug") slug: string) {
     return this.service.publicPage(slug);

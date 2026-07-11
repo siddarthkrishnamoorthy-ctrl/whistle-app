@@ -204,4 +204,44 @@ export class PlatformController {
   events() {
     return this.service.listAllEvents();
   }
+
+  // ── Assessment test library (owner-curated) ───────────────────────────────
+
+  @Get("assessment-tests")
+  assessmentTests() {
+    return this.service.listPlatformAssessmentTests();
+  }
+
+  @Post("assessment-tests")
+  createAssessmentTest(
+    @Body()
+    dto: {
+      name: string;
+      category: string;
+      metricType: string;
+      unit: string;
+      precisionDecimals?: number;
+      attemptsAllowed?: number;
+      instructions?: string;
+    }
+  ) {
+    return this.service.createPlatformAssessmentTest(dto);
+  }
+
+  @Delete("assessment-tests/:id")
+  deleteAssessmentTest(@Param("id") id: string) {
+    return this.service.deletePlatformAssessmentTest(id);
+  }
+
+  // ── Cross-academy oversight: CRM + Match Center ───────────────────────────
+
+  @Get("crm")
+  crm() {
+    return this.service.crm();
+  }
+
+  @Get("match-center")
+  matchCenter() {
+    return this.service.matchCenter();
+  }
 }

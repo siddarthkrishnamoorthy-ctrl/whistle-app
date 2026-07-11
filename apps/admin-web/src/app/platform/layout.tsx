@@ -12,10 +12,13 @@ import {
   BarChart3,
   BookOpen,
   Building2,
+  ClipboardCheck,
   Dumbbell,
   Flag,
+  Inbox,
   Receipt,
   ShieldCheck,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import clsx from "clsx";
@@ -31,9 +34,10 @@ interface NavItem {
 const NAV: { label: string; items: NavItem[] }[] = [
   { label: "", items: [{ label: "Overview", href: "/platform", icon: BarChart3 }] },
   {
-    label: "Business",
+    label: "Network",
     items: [
-      { label: "Tenants", href: "/platform/tenants", icon: Building2 },
+      { label: "Academies & Schools", href: "/platform/tenants", icon: Building2 },
+      { label: "CRM", href: "/platform/crm", icon: Inbox },
       { label: "Invoices", href: "/platform/invoices", icon: Receipt },
     ],
   },
@@ -42,11 +46,15 @@ const NAV: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Drill Bank", href: "/platform/drills", icon: Dumbbell },
       { label: "Lesson Plans", href: "/platform/lesson-plans", icon: BookOpen },
+      { label: "Assessments", href: "/platform/assessments", icon: ClipboardCheck },
     ],
   },
   {
     label: "Competitions",
-    items: [{ label: "Tournaments & Events", href: "/platform/competitions", icon: Flag }],
+    items: [
+      { label: "Match Center", href: "/platform/match-center", icon: Trophy },
+      { label: "Tournaments", href: "/platform/competitions", icon: Flag },
+    ],
   },
 ];
 
