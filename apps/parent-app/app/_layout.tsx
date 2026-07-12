@@ -73,7 +73,6 @@ export default function RootLayout() {
             <Stack.Screen name="events/[id]" options={{ title: "Match Center" }} />
             <Stack.Screen name="fixtures/[id]" options={{ title: "Fixture" }} />
             <Stack.Screen name="rating-detail/index" options={{ title: "My Rating" }} />
-            <Stack.Screen name="chess/index" options={{ title: "Chess Arena" }} />
             <Stack.Screen name="chess/[gameId]" options={{ title: "Chess" }} />
             <Stack.Screen name="chess/puzzle" options={{ title: "Puzzle" }} />
           </Stack>

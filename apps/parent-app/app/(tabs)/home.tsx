@@ -115,21 +115,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Chess Arena entry (Chess Module BRD — student-facing, parent-enabled) */}
-      <TouchableOpacity onPress={() => router.push("/chess")} activeOpacity={0.8}>
-        <Card style={{ borderColor: "rgba(245,185,63,0.35)", borderWidth: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 15 }}>♟️ Chess Arena</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                Play friends at your center, invite other centers, join chess events
-              </Text>
-            </View>
-            <Text style={{ color: colors.accent, fontWeight: "800", fontSize: 18 }}>›</Text>
-          </View>
-        </Card>
-      </TouchableOpacity>
-
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>My children</Text>
         {loading ? (

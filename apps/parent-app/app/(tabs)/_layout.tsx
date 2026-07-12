@@ -19,6 +19,7 @@ const TABS: { key: string; label: string; path: string; icon: IconName; iconActi
   { key: "child", label: "My Child", path: "/child", icon: "happy-outline", iconActive: "happy" },
   { key: "progress", label: "Progress", path: "/progress", icon: "trending-up-outline", iconActive: "trending-up" },
   { key: "events", label: "Matches", path: "/events", icon: "trophy-outline", iconActive: "trophy" },
+  { key: "chess", label: "Chess", path: "/chess", icon: "grid-outline", iconActive: "grid" },
   { key: "profile", label: "Profile", path: "/profile", icon: "person-outline", iconActive: "person" },
 ];
 
