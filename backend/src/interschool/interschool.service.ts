@@ -221,7 +221,17 @@ export class InterschoolService {
     });
   }
 
-  createEvent(academyId: string, dto: CreateEventDto) {
+  async createEvent(academyId: string, dto: CreateEventDto) {
+    // Every sport must be in the catalogue — otherwise fixtures (whose sport_key
+    // is a foreign key to Sport) would fail with an opaque 500 much later.
+    const sports = dto.sports ?? [];
+    if (sports.length === 0) throw new BadRequestException("Pick at least one sport for the event.");
+    const known = await this.prisma.sport.findMany({ where: { key: { in: sports } }, select: { key: true } });
+    const knownKeys = new Set(known.map((s) => s.key));
+    const unknown = sports.filter((s) => !knownKeys.has(s));
+    if (unknown.length > 0) {
+      throw new BadRequestException(`Unknown sport(s): ${unknown.join(", ")}. Add them to the sports catalogue first.`);
+    }
     return this.prisma.interschoolEvent.create({
       data: {
         hostAcademyId: academyId,
