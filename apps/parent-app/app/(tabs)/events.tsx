@@ -5,7 +5,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useChildren } from "@/lib/children-context";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, Pill, colors } from "@/components/ui";
+import { Card, EmptyState, Pill, SearchBar, colors } from "@/components/ui";
 import { formatDate, type InterschoolEvent } from "@whistle/shared";
 import { RANK_MEDALS, sportEmoji } from "@/lib/sport-emoji";
 
@@ -111,6 +111,7 @@ export default function EventsScreen() {
   const [sports, setSports] = useState<Sport[]>([]);
   // Standings sport can be browsed — defaults to the child's sport.
   const [standingsSport, setStandingsSport] = useState("");
+  const [standingsQuery, setStandingsQuery] = useState("");
 
   useFocusEffect(
     useCallback(() => {
@@ -279,7 +280,20 @@ export default function EventsScreen() {
                 <EmptyState message="No rated players in this sport yet." />
               ) : (
                 <Card>
-                  {leaders.map((l, i) => {
+                  {leaders.length > 8 ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <SearchBar value={standingsQuery} onChangeText={setStandingsQuery} placeholder="Find a player…" />
+                    </View>
+                  ) : null}
+                  {(() => {
+                    const q = standingsQuery.trim().toLowerCase();
+                    // Preserve each player's true rank while filtering.
+                    const shown = leaders
+                      .map((l, i) => ({ l, i }))
+                      .filter(({ l }) => !q || (l.client?.name ?? "").toLowerCase().includes(q));
+                    if (shown.length === 0)
+                      return <EmptyState message="No players match your search." />;
+                    return shown.map(({ l, i }) => {
                     const cid = l.client?.id ?? l.clientId;
                     const rating = l.currentRating ?? l.rating;
                     const isMine = cid && cid === selectedChild?.id;
@@ -312,7 +326,8 @@ export default function EventsScreen() {
                         </Text>
                       </View>
                     );
-                  })}
+                    });
+                  })()}
                 </Card>
               )}
             </View>

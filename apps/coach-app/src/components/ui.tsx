@@ -256,4 +256,85 @@ export function ErrorView({ message }: { message: string }) {
   );
 }
 
+// Rounded search box for filtering long lists (leading 🔍, inline clear).
+export function SearchBar({
+  value,
+  onChangeText,
+  placeholder = "Search…",
+}: {
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: focused ? colors.accent : colors.border,
+        backgroundColor: "rgba(0, 0, 0, 0.35)",
+        borderRadius: 999,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+      }}
+    >
+      <Text style={{ fontSize: 14, color: colors.textMuted }}>🔍</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{ flex: 1, color: colors.textPrimary, fontSize: 14, padding: 0 }}
+      />
+      {value.length > 0 ? (
+        <TouchableOpacity onPress={() => onChangeText("")} hitSlop={8}>
+          <Text style={{ color: colors.textMuted, fontSize: 15 }}>✕</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+// Collapsible group header for grouping long lists; opens compact with a count.
+export function Collapsible({
+  title,
+  count,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <View style={{ ...glass, borderRadius: 14, overflow: "hidden" }}>
+      <TouchableOpacity
+        onPress={() => setOpen((v) => !v)}
+        activeOpacity={0.7}
+        style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 12 }}
+      >
+        <Text style={{ color: colors.textMuted, fontSize: 13, width: 14 }}>{open ? "▾" : "▸"}</Text>
+        <Text style={{ flex: 1, color: colors.textPrimary, fontWeight: "700", fontSize: 14 }} numberOfLines={1}>
+          {title}
+        </Text>
+        {typeof count === "number" ? (
+          <View style={{ backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600" }}>{count}</Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+      {open ? (
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.border, padding: 12, gap: 8 }}>{children}</View>
+      ) : null}
+    </View>
+  );
+}
+
 export { colors };

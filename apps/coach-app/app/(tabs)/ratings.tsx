@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
-import { Card, ChipRow, EmptyState, Pill, colors } from "@/components/ui";
+import { Card, ChipRow, EmptyState, Pill, SearchBar, colors } from "@/components/ui";
 import { RANK_MEDALS, sportEmoji } from "@/lib/sport-emoji";
 
 interface Sport {
@@ -32,6 +32,7 @@ export default function RatingsScreen() {
   const [sportKey, setSportKey] = useState("");
   const [formatType, setFormatType] = useState<(typeof FORMATS)[number]["key"]>("individual");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -130,7 +131,17 @@ export default function RatingsScreen() {
             <EmptyState message="No rated players for this sport & format yet." />
           ) : (
             <View style={{ gap: 8 }}>
-              {rows.map((r, i) => {
+              {rows.length > 8 ? (
+                <SearchBar value={query} onChangeText={setQuery} placeholder="Search player or academy…" />
+              ) : null}
+              {(() => {
+                const q = query.trim().toLowerCase();
+                // Keep each player's true leaderboard rank while filtering.
+                const shown = rows
+                  .map((r, i) => ({ r, i }))
+                  .filter(({ r }) => !q || r.client.name.toLowerCase().includes(q) || (r.client.academy?.name ?? "").toLowerCase().includes(q));
+                if (shown.length === 0) return <EmptyState message="No players match your search." />;
+                return shown.map(({ r, i }) => {
                 const medal = RANK_MEDALS[i];
                 const top = i < 3;
                 return (
@@ -155,7 +166,8 @@ export default function RatingsScreen() {
                     </View>
                   </Card>
                 );
-              })}
+                });
+              })()}
             </View>
           )}
         </>
