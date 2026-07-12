@@ -1,1 +1,4 @@
-uploads/
+# Runtime upload directory (user-uploaded files land here at process.cwd()/uploads).
+# Anchored with a leading slash so it ignores ONLY backend/uploads/ and does NOT
+# swallow the source module at backend/src/uploads/.
+/uploads/
