@@ -75,6 +75,9 @@ export default function RootLayout() {
             <Stack.Screen name="rating-detail/index" options={{ title: "My Rating" }} />
             <Stack.Screen name="chess/[gameId]" options={{ title: "Chess" }} />
             <Stack.Screen name="chess/puzzle" options={{ title: "Puzzle" }} />
+            <Stack.Screen name="scrabble/[gameId]" options={{ title: "Scrabble" }} />
+            <Stack.Screen name="scrabble/puzzle" options={{ title: "Word Puzzle" }} />
+            <Stack.Screen name="scrabble/word-power" options={{ title: "Word Power" }} />
           </Stack>
           </ThemeProvider>
         </LinearGradient>
