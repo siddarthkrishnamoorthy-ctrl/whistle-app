@@ -9,7 +9,7 @@ The application **code** is versioned by Git itself; these files capture the
 
 | File | Taken | Contents |
 |------|-------|----------|
-| `whistle-db-2026-07-11.sql.gz` | 2026-07-11 | Full `whistle` DB — 69 tables, all seeded demo data. `pg_dump --no-owner --no-privileges`, gzip-compressed. |
+| `whistle-db-2026-07-12.sql.gz` | 2026-07-12 | Full `whistle` DB — includes the Chess **and Scrabble** modules. `pg_dump --no-owner --no-privileges`, gzip-compressed. |
 
 Password hashes in these dumps are bcrypt (one-way). The demo login password
 (`whistle123`) should still be rotated before any public deployment.
@@ -25,7 +25,7 @@ psql -h 127.0.0.1 -U postgres -c "DROP DATABASE IF EXISTS whistle;"
 psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE whistle;"
 
 # 2. Load the dump
-gunzip -c backups/whistle-db-2026-07-11.sql.gz | \
+gunzip -c backups/whistle-db-2026-07-12.sql.gz | \
   psql -h 127.0.0.1 -U postgres -d whistle
 ```
 
