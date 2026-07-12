@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useApiList } from "@/lib/hooks";
 import { apiJson, assetUrl } from "@/lib/api-client";
-import { Card, EmptyState, Field, SelectField, StatusPill } from "@/components/ui";
+import { Card, CollapsibleSection, EmptyState, SearchInput, SelectField, StatusPill } from "@/components/ui";
 import type { Drill, LessonPlan, Sport } from "@/lib/types";
 import { NewDrillModal, type CreateDrillPayload } from "./new-drill-modal";
 
@@ -62,6 +62,74 @@ export default function DrillBankPage() {
     }
   }
 
+  // Group by sport for the collapsible "all sports" view.
+  const sportGroups = useMemo(() => {
+    const map = new Map<string, Drill[]>();
+    for (const d of drills) {
+      const key = d.sport.name;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [drills]);
+
+  const renderDrillCard = (drill: Drill) => {
+    const diagram = drill.media?.find((m) => m.type === "diagram");
+    const video = drill.media?.find((m) => m.type === "video");
+    return (
+      <Card key={drill.id} className="space-y-2">
+        {diagram && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={assetUrl(diagram.url)}
+            alt={`${drill.title} diagram`}
+            className="h-32 w-full rounded-md border border-border object-cover"
+          />
+        )}
+        <div className="flex items-start justify-between">
+          <h3 className="font-medium text-text-primary">{drill.title}</h3>
+          {drill.level && <StatusPill tone={LEVEL_TONE[drill.level]}>{drill.level}</StatusPill>}
+        </div>
+        <p className="text-xs text-text-muted">
+          {drill.sport.name}
+          {drill.skillCategory ? ` · ${drill.skillCategory}` : ""}
+        </p>
+        {drill.description && <p className="text-sm text-text-secondary">{drill.description}</p>}
+        <div className="flex flex-wrap gap-1 text-xs text-text-muted">
+          {drill.durationMin && <span className="rounded-full bg-surface-alt px-2 py-0.5">{drill.durationMin} min</span>}
+          {drill.ageGroups.map((g) => (
+            <span key={g} className="rounded-full bg-surface-alt px-2 py-0.5">
+              {g}
+            </span>
+          ))}
+        </div>
+        {video && (
+          <a
+            href={video.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
+          >
+            ▶ Watch video
+          </a>
+        )}
+        {forLessonPlan && (
+          <button
+            onClick={() => handleAddToLessonPlan(drill)}
+            disabled={addingDrillId === drill.id || !targetPlan}
+            className="w-full rounded-full border border-accent px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent/10 disabled:opacity-50"
+          >
+            {addingDrillId === drill.id
+              ? "Adding…"
+              : addedDrillIds.includes(drill.id)
+                ? "✓ Added — add again"
+                : "+ Add to Lesson Plan"}
+          </button>
+        )}
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {forLessonPlan && (
@@ -96,15 +164,14 @@ export default function DrillBankPage() {
         </button>
       </div>
 
-      <div className="flex gap-3">
-        <Field
-          label=""
-          placeholder="Search drills…"
+      <div className="flex flex-wrap gap-3">
+        <SearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
+          onChange={setSearch}
+          placeholder="Search drills…"
+          className="min-w-[240px] max-w-xs flex-1"
         />
-        <SelectField label="" value={sportKey} onChange={(e) => setSportKey(e.target.value)} className="max-w-xs">
+        <SelectField compact value={sportKey} onChange={(e) => setSportKey(e.target.value)} className="max-w-xs">
           <option value="">All sports</option>
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
@@ -120,66 +187,23 @@ export default function DrillBankPage() {
         <Card className="text-sm text-text-secondary">Loading…</Card>
       ) : drills.length === 0 ? (
         <Card>
-          <EmptyState message="No drills yet — add your first one." />
+          <EmptyState message="No drills match — try another search or sport." />
         </Card>
-      ) : (
+      ) : sportKey ? (
+        // Single sport selected — a flat grid reads best.
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {drills.map((drill) => {
-            const diagram = drill.media?.find((m) => m.type === "diagram");
-            const video = drill.media?.find((m) => m.type === "video");
-            return (
-              <Card key={drill.id} className="space-y-2">
-                {diagram && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={assetUrl(diagram.url)}
-                    alt={`${drill.title} diagram`}
-                    className="h-32 w-full rounded-md border border-border object-cover"
-                  />
-                )}
-                <div className="flex items-start justify-between">
-                  <h3 className="font-medium text-text-primary">{drill.title}</h3>
-                  {drill.level && <StatusPill tone={LEVEL_TONE[drill.level]}>{drill.level}</StatusPill>}
-                </div>
-                <p className="text-xs text-text-muted">
-                  {drill.sport.name}
-                  {drill.skillCategory ? ` · ${drill.skillCategory}` : ""}
-                </p>
-                {drill.description && <p className="text-sm text-text-secondary">{drill.description}</p>}
-                <div className="flex flex-wrap gap-1 text-xs text-text-muted">
-                  {drill.durationMin && <span className="rounded-full bg-surface-alt px-2 py-0.5">{drill.durationMin} min</span>}
-                  {drill.ageGroups.map((g) => (
-                    <span key={g} className="rounded-full bg-surface-alt px-2 py-0.5">
-                      {g}
-                    </span>
-                  ))}
-                </div>
-                {video && (
-                  <a
-                    href={video.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
-                  >
-                    ▶ Watch video
-                  </a>
-                )}
-                {forLessonPlan && (
-                  <button
-                    onClick={() => handleAddToLessonPlan(drill)}
-                    disabled={addingDrillId === drill.id || !targetPlan}
-                    className="w-full rounded-full border border-accent px-3 py-1.5 text-sm font-semibold text-accent hover:bg-accent/10 disabled:opacity-50"
-                  >
-                    {addingDrillId === drill.id
-                      ? "Adding…"
-                      : addedDrillIds.includes(drill.id)
-                        ? "✓ Added — add again"
-                        : "+ Add to Lesson Plan"}
-                  </button>
-                )}
-              </Card>
-            );
-          })}
+          {drills.map(renderDrillCard)}
+        </div>
+      ) : (
+        // All sports — collapse into per-sport sections so the page opens compact.
+        <div className="space-y-3">
+          {sportGroups.map(([sportName, list]) => (
+            <CollapsibleSection key={sportName} title={sportName} count={list.length} defaultOpen={sportGroups.length <= 3}>
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                {list.map(renderDrillCard)}
+              </div>
+            </CollapsibleSection>
+          ))}
         </div>
       )}
 

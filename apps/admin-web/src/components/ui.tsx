@@ -1,4 +1,6 @@
-import { InputHTMLAttributes, ButtonHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+"use client";
+
+import { InputHTMLAttributes, ButtonHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, useState } from "react";
 import clsx from "clsx";
 
 export function Field({ label, ...props }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
@@ -200,6 +202,128 @@ export function Table({
 
 export function EmptyState({ message }: { message: string }) {
   return <div className="p-10 text-center text-sm text-text-secondary">{message}</div>;
+}
+
+// Standard search box with a leading magnifier — used to filter long lists so
+// users narrow before scrolling. Same border/focus treatment as the inputs.
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search…",
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <span className={clsx("relative block", className)}>
+      <svg
+        aria-hidden
+        viewBox="0 0 20 20"
+        fill="none"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+      >
+        <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-border bg-surface-alt py-2.5 pl-10 pr-9 text-text-primary transition-colors placeholder:text-text-muted hover:border-white/30 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-primary"
+        >
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+            <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+// Collapsible group header for grouping long lists (by class, sport, center…).
+// Opens compact; the count + chevron make the size legible before expanding.
+export function CollapsibleSection({
+  title,
+  count,
+  subtitle,
+  defaultOpen = true,
+  right,
+  children,
+}: {
+  title: React.ReactNode;
+  count?: number;
+  subtitle?: React.ReactNode;
+  defaultOpen?: boolean;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-surface/60 backdrop-blur-md">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-alt"
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            fill="none"
+            className={clsx("h-4 w-4 shrink-0 text-text-muted transition-transform", open ? "rotate-90" : "")}
+          >
+            <path d="M8 6l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-text-primary">{title}</span>
+            {subtitle ? <span className="block truncate text-xs text-text-muted">{subtitle}</span> : null}
+          </span>
+          {typeof count === "number" ? (
+            <span className="ml-1 shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-medium text-text-secondary">
+              {count}
+            </span>
+          ) : null}
+        </span>
+        {right ? <span className="shrink-0">{right}</span> : null}
+      </button>
+      {open ? <div className="border-t border-border">{children}</div> : null}
+    </div>
+  );
+}
+
+// Compact metric tile for summary strips above a list (a light infographic).
+export function MetricTile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: "accent" | "success" | "warning" | "danger" | "neutral";
+}) {
+  const toneText: Record<string, string> = {
+    accent: "text-accent",
+    success: "text-success",
+    warning: "text-warning",
+    danger: "text-danger",
+    neutral: "text-text-primary",
+  };
+  return (
+    <div className="rounded-lg border border-border bg-surface px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <div className={clsx("text-2xl font-semibold tabular-nums", toneText[tone])}>{value}</div>
+      <div className="mt-0.5 text-xs uppercase tracking-wide text-text-muted">{label}</div>
+    </div>
+  );
 }
 
 // Color-coded toggle switch: "admin" (neon purple) for administrative /
