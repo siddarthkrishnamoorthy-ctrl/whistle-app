@@ -123,17 +123,18 @@ export default function SchoolsPage() {
               <td className="px-4 py-3 text-text-secondary">{s._count?.classes ?? 0}</td>
               <td className="px-4 py-3 text-text-secondary">{s.maxStudents ?? "Unlimited"}</td>
               <td className="px-4 py-3">
-                <select
+                <SelectField
+                  compact
                   value={s.lessonPlanAssignmentMode ?? ""}
                   onChange={(e) => changeMode(s, e.target.value)}
-                  className="rounded-md border border-border bg-surface-alt px-2.5 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+                  className="min-w-[170px]"
                 >
                   {Object.entries(MODE_LABEL).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </td>
             </tr>
           ))}

@@ -39,19 +39,22 @@ export function TextareaField({
 export function SelectField({
   label,
   children,
+  compact,
   ...props
-}: { label: string } & SelectHTMLAttributes<HTMLSelectElement>) {
+}: { label?: string; compact?: boolean } & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm text-text-secondary">{label}</span>
+      {label ? <span className="mb-1.5 block text-sm text-text-secondary">{label}</span> : null}
       <span className="relative block">
         <select
           {...props}
           className={clsx(
             // appearance-none kills the mismatched native arrow; the padding
             // reserves room for our chevron so long labels truncate cleanly
-            // instead of running under it.
-            "w-full appearance-none truncate rounded-lg border border-border bg-surface-alt py-2.5 pl-3.5 pr-10 text-text-primary",
+            // instead of running under it. `compact` is the inline-filter /
+            // table-cell size — same look, smaller footprint.
+            "w-full appearance-none truncate rounded-lg border border-border bg-surface-alt text-text-primary",
+            compact ? "py-1.5 pl-3 pr-9 text-sm" : "py-2.5 pl-3.5 pr-10",
             "transition-colors hover:border-white/30 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent",
             props.className
           )}
@@ -62,7 +65,10 @@ export function SelectField({
           aria-hidden
           viewBox="0 0 20 20"
           fill="none"
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary"
+          className={clsx(
+            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-text-secondary",
+            compact ? "right-2.5 h-3.5 w-3.5" : "right-3 h-4 w-4"
+          )}
         >
           <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

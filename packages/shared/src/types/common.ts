@@ -2,7 +2,7 @@
 // serialized as-is over the REST API) — the Prisma schema is the source of
 // truth; update both together.
 
-export type UserRole = "admin" | "account_manager" | "venue_manager" | "head_coach" | "coach" | "parent" | "student";
+export type UserRole = "admin" | "account_manager" | "venue_manager" | "head_coach" | "coach" | "parent" | "student" | "referee" | "platform_owner";
 
 export type StaffRole = "admin" | "account_manager" | "venue_manager" | "head_coach" | "coach" | "referee";
 

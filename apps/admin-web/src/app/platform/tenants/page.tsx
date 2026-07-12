@@ -201,7 +201,6 @@ function TenantCard({
   }
 
   const chipCls = "flex items-center gap-1.5 rounded-lg border border-border bg-white/[0.04] px-2.5 py-1.5 text-xs text-text-secondary";
-  const selectCls = "rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-text-primary";
 
   return (
     <div className={`rounded-lg border ${t.suspended ? "border-danger/40 bg-danger/[0.06]" : "border-border bg-surface"}`}>
@@ -264,16 +263,18 @@ function TenantCard({
                     className="w-16 bg-transparent text-right font-semibold text-text-primary outline-none"
                   />
                 </label>
-                <select
+                <SelectField
+                  compact
+                  label=""
                   value={t.allowanceMode}
                   onChange={(e) => patch({ allowanceMode: e.target.value })}
                   disabled={busy}
-                  className={selectCls}
+                  className="w-auto"
                   title="hard = block the N+1th student · true-up = allow growth, bill the real count"
                 >
                   <option value="true_up">True-up billing</option>
                   <option value="hard">Hard cap</option>
-                </select>
+                </SelectField>
                 {t.subscription && (
                   <label className={chipCls}>
                     Declared strength

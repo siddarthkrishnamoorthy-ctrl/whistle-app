@@ -148,7 +148,7 @@ export default function AssessmentTestsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
-          <SelectField label="" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="max-w-[200px]">
+          <SelectField compact value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="max-w-[200px]">
             <option value="">All categories</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -292,15 +292,16 @@ export default function AssessmentTestsPage() {
                   className="rounded-md border border-border bg-surface-alt px-2 py-1.5 text-sm text-text-primary"
                 />
               ))}
-              <select
+              <SelectField
+                compact
                 value={z.gender}
                 onChange={(e) => setZones((all) => all.map((x, j) => (j === i ? { ...x, gender: e.target.value } : x)))}
-                className="rounded-md border border-border bg-surface-alt px-2 py-1.5 text-sm text-text-primary"
+                className="w-auto"
               >
                 <option value="any">any</option>
                 <option value="male">male</option>
                 <option value="female">female</option>
-              </select>
+              </SelectField>
               {(["thresholdLow", "thresholdHigh"] as const).map((k) => (
                 <input
                   key={k}

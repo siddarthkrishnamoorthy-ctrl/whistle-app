@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { apiJson } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
-import { Card, OutlineButton, PrimaryButton, StatusPill } from "@/components/ui";
+import { Card, OutlineButton, PrimaryButton, SelectField, StatusPill } from "@/components/ui";
 import type { Fixture, ScoringTemplate } from "@/lib/types";
 
 const STATUS_TONE = {
@@ -273,15 +273,15 @@ export default function FixtureDetailPage() {
           <div className="space-y-3 border-t border-border pt-4">
             <h3 className="text-sm font-semibold text-text-primary">End match</h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <select
+              <SelectField
+                label=""
                 value={winnerSide}
                 onChange={(e) => setWinnerSide(e.target.value as "A" | "B" | "draw")}
-                className="rounded-md border border-border bg-surface-alt px-3.5 py-2.5 text-text-primary"
               >
                 <option value="A">Side A wins</option>
                 <option value="B">Side B wins</option>
                 <option value="draw">Draw</option>
-              </select>
+              </SelectField>
               <input
                 placeholder="Score summary e.g. 146/4 vs 140/8"
                 value={scoreDisplay}
