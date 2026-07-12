@@ -2,7 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException,
 import { PrismaService } from "../prisma/prisma.service";
 import { ScoringService } from "../scoring/scoring.service";
 import { TournamentsService } from "../tournaments/tournaments.service";
-import { applyPass, applyPlacement, GameState, initialState, LETTER_VALUES, Placement } from "./scrabble-engine";
+import { applyPass, applyPlacement, GameState, initialState, LETTER_VALUES, Placement, randomRack } from "./scrabble-engine";
+import { isValidWord } from "./scrabble-dictionary";
 import { BOT_NAMES, BotLevel, chooseBotMove } from "./scrabble-bot";
 import { SCRABBLE_PUZZLE_RACKS, SCRABBLE_WORD_LISTS } from "./scrabble-content.seed";
 
@@ -462,6 +463,37 @@ export class ScrabbleService implements OnModuleInit {
     return lists.map((l) => ({ id: l.id, title: l.title, description: l.description, wordCount: l._count.entries }));
   }
 
+  // Admin/Head-Coach word-list authoring (§5.3). Lists are academy-scoped;
+  // the platform starter library (academyId=null) is read-only here.
+  async getWordList(academyId: string, id: string) {
+    const list = await this.prisma.scrabbleWordList.findUnique({ where: { id }, include: { entries: { orderBy: { createdAt: "asc" } } } });
+    if (!list || (list.academyId && list.academyId !== academyId)) throw new NotFoundException("Word list not found.");
+    return list;
+  }
+
+  createWordList(academyId: string, dto: { title: string; description?: string; gradeKey?: string }) {
+    if (!dto.title?.trim()) throw new BadRequestException("A title is required.");
+    return this.prisma.scrabbleWordList.create({
+      data: { academyId, title: dto.title.trim(), description: dto.description?.trim() || null, gradeKey: dto.gradeKey || null },
+    });
+  }
+
+  async addWordEntry(academyId: string, listId: string, dto: { word: string; definition: string; example?: string }) {
+    const list = await this.prisma.scrabbleWordList.findUnique({ where: { id: listId } });
+    if (!list || list.academyId !== academyId) throw new ForbiddenException("You can only edit your academy's lists.");
+    if (!dto.word?.trim() || !dto.definition?.trim()) throw new BadRequestException("Word and definition are required.");
+    return this.prisma.scrabbleWordEntry.create({
+      data: { listId, word: dto.word.trim().toLowerCase(), definition: dto.definition.trim(), example: dto.example?.trim() || null },
+    });
+  }
+
+  async deleteWordEntry(academyId: string, listId: string, entryId: string) {
+    const list = await this.prisma.scrabbleWordList.findUnique({ where: { id: listId } });
+    if (!list || list.academyId !== academyId) throw new ForbiddenException("You can only edit your academy's lists.");
+    await this.prisma.scrabbleWordEntry.delete({ where: { id: entryId } }).catch(() => undefined);
+    return { deleted: true };
+  }
+
   // Enroll every word in a list into the student's review schedule (idempotent).
   async startTest(clientId: string, listId: string) {
     const entries = await this.prisma.scrabbleWordEntry.findMany({ where: { listId }, select: { id: true } });
@@ -537,6 +569,82 @@ export class ScrabbleService implements OnModuleInit {
         create: { blockerClientId, blockedClientId },
       })
       .then(() => ({ blocked: true }));
+  }
+
+  // ── Community open-seek (§5.5) ─────────────────────────────────────────────
+
+  private async isBlockedPair(x: string, y: string) {
+    return Boolean(
+      await this.prisma.gameBlock.findFirst({
+        where: { OR: [{ blockerClientId: x, blockedClientId: y }, { blockerClientId: y, blockedClientId: x }] },
+      })
+    );
+  }
+
+  // Post an open seek; if a compatible one is already waiting, pair immediately.
+  // Matching is by academy + match type, skipping any blocked pair (§5.10).
+  async seek(academyId: string, clientId: string, matchType = "async") {
+    const me = await this.clientOrThrow(academyId, clientId);
+    const mt = MATCH_TYPES[matchType] ? matchType : "async";
+    // Already have an open seek? Return its status instead of duplicating.
+    const mine = await this.prisma.scrabbleSeek.findFirst({ where: { clientId, status: "open" } });
+    if (mine) return this.seekStatus(academyId, clientId);
+
+    const waiting = await this.prisma.scrabbleSeek.findMany({
+      where: { academyId, status: "open", matchType: mt, clientId: { not: clientId } },
+      orderBy: { createdAt: "asc" },
+    });
+    for (const w of waiting) {
+      if (await this.isBlockedPair(clientId, w.clientId)) continue;
+      const them = await this.prisma.client.findUnique({ where: { id: w.clientId }, select: { id: true, name: true } });
+      if (!them) continue;
+      // Pair them: the waiting seeker (posted first) is player A.
+      const game = await this.createGame({ context: "community", academyId, aId: them.id, bId: me.id, aName: them.name, bName: me.name, matchType: mt });
+      await this.prisma.scrabbleSeek.update({ where: { id: w.id }, data: { status: "matched", gameId: game.id } });
+      return { matched: true, game: this.publicGame(game, clientId) };
+    }
+    const seek = await this.prisma.scrabbleSeek.create({ data: { academyId, clientId, matchType: mt, status: "open" } });
+    return { matched: false, seek };
+  }
+
+  // Poll: has my open seek been matched by someone else joining?
+  async seekStatus(academyId: string, clientId: string) {
+    const seek = await this.prisma.scrabbleSeek.findFirst({ where: { clientId }, orderBy: { createdAt: "desc" } });
+    if (!seek) return { matched: false, seek: null };
+    if (seek.status === "matched" && seek.gameId) {
+      const g = await this.prisma.scrabbleGame.findUnique({ where: { id: seek.gameId } });
+      return { matched: true, game: g ? this.publicGame(g, clientId) : null };
+    }
+    return { matched: false, seek: seek.status === "open" ? seek : null };
+  }
+
+  async cancelSeek(clientId: string) {
+    await this.prisma.scrabbleSeek.updateMany({ where: { clientId, status: "open" }, data: { status: "cancelled" } });
+    return { cancelled: true };
+  }
+
+  // ── Word Rush (§5.2): a timed "find as many words as you can" drill ─────────
+
+  wordRushNew() {
+    // A sequence of fresh racks + a 180s clock. Stateless — the client keeps the
+    // running score and validates each word against /word-rush/check.
+    return { seconds: 180, racks: Array.from({ length: 12 }, () => randomRack()) };
+  }
+
+  // Validate a single Word Rush word: must be a real word AND formable from the
+  // rack (each letter available). Points = the word's letter values.
+  wordRushCheck(rack: string[], word: string) {
+    const w = (word ?? "").trim().toLowerCase();
+    if (w.length < 2) return { valid: false, points: 0, reason: "Too short." };
+    if (!isValidWord(w)) return { valid: false, points: 0, reason: "Not in the word list." };
+    const pool: Record<string, number> = {};
+    for (const t of rack) pool[t.toLowerCase()] = (pool[t.toLowerCase()] ?? 0) + 1;
+    for (const ch of w) {
+      if ((pool[ch] ?? 0) <= 0) return { valid: false, points: 0, reason: "Uses tiles you don't have." };
+      pool[ch]--;
+    }
+    const points = w.split("").reduce((n, ch) => n + (LETTER_VALUES[ch] ?? 0), 0);
+    return { valid: true, points };
   }
 
   // ── Rating (§5.8) ──────────────────────────────────────────────────────────

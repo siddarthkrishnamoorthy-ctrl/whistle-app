@@ -41,6 +41,7 @@ export default function ScrabbleArenaScreen() {
   const [busy, setBusy] = useState(false);
   const [showAllOther, setShowAllOther] = useState(false);
   const [matchType, setMatchType] = useState("async");
+  const [seeking, setSeeking] = useState(false);
 
   const load = useCallback(() => {
     if (!selectedChild) return;
@@ -84,6 +85,41 @@ export default function ScrabbleArenaScreen() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Community open-seek (§5.5): post a seek, then poll until someone joins.
+  async function findCommunityGame() {
+    setSeeking(true);
+    try {
+      const res = await apiJson<{ matched: boolean; game?: { id: string } }>("/scrabble/community/seek", {
+        method: "POST",
+        body: JSON.stringify({ clientId: selectedChild!.id, matchType }),
+      });
+      if (res.matched && res.game?.id) {
+        setSeeking(false);
+        router.push(`/scrabble/${res.game.id}`);
+        return;
+      }
+      // Poll for a match; the effect below stops when the component unfocuses.
+      const poll = setInterval(async () => {
+        const st = await apiJson<{ matched: boolean; game?: { id: string } }>(`/scrabble/community/seek?clientId=${selectedChild!.id}`).catch(() => null);
+        if (st?.matched && st.game?.id) {
+          clearInterval(poll);
+          setSeeking(false);
+          router.push(`/scrabble/${st.game.id}`);
+        }
+      }, 2500);
+      // Stop polling after 60s if nobody joins.
+      setTimeout(() => clearInterval(poll), 60000);
+    } catch (e) {
+      setSeeking(false);
+      Alert.alert("Couldn't find a game", e instanceof Error ? e.message : "Please try again.");
+    }
+  }
+
+  async function cancelSeek() {
+    setSeeking(false);
+    await apiJson("/scrabble/community/seek/cancel", { method: "POST", body: JSON.stringify({ clientId: selectedChild!.id }) }).catch(() => undefined);
   }
 
   async function respond(challengeId: string, accept: boolean) {
@@ -186,12 +222,37 @@ export default function ScrabbleArenaScreen() {
           </View>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
             <TouchableOpacity onPress={() => router.push("/scrabble/puzzle")} style={{ flex: 1, borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}>
-              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 13 }}>🧩 Word puzzle</Text>
+              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 12 }}>🧩 Puzzle</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/scrabble/word-power")} style={{ flex: 1, borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}>
-              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 13 }}>📚 Word Power</Text>
+              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 12 }}>📚 Word Power</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/scrabble/word-rush")} style={{ flex: 1, borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}>
+              <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 12 }}>⚡ Rush</Text>
             </TouchableOpacity>
           </View>
+        </Card>
+      </View>
+
+      {/* Community — find an open game with any Whistle student (§5.5) */}
+      <View>
+        <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>Community</Text>
+        <Card>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
+            🌐 Get matched with any student looking for a game — safe, verified players only.
+          </Text>
+          {seeking ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: colors.accent, fontSize: 13, fontWeight: "700", textAlign: "center" }}>Searching for an opponent…</Text>
+              <TouchableOpacity onPress={cancelSeek} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 10, alignItems: "center" }}>
+                <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 13 }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={findCommunityGame} style={{ backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 10, alignItems: "center" }}>
+              <Text style={{ color: colors.accentText, fontWeight: "800", fontSize: 13 }}>🔎 Find an open game</Text>
+            </TouchableOpacity>
+          )}
         </Card>
       </View>
 

@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Inbox,
   Layers,
+  SpellCheck,
   LayoutDashboard,
   ListOrdered,
   Mail,
@@ -75,6 +76,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Grades", href: "/misc/grades", icon: Layers },
       { label: "Assessment Tests", href: "/misc/assessment-tests", icon: ClipboardList },
       { label: "Assessment Cycles", href: "/misc/assessment-cycles", icon: RefreshCw },
+      { label: "Scrabble Word Lists", href: "/misc/word-lists", icon: SpellCheck },
     ],
   },
   {

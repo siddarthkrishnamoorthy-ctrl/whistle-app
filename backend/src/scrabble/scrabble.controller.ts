@@ -90,6 +90,30 @@ export class ScrabbleController {
     return this.scrabble.wordLists(user.academyId as string);
   }
 
+  @Get("word-lists/:id")
+  wordList(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.scrabble.getWordList(user.academyId as string, id);
+  }
+
+  // Word-list authoring (admin / head coach / account manager).
+  @Post("word-lists")
+  @Roles("admin", "head_coach", "account_manager")
+  createWordList(@CurrentUser() user: AuthenticatedUser, @Body() dto: { title: string; description?: string; gradeKey?: string }) {
+    return this.scrabble.createWordList(user.academyId as string, dto);
+  }
+
+  @Post("word-lists/:id/entries")
+  @Roles("admin", "head_coach", "account_manager")
+  addWordEntry(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: { word: string; definition: string; example?: string }) {
+    return this.scrabble.addWordEntry(user.academyId as string, id, dto);
+  }
+
+  @Post("word-lists/:id/entries/:entryId/delete")
+  @Roles("admin", "head_coach", "account_manager")
+  deleteWordEntry(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Param("entryId") entryId: string) {
+    return this.scrabble.deleteWordEntry(user.academyId as string, id, entryId);
+  }
+
   @Post("tests/start")
   startTest(@Body() dto: { clientId: string; listId: string }) {
     return this.scrabble.startTest(dto.clientId, dto.listId);
@@ -103,6 +127,33 @@ export class ScrabbleController {
   @Post("tests/:wordEntryId/answer")
   answerTest(@Param("wordEntryId") wordEntryId: string, @Body() dto: { clientId: string; correct: boolean }) {
     return this.scrabble.answerTest(dto.clientId, wordEntryId, dto.correct);
+  }
+
+  // ── Community open-seek (§5.5) ─────────────────────────────────────────────
+  @Post("community/seek")
+  seek(@CurrentUser() user: AuthenticatedUser, @Body() dto: { clientId: string; matchType?: string }) {
+    return this.scrabble.seek(user.academyId as string, dto.clientId, dto.matchType);
+  }
+
+  @Get("community/seek")
+  seekStatus(@CurrentUser() user: AuthenticatedUser, @Query("clientId") clientId: string) {
+    return this.scrabble.seekStatus(user.academyId as string, clientId);
+  }
+
+  @Post("community/seek/cancel")
+  cancelSeek(@Body() dto: { clientId: string }) {
+    return this.scrabble.cancelSeek(dto.clientId);
+  }
+
+  // ── Word Rush (§5.2) ───────────────────────────────────────────────────────
+  @Get("word-rush/new")
+  wordRushNew() {
+    return this.scrabble.wordRushNew();
+  }
+
+  @Post("word-rush/check")
+  wordRushCheck(@Body() dto: { rack: string[]; word: string }) {
+    return this.scrabble.wordRushCheck(dto.rack ?? [], dto.word ?? "");
   }
 
   // ── Safety (§5.10) ─────────────────────────────────────────────────────────

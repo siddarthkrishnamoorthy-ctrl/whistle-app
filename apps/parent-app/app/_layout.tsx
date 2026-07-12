@@ -78,6 +78,7 @@ export default function RootLayout() {
             <Stack.Screen name="scrabble/[gameId]" options={{ title: "Scrabble" }} />
             <Stack.Screen name="scrabble/puzzle" options={{ title: "Word Puzzle" }} />
             <Stack.Screen name="scrabble/word-power" options={{ title: "Word Power" }} />
+            <Stack.Screen name="scrabble/word-rush" options={{ title: "Word Rush" }} />
           </Stack>
           </ThemeProvider>
         </LinearGradient>

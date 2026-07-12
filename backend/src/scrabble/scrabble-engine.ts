@@ -115,6 +115,13 @@ export function initialState(rng: () => number = Math.random): GameState {
   };
 }
 
+// A random 7-tile rack drawn from a fresh bag — used by Word Rush (§5.2).
+// Blanks are swapped for a common vowel so every rack is immediately playable.
+export function randomRack(rng: () => number = Math.random): string[] {
+  const rack = shuffle(fullBag(), rng).slice(0, RACK_SIZE);
+  return rack.map((t) => (t === "?" ? "e" : t));
+}
+
 // ── Word extraction ──────────────────────────────────────────────────────────
 
 const idx = (r: number, c: number) => r * SIZE + c;

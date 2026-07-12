@@ -1589,6 +1589,21 @@ model ScrabbleTestProgress {
   @@map("scrabble_test_progress")
 }
 
+// Community open-seek pool (Scrabble §5.5): a student posts an open seek and is
+// matched with the next compatible seeker (same match type, not blocked) — the
+// word-game equivalent of "find a game". Scoped to verified Whistle students.
+model ScrabbleSeek {
+  id        String   @id @default(uuid())
+  academyId String   @map("academy_id")
+  clientId  String   @map("client_id")
+  matchType String   @default("async") @map("match_type")
+  status    String   @default("open") // open | matched | cancelled
+  gameId    String?  @map("game_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("scrabble_seeks")
+}
+
 // Shared block list (Scrabble §5.10, also used by Chess): a student (or parent)
 // can stop another student from ever inviting/matching them again.
 model GameBlock {

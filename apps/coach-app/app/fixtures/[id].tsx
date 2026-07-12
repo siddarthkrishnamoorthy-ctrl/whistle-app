@@ -420,7 +420,29 @@ export default function FixtureDetailScreen() {
         />
       ) : null}
 
-      {isOpen && canScore && !sessionId && fixture.sportKey !== "chess" ? (
+      {/* Scrabble plays on the shared board — the coach facilitates each turn */}
+      {isOpen && canScore && fixture.sportKey === "scrabble" ? (
+        <PrimaryButton
+          title={starting ? "Opening board…" : "🔤 Open Scrabble board"}
+          onPress={async () => {
+            setStarting(true);
+            try {
+              const g = await apiJson<{ id: string }>(`/scrabble/fixtures/${fixture.id}/game`, {
+                method: "POST",
+                body: JSON.stringify({}),
+              });
+              router.push(`/scrabble/${g.id}`);
+            } catch (e) {
+              Alert.alert("Couldn't open board", e instanceof Error ? e.message : "Please try again.");
+            } finally {
+              setStarting(false);
+            }
+          }}
+          disabled={starting}
+        />
+      ) : null}
+
+      {isOpen && canScore && !sessionId && fixture.sportKey !== "chess" && fixture.sportKey !== "scrabble" ? (
         <PrimaryButton title={starting ? "Starting…" : "▶ Start live scoring"} onPress={startScoring} disabled={starting} />
       ) : null}
 
