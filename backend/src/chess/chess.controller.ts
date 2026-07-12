@@ -72,6 +72,26 @@ export class ChessController {
     return this.chess.resign(id, dto.playerId);
   }
 
+  // ── Play vs Computer (BRD 5.1) ─────────────────────────────────────────────
+  @Post("bot-games")
+  createBotGame(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: { clientId: string; level?: number; playerColor?: "white" | "black" | "random" }
+  ) {
+    return this.chess.createBotGame(user.academyId as string, dto.clientId, dto.level ?? 2, dto.playerColor ?? "white");
+  }
+
+  // ── Puzzles (BRD 5.2) ──────────────────────────────────────────────────────
+  @Get("puzzles/next")
+  nextPuzzle(@Query("exclude") exclude?: string) {
+    return this.chess.nextPuzzle(exclude);
+  }
+
+  @Post("puzzles/:id/solve")
+  solvePuzzle(@Param("id") id: string, @Body() dto: { moves: { from: string; to: string; promotion?: string }[] }) {
+    return this.chess.solvePuzzle(id, dto.moves ?? []);
+  }
+
   // Find-or-create the online board for a chess Match Center fixture.
   @Post("fixtures/:fixtureId/game")
   gameForFixture(@CurrentUser() user: AuthenticatedUser, @Param("fixtureId") fixtureId: string) {

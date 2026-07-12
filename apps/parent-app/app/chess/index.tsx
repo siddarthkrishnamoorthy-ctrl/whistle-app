@@ -71,6 +71,22 @@ export default function ChessArenaScreen() {
     }
   }
 
+  // Play vs Computer (Chess BRD 5.1) — casual, unrated practice.
+  async function playBot(level: number) {
+    setBusy(true);
+    try {
+      const game = await apiJson<{ id: string }>("/chess/bot-games", {
+        method: "POST",
+        body: JSON.stringify({ clientId: selectedChild!.id, level, playerColor: "white" }),
+      });
+      router.push(`/chess/${game.id}`);
+    } catch (e) {
+      Alert.alert("Couldn't start", e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function respond(challengeId: string, accept: boolean) {
     try {
       const res = await apiJson<{ game?: { id: string } }>(`/chess/challenges/${challengeId}/respond`, {
@@ -124,6 +140,36 @@ export default function ChessArenaScreen() {
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800" }}>♟️ Chess Arena</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{selectedChild.name} plays here</Text>
+      </View>
+
+      {/* Solo practice: play the computer or solve a puzzle — always available */}
+      <View>
+        <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>Practice solo</Text>
+        <Card>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 8 }}>🤖 Play the computer (casual — no rating)</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[
+              { level: 1, label: "Beginner" },
+              { level: 2, label: "Club" },
+              { level: 3, label: "Strong" },
+            ].map((b) => (
+              <TouchableOpacity
+                key={b.level}
+                disabled={busy}
+                onPress={() => playBot(b.level)}
+                style={{ flex: 1, backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}
+              >
+                <Text style={{ color: colors.accentText, fontWeight: "700", fontSize: 13 }}>{b.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/chess/puzzle")}
+            style={{ marginTop: 10, borderWidth: 1, borderColor: colors.accent, borderRadius: 999, paddingVertical: 9, alignItems: "center" }}
+          >
+            <Text style={{ color: colors.accent, fontWeight: "700", fontSize: 13 }}>🧩 Solve a tactics puzzle</Text>
+          </TouchableOpacity>
+        </Card>
       </View>
 
       {incoming.length > 0 && (

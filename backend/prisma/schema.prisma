@@ -1410,8 +1410,11 @@ model TournamentMatch {
 // academy games and tournament-user ids for tournament games.
 model ChessGame {
   id                String    @id @default(uuid())
-  context           String // "friendly" | "fixture" | "tournament"
+  context           String // "friendly" | "fixture" | "tournament" | "bot"
   academyId         String?   @map("academy_id")
+  // Play vs Computer (2026-07): the bot's strength for context="bot" games.
+  // 1 Beginner · 2 Club Player · 3 Strong. Bot games are casual (unrated).
+  botLevel          Int?      @map("bot_level")
   fixtureId         String?   @unique @map("fixture_id")
   tournamentMatchId String?   @unique @map("tournament_match_id")
   whiteId           String    @map("white_id")
@@ -1427,6 +1430,22 @@ model ChessGame {
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("chess_games")
+}
+
+// Tactics puzzles (Chess BRD 5.2): a position + the single correct solution
+// line. The player is served the FEN and side-to-move; the solution stays
+// server-side and is only revealed once solved or given up on.
+model ChessPuzzle {
+  id        String   @id @default(uuid())
+  fen       String
+  // The correct reply sequence as ["e2e4","e7e5",...] (player moves at even
+  // indices). v1 puzzles are mate-in-1 / win-material one-movers.
+  solution  String[]
+  theme     String // "mate_in_1" | "fork" | "pin" | "hanging_piece" ...
+  rating    Int      @default(1000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("chess_puzzles")
 }
 
 // Cross-center invitation (BRD 5.4): same-center students play directly;

@@ -3,6 +3,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ScoringService } from "../scoring/scoring.service";
 import { TournamentsService } from "../tournaments/tournaments.service";
 import { applyMove, legalMovesFrom, START_FEN } from "./chess-engine";
+import { BOT_NAMES, chooseBotMove, type BotLevel } from "./chess-bot";
+import { CHESS_PUZZLE_SEEDS } from "./chess-puzzles.seed";
 
 // One chess surface reused everywhere (Chess Module BRD 5.7): friendly
 // games between students, Match Center fixtures and tournament matches all
@@ -22,6 +24,15 @@ export class ChessService implements OnModuleInit {
     await this.prisma.sport
       .upsert({ where: { key: "chess" }, update: {}, create: { key: "chess", name: "Chess" } })
       .catch(() => undefined);
+    await this.seedPuzzles().catch(() => undefined);
+  }
+
+  private async seedPuzzles() {
+    const count = await this.prisma.chessPuzzle.count();
+    if (count > 0) return;
+    for (const p of CHESS_PUZZLE_SEEDS) {
+      await this.prisma.chessPuzzle.create({ data: p });
+    }
   }
 
   // ── Opponents & challenges (BRD 5.4: same-center direct, cross-center invite) ──
@@ -171,7 +182,7 @@ export class ChessService implements OnModuleInit {
 
     const moves = [...((g.moves as object[]) ?? []), { from, to, promotion: promotion ?? undefined, fen: result.fen }];
     const finished = result.status !== "active";
-    const updated = await this.prisma.chessGame.update({
+    let updated = await this.prisma.chessGame.update({
       where: { id: gameId },
       data: {
         fen: result.fen!,
@@ -181,7 +192,111 @@ export class ChessService implements OnModuleInit {
       },
     });
     if (finished) await this.reportResult(updated);
+
+    // Play vs Computer: if the game is still on and it's now the bot's turn,
+    // the engine replies in the same request so the client just polls the FEN.
+    if (!finished && g.context === "bot") {
+      updated = await this.playBotReply(updated);
+    }
     return { ...updated, check: result.check ?? false };
+  }
+
+  // Compute + apply the bot's move for a context="bot" game whose turn it is.
+  private async playBotReply(g: Awaited<ReturnType<PrismaService["chessGame"]["update"]>>) {
+    const botId = "bot";
+    const turnId = g.fen.split(/\s+/)[1] === "w" ? g.whiteId : g.blackId;
+    if (turnId !== botId) return g;
+    const move = chooseBotMove(g.fen, (g.botLevel ?? 2) as BotLevel);
+    if (!move) return g;
+    const res = applyMove(g.fen, move.from, move.to, move.promotion);
+    if (!res.ok || !res.fen) return g;
+    const moves = [...((g.moves as object[]) ?? []), { from: move.from, to: move.to, promotion: move.promotion, fen: res.fen, bot: true }];
+    const finished = res.status !== "active";
+    // Bot games are casual — no reportResult (rating/standings untouched).
+    return this.prisma.chessGame.update({
+      where: { id: g.id },
+      data: {
+        fen: res.fen,
+        moves: moves as object[],
+        status: finished ? res.status! : "active",
+        winner: finished ? res.winner ?? null : null,
+      },
+    });
+  }
+
+  // ── Play vs Computer (Chess BRD 5.1) ───────────────────────────────────────
+
+  async createBotGame(academyId: string, clientId: string, level: number, playerColor: "white" | "black" | "random") {
+    const client = await this.clientOrThrow(academyId, clientId);
+    const lvl = ([1, 2, 3].includes(level) ? level : 2) as BotLevel;
+    // "random" resolves deterministically off the client id (no Math.random).
+    const color =
+      playerColor === "random"
+        ? clientId.charCodeAt(0) % 2 === 0
+          ? "white"
+          : "black"
+        : playerColor;
+    const playerIsWhite = color === "white";
+    const g = await this.prisma.chessGame.create({
+      data: {
+        context: "bot",
+        academyId,
+        botLevel: lvl,
+        whiteId: playerIsWhite ? clientId : "bot",
+        blackId: playerIsWhite ? "bot" : clientId,
+        whiteName: playerIsWhite ? client.name : BOT_NAMES[lvl],
+        blackName: playerIsWhite ? BOT_NAMES[lvl] : client.name,
+        fen: START_FEN,
+      },
+    });
+    // If the bot has white, it opens.
+    return this.playBotReply(g);
+  }
+
+  // ── Puzzles (Chess BRD 5.2) ────────────────────────────────────────────────
+
+  async nextPuzzle(excludeId?: string) {
+    const total = await this.prisma.chessPuzzle.count();
+    if (total === 0) throw new NotFoundException("No puzzles available.");
+    const puzzles = await this.prisma.chessPuzzle.findMany({ where: excludeId ? { id: { not: excludeId } } : {} });
+    // Rotate deterministically by current minute so repeated calls vary a bit
+    // without Math.random(); the solution is never included in the payload.
+    const p = puzzles[puzzles.length ? new Date().getMinutes() % puzzles.length : 0] ?? puzzles[0];
+    const sideToMove = p.fen.split(/\s+/)[1] === "w" ? "white" : "black";
+    return { id: p.id, fen: p.fen, theme: p.theme, rating: p.rating, sideToMove, moveCount: p.solution.length };
+  }
+
+  // Validate the player's attempt against the stored solution. Returns
+  // solved/incorrect and reveals the solution once the puzzle is resolved.
+  async solvePuzzle(id: string, moves: { from: string; to: string; promotion?: string }[]) {
+    const puzzle = await this.prisma.chessPuzzle.findUnique({ where: { id } });
+    if (!puzzle) throw new NotFoundException("Puzzle not found.");
+    const attempt = (moves ?? []).map((m) => `${m.from}${m.to}${m.promotion ?? ""}`);
+    // The player's moves are the even indices of the solution line; the odd
+    // indices are the (forced) opponent replies, applied automatically.
+    let fen = puzzle.fen;
+    let solved = true;
+    for (let i = 0; i < puzzle.solution.length; i++) {
+      const expected = puzzle.solution[i];
+      const isPlayerMove = i % 2 === 0;
+      const played = isPlayerMove ? attempt[i / 2] : expected;
+      if (isPlayerMove && played !== expected) {
+        solved = false;
+        break;
+      }
+      const res = applyMove(fen, played.slice(0, 2), played.slice(2, 4), played.slice(4) || undefined);
+      if (!res.ok || !res.fen) {
+        solved = false;
+        break;
+      }
+      fen = res.fen;
+    }
+    return {
+      solved,
+      theme: puzzle.theme,
+      // Reveal the answer once the attempt is complete (solved or given up).
+      solution: puzzle.solution,
+    };
   }
 
   async resign(gameId: string, playerId: string) {
