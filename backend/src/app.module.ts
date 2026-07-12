@@ -32,6 +32,7 @@ import { JobsModule } from "./jobs/jobs.module";
 import { SchoolsModule } from "./schools/schools.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 import { ChessModule } from "./chess/chess.module";
+import { ScrabbleModule } from "./scrabble/scrabble.module";
 import { PeriodicAssessmentsModule } from "./periodic-assessments/periodic-assessments.module";
 import { PlatformModule } from "./platform/platform.module";
 
@@ -70,6 +71,7 @@ import { PlatformModule } from "./platform/platform.module";
     SchoolsModule,
     TournamentsModule,
     ChessModule,
+    ScrabbleModule,
     PeriodicAssessmentsModule,
     PlatformModule,
   ],

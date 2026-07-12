@@ -1475,6 +1475,132 @@ model ChessChallenge {
   @@map("chess_challenges")
 }
 
+// ── Scrabble (Whistle Scrabble Module v1.0) ───────────────────────────────
+// One server-validated Scrabble surface reused by vs-computer, friendly,
+// Community, Match Center fixture and tournament games — results feed the same
+// standings + rating engines as every other sport (sport_key = "scrabble").
+// The full board/tile/score state lives in `state` (JSON) so a game persists
+// and replays exactly, mirroring how ChessGame stores its FEN + move list.
+model ScrabbleGame {
+  id                String    @id @default(uuid())
+  context           String // "friendly" | "community" | "fixture" | "tournament" | "bot"
+  academyId         String?   @map("academy_id")
+  botLevel          Int?      @map("bot_level") // context="bot": 1 Beginner · 2 Club · 3 Strong (unrated)
+  fixtureId         String?   @unique @map("fixture_id")
+  tournamentMatchId String?   @unique @map("tournament_match_id")
+  playerAId         String    @map("player_a_id")
+  playerBId         String    @map("player_b_id") // "bot" for vs-computer
+  playerAName       String    @map("player_a_name")
+  playerBName       String    @map("player_b_name")
+  // Engine GameState: board, blanks, bag, racks, scores, toMove, passStreak.
+  state             Json
+  // Append-only history: [{ no, by, type, word?, score, tiles? }].
+  moves             Json      @default("[]")
+  matchType         String    @default("async") @map("match_type") // timed_blitz | timed_standard | async
+  perMoveSeconds    Int?      @map("per_move_seconds") // null for async
+  dictionary        String    @default("standard")
+  isRated           Boolean   @default(false) @map("is_rated")
+  scoreA            Int       @default(0) @map("score_a")
+  scoreB            Int       @default(0) @map("score_b")
+  status            String    @default("active") // active | completed | resigned | timeout | abandoned
+  winner            String? // "a" | "b" | "draw"
+  termination       String? // bag_and_racks_empty | consecutive_passes | resignation | timeout | abandoned
+  // Timed play: the moment the side-to-move's per-move countdown started.
+  turnStartedAt     DateTime? @map("turn_started_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("scrabble_games")
+}
+
+// Friend / cross-center challenge (Scrabble §5.4): same-center students play
+// directly; another center's student must accept first. Mirrors ChessChallenge.
+model ScrabbleChallenge {
+  id                 String   @id @default(uuid())
+  academyId          String   @map("academy_id")
+  challengerClientId String   @map("challenger_client_id")
+  opponentClientId   String   @map("opponent_client_id")
+  sameCenter         Boolean  @default(false) @map("same_center")
+  status             String   @default("pending") // pending | accepted | declined
+  gameId             String?  @map("game_id")
+  matchType          String   @default("async") @map("match_type")
+  requiresApproval   Boolean  @default(false) @map("requires_approval") // parental control (§5.10)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("scrabble_challenges")
+}
+
+// Word puzzles (Scrabble §5.2): a rack + board state whose best play the
+// student must find. Solution stays server-side until solved/given up.
+model ScrabblePuzzle {
+  id         String   @id @default(uuid())
+  // Starting board as JSON GameState fragment (board + a fixed rack).
+  board      Json
+  rack       String[]
+  // Best play: { word, row, col, horizontal } and the score it earns.
+  bestWord   String   @map("best_word")
+  bestScore  Int      @map("best_score")
+  theme      String // "highest_score" | "bingo_hunt" | "short_words" | "bonus_square"
+  rating     Int      @default(1000)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("scrabble_puzzles")
+}
+
+// Word Power lists (Scrabble §5.3): spaced-repetition vocabulary sets, built by
+// Whistle (starter library, academyId=null) or an academy's Head Coach/Admin.
+model ScrabbleWordList {
+  id          String              @id @default(uuid())
+  academyId   String?             @map("academy_id") // null = platform starter library
+  title       String
+  description String?
+  gradeKey    String?             @map("grade_key") // optional Curriculum Grade tie-in
+  createdAt   DateTime            @default(now()) @map("created_at")
+  entries     ScrabbleWordEntry[]
+
+  @@map("scrabble_word_lists")
+}
+
+model ScrabbleWordEntry {
+  id         String            @id @default(uuid())
+  listId     String            @map("list_id")
+  list       ScrabbleWordList  @relation(fields: [listId], references: [id], onDelete: Cascade)
+  word       String
+  definition String
+  example    String?
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@map("scrabble_word_entries")
+}
+
+// Per-student spaced-repetition schedule for a word (Scrabble §5.3) — identical
+// mechanic to Chess Tests: correct answers push the next review further out.
+model ScrabbleTestProgress {
+  id           String   @id @default(uuid())
+  clientId     String   @map("client_id")
+  wordEntryId  String   @map("word_entry_id")
+  box          Int      @default(0) // Leitner box; higher = longer interval
+  correctCount Int      @default(0) @map("correct_count")
+  wrongCount   Int      @default(0) @map("wrong_count")
+  dueAt        DateTime @default(now()) @map("due_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([clientId, wordEntryId])
+  @@map("scrabble_test_progress")
+}
+
+// Shared block list (Scrabble §5.10, also used by Chess): a student (or parent)
+// can stop another student from ever inviting/matching them again.
+model GameBlock {
+  id             String   @id @default(uuid())
+  blockerClientId String  @map("blocker_client_id")
+  blockedClientId String  @map("blocked_client_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([blockerClientId, blockedClientId])
+  @@map("game_blocks")
+}
+
 // ── Cricket ball-by-ball scoring (Cricket Scoring Requirements v1.0) ───────
 // Match setup (BRD Cricket 4.1): limited-overs with ANY overs count, toss
 // choice, playing XI per side. DLS is stored as a toggle; school-level
