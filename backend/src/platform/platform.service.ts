@@ -8,6 +8,24 @@ const PASSWORD_SALT_ROUNDS = 10;
 const TRIAL_DAYS = 14;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+// Curated YouTube demo clips (video ids) for the master drill library, keyed by
+// sport: [warm-up / movement clip, core-skills clip]. Every sport resolves to a
+// pair so no library drill ships without a demonstration video. Sports outside
+// this map fall back to a general athletic warm-up + movement-skills pair.
+const LIBRARY_VIDEOS: Record<string, [string, string]> = {
+  cricket: ["I9YU6vKV5B8", "1n6DPBQhOsw"],
+  football: ["6dpBcJllYYw", "ymkZ4dCbnBI"],
+  badminton: ["IX0V56ZuG9w", "8j2lWKegYbc"],
+  swimming: ["cyVOWXtqAlA", "8oT7bJq5jNs"],
+  tennis: ["6yFDF1EYWY8", "8vGqkG3xw3E"],
+  basketball: ["Ai6cY6exp_w", "1z8vT6nQKKM"],
+  volleyball: ["6R1sQnhBpjM", "x0V0lD8u9ZI"],
+  hockey: ["vlz6cUeYCbo", "Z1cM4cVYq5g"],
+  table_tennis: ["YZnGCBM0PQU", "WOnbUZgTPBQ"],
+  track_and_field: ["4beg5TDVrGY", "IX0V56ZuG9w"],
+};
+const LIBRARY_VIDEOS_DEFAULT: [string, string] = ["4beg5TDVrGY", "6dpBcJllYYw"];
+
 // Whistle — the platform company — operating its own product (2026-07).
 // The operator sells the platform to schools and academies per student,
 // so this service is deliberately cross-tenant: it is only ever reached
@@ -599,6 +617,10 @@ export class PlatformService implements OnModuleInit {
     if (existing > 0) return;
     const sports = await this.prisma.sport.findMany({ orderBy: { name: "asc" } });
     for (const sport of sports) {
+      // Curated coaching-demo videos per sport (warm-up clip, skills clip).
+      // Falls back to a general dynamic-warm-up / movement-skills pair so every
+      // library drill carries a demonstration link, whatever the sport.
+      const [warmupVid, coreVid] = LIBRARY_VIDEOS[sport.key] ?? LIBRARY_VIDEOS_DEFAULT;
       const warmup = await this.prisma.drill.create({
         data: {
           academyId: null,
@@ -608,6 +630,7 @@ export class PlatformService implements OnModuleInit {
           durationMin: 10,
           description: `Progressive pulse-raiser and mobility routine tailored to ${sport.name.toLowerCase()}: light movement, dynamic stretching, and sport-specific activation patterns.`,
           equipment: ["Cones", "Markers"],
+          media: [{ type: "video", url: `https://www.youtube.com/watch?v=${warmupVid}` }] as unknown as object,
         },
       });
       const core = await this.prisma.drill.create({
@@ -619,6 +642,7 @@ export class PlatformService implements OnModuleInit {
           durationMin: 25,
           description: `Station-based circuit covering the fundamental techniques of ${sport.name.toLowerCase()}, with coach demonstrations and peer feedback rounds.`,
           equipment: ["Cones", "Whistle"],
+          media: [{ type: "video", url: `https://www.youtube.com/watch?v=${coreVid}` }] as unknown as object,
         },
       });
       await this.prisma.lessonPlan.create({
