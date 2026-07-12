@@ -41,6 +41,8 @@ export default function ChessArenaScreen() {
   const [games, setGames] = useState<Game[]>([]);
   const [busy, setBusy] = useState(false);
   const [showAllOther, setShowAllOther] = useState(false);
+  // Time control applied to new bot games and challenges (BRD 5.7).
+  const [timeControl, setTimeControl] = useState("untimed");
 
   const load = useCallback(() => {
     if (!selectedChild) return;
@@ -59,7 +61,7 @@ export default function ChessArenaScreen() {
     try {
       const res = await apiJson<{ game?: { id: string } | null; challenge: { status: string } }>("/chess/challenges", {
         method: "POST",
-        body: JSON.stringify({ clientId: selectedChild!.id, opponentClientId }),
+        body: JSON.stringify({ clientId: selectedChild!.id, opponentClientId, timeControl }),
       });
       if (res.game?.id) router.push(`/chess/${res.game.id}`);
       else Alert.alert("Invitation sent", "The game starts as soon as they accept.");
@@ -77,7 +79,7 @@ export default function ChessArenaScreen() {
     try {
       const game = await apiJson<{ id: string }>("/chess/bot-games", {
         method: "POST",
-        body: JSON.stringify({ clientId: selectedChild!.id, level, playerColor: "white" }),
+        body: JSON.stringify({ clientId: selectedChild!.id, level, playerColor: "white", timeControl }),
       });
       router.push(`/chess/${game.id}`);
     } catch (e) {
@@ -140,6 +142,43 @@ export default function ChessArenaScreen() {
       <View>
         <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "800" }}>♟️ Chess Arena</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{selectedChild.name} plays here</Text>
+      </View>
+
+      {/* Time control — applies to new computer games and challenges */}
+      <View>
+        <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginBottom: 6 }}>
+          ⏱ TIME CONTROL
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+          {[
+            { key: "untimed", label: "Untimed" },
+            { key: "5+0", label: "5 min" },
+            { key: "5+3", label: "5|3" },
+            { key: "10+0", label: "10 min" },
+            { key: "10+5", label: "10|5" },
+            { key: "15+10", label: "15|10" },
+          ].map((tc) => {
+            const active = tc.key === timeControl;
+            return (
+              <TouchableOpacity
+                key={tc.key}
+                onPress={() => setTimeControl(tc.key)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: active ? colors.accent : colors.border,
+                  backgroundColor: active ? colors.accent + "22" : colors.surface,
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{ color: active ? colors.accent : colors.textSecondary, fontSize: 12, fontWeight: active ? "800" : "600" }}>
+                  {tc.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Solo practice: play the computer or solve a puzzle — always available */}

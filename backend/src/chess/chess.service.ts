@@ -5,6 +5,7 @@ import { TournamentsService } from "../tournaments/tournaments.service";
 import { applyMove, legalMovesFrom, START_FEN } from "./chess-engine";
 import { BOT_NAMES, chooseBotMove, type BotLevel } from "./chess-bot";
 import { CHESS_PUZZLE_SEEDS } from "./chess-puzzles.seed";
+import { liveRemaining, parseTimeControl } from "./chess-clock";
 
 // One chess surface reused everywhere (Chess Module BRD 5.7): friendly
 // games between students, Match Center fixtures and tournament matches all
@@ -61,7 +62,7 @@ export class ChessService implements OnModuleInit {
     };
   }
 
-  async challenge(academyId: string, challengerClientId: string, opponentClientId: string) {
+  async challenge(academyId: string, challengerClientId: string, opponentClientId: string, timeControl?: string | null) {
     if (challengerClientId === opponentClientId) throw new BadRequestException("You can't challenge yourself.");
     const me = await this.clientOrThrow(academyId, challengerClientId);
     const them = await this.clientOrThrow(academyId, opponentClientId);
@@ -76,9 +77,10 @@ export class ChessService implements OnModuleInit {
         blackId: them.id,
         whiteName: me.name,
         blackName: them.name,
+        timeControl,
       });
       const ch = await this.prisma.chessChallenge.create({
-        data: { academyId, challengerClientId, opponentClientId, sameCenter: true, status: "accepted", gameId: game.id },
+        data: { academyId, challengerClientId, opponentClientId, sameCenter: true, status: "accepted", gameId: game.id, timeControl },
       });
       return { challenge: ch, game };
     }
@@ -87,7 +89,7 @@ export class ChessService implements OnModuleInit {
     });
     if (existing) return { challenge: existing, game: null };
     const ch = await this.prisma.chessChallenge.create({
-      data: { academyId, challengerClientId, opponentClientId, sameCenter: false, status: "pending" },
+      data: { academyId, challengerClientId, opponentClientId, sameCenter: false, status: "pending", timeControl },
     });
     return { challenge: ch, game: null };
   }
@@ -122,7 +124,8 @@ export class ChessService implements OnModuleInit {
       this.clientOrThrow(academyId, ch.challengerClientId),
       this.clientOrThrow(academyId, ch.opponentClientId),
     ]);
-    // Challenger takes white — they made the first move socially.
+    // Challenger takes white — they made the first move socially. The time
+    // control the challenger picked carries onto the game.
     const game = await this.createGame({
       context: "friendly",
       academyId,
@@ -130,6 +133,7 @@ export class ChessService implements OnModuleInit {
       blackId: them.id,
       whiteName: me.name,
       blackName: them.name,
+      timeControl: ch.timeControl,
     });
     await this.prisma.chessChallenge.update({ where: { id: challengeId }, data: { status: "accepted", gameId: game.id } });
     return { accepted: true, game };
@@ -146,8 +150,41 @@ export class ChessService implements OnModuleInit {
     blackId: string;
     whiteName: string;
     blackName: string;
+    timeControl?: string | null;
   }) {
-    return this.prisma.chessGame.create({ data });
+    const { timeControl, ...rest } = data;
+    const { initialMs, incrementMs } = parseTimeControl(timeControl);
+    // A timed game starts White's clock the moment the game is created.
+    return this.prisma.chessGame.create({
+      data: {
+        ...rest,
+        initialMs,
+        incrementMs,
+        whiteMs: initialMs,
+        blackMs: initialMs,
+        turnStartedAt: initialMs != null ? new Date() : null,
+      },
+    });
+  }
+
+  // Snapshot the up-to-the-second clocks onto a game payload, and end the game
+  // if the side-to-move has already flagged (claimed from any read/move).
+  private async withLiveClock(g: Awaited<ReturnType<PrismaService["chessGame"]["findUniqueOrThrow"]>>) {
+    if (g.initialMs == null || g.status !== "active") {
+      const rem = liveRemaining(g);
+      return { ...g, whiteMs: rem.whiteMs ?? g.whiteMs, blackMs: rem.blackMs ?? g.blackMs };
+    }
+    const rem = liveRemaining(g);
+    if (rem.flagged) {
+      const winner = rem.flagged === "white" ? "black" : "white";
+      const finished = await this.prisma.chessGame.update({
+        where: { id: g.id },
+        data: { status: "timeout", winner, whiteMs: rem.whiteMs, blackMs: rem.blackMs },
+      });
+      await this.reportResult(finished);
+      return finished;
+    }
+    return { ...g, whiteMs: rem.whiteMs, blackMs: rem.blackMs };
   }
 
   async myGames(academyId: string, clientId: string) {
@@ -162,18 +199,57 @@ export class ChessService implements OnModuleInit {
   async game(gameId: string) {
     const g = await this.prisma.chessGame.findUnique({ where: { id: gameId } });
     if (!g) throw new NotFoundException("Game not found.");
-    return g;
+    // Reading the game is enough to claim a flag-fall — a waiting opponent's
+    // poll ends the game the instant the mover's clock hits zero.
+    return this.withLiveClock(g);
   }
 
   legalMoves(fen: string, from: string) {
     return legalMovesFrom(fen, from);
   }
 
+  // Clock deltas after the side `moverColor` completes a move: charge the
+  // time spent this turn (already reflected in liveRemaining), grant the
+  // increment, and hand the running clock to the opponent (turnStartedAt=now).
+  private clockAfterMove(
+    g: { initialMs: number | null; incrementMs: number | null; whiteMs: number | null; blackMs: number | null; fen: string; status: string; turnStartedAt: Date | null },
+    moverColor: "white" | "black",
+    finished: boolean
+  ): Record<string, unknown> {
+    if (g.initialMs == null) return {};
+    const rem = liveRemaining(g);
+    const moverLive = (moverColor === "white" ? rem.whiteMs : rem.blackMs) ?? 0;
+    const newMover = moverLive + (finished ? 0 : g.incrementMs ?? 0);
+    return {
+      whiteMs: moverColor === "white" ? newMover : rem.whiteMs,
+      blackMs: moverColor === "black" ? newMover : rem.blackMs,
+      turnStartedAt: finished ? null : new Date(),
+    };
+  }
+
   // playerId is a clientId (academy games) or tournament-user id.
   async move(gameId: string, playerId: string, from: string, to: string, promotion?: string) {
-    const g = await this.game(gameId);
+    const g = await this.prisma.chessGame.findUnique({ where: { id: gameId } });
+    if (!g) throw new NotFoundException("Game not found.");
     if (g.status !== "active") throw new BadRequestException("This game is over.");
-    const turnPlayer = g.fen.split(/\s+/)[1] === "w" ? g.whiteId : g.blackId;
+
+    // Flag-fall: if the mover's clock ran out while they were thinking, the
+    // game ends here — they can't complete the move.
+    if (g.initialMs != null) {
+      const rem = liveRemaining(g);
+      if (rem.flagged) {
+        const winner = rem.flagged === "white" ? "black" : "white";
+        const done = await this.prisma.chessGame.update({
+          where: { id: gameId },
+          data: { status: "timeout", winner, whiteMs: rem.whiteMs, blackMs: rem.blackMs, turnStartedAt: null },
+        });
+        await this.reportResult(done);
+        throw new BadRequestException("Your time ran out — you lost on time.");
+      }
+    }
+
+    const turnColor = g.fen.split(/\s+/)[1] === "w" ? "white" : "black";
+    const turnPlayer = turnColor === "white" ? g.whiteId : g.blackId;
     if (playerId !== g.whiteId && playerId !== g.blackId) throw new ForbiddenException("You're not a player in this game.");
     if (playerId !== turnPlayer) throw new BadRequestException("It's not your turn.");
 
@@ -189,6 +265,7 @@ export class ChessService implements OnModuleInit {
         moves: moves as object[],
         status: finished ? result.status! : "active",
         winner: finished ? result.winner ?? null : null,
+        ...this.clockAfterMove(g, turnColor, finished),
       },
     });
     if (finished) await this.reportResult(updated);
@@ -204,7 +281,8 @@ export class ChessService implements OnModuleInit {
   // Compute + apply the bot's move for a context="bot" game whose turn it is.
   private async playBotReply(g: Awaited<ReturnType<PrismaService["chessGame"]["update"]>>) {
     const botId = "bot";
-    const turnId = g.fen.split(/\s+/)[1] === "w" ? g.whiteId : g.blackId;
+    const turnColor = g.fen.split(/\s+/)[1] === "w" ? "white" : "black";
+    const turnId = turnColor === "white" ? g.whiteId : g.blackId;
     if (turnId !== botId) return g;
     const move = chooseBotMove(g.fen, (g.botLevel ?? 2) as BotLevel);
     if (!move) return g;
@@ -220,13 +298,20 @@ export class ChessService implements OnModuleInit {
         moves: moves as object[],
         status: finished ? res.status! : "active",
         winner: finished ? res.winner ?? null : null,
+        ...this.clockAfterMove(g, turnColor, finished),
       },
     });
   }
 
   // ── Play vs Computer (Chess BRD 5.1) ───────────────────────────────────────
 
-  async createBotGame(academyId: string, clientId: string, level: number, playerColor: "white" | "black" | "random") {
+  async createBotGame(
+    academyId: string,
+    clientId: string,
+    level: number,
+    playerColor: "white" | "black" | "random",
+    timeControl?: string | null
+  ) {
     const client = await this.clientOrThrow(academyId, clientId);
     const lvl = ([1, 2, 3].includes(level) ? level : 2) as BotLevel;
     // "random" resolves deterministically off the client id (no Math.random).
@@ -237,6 +322,7 @@ export class ChessService implements OnModuleInit {
           : "black"
         : playerColor;
     const playerIsWhite = color === "white";
+    const { initialMs, incrementMs } = parseTimeControl(timeControl);
     const g = await this.prisma.chessGame.create({
       data: {
         context: "bot",
@@ -247,6 +333,11 @@ export class ChessService implements OnModuleInit {
         whiteName: playerIsWhite ? client.name : BOT_NAMES[lvl],
         blackName: playerIsWhite ? BOT_NAMES[lvl] : client.name,
         fen: START_FEN,
+        initialMs,
+        incrementMs,
+        whiteMs: initialMs,
+        blackMs: initialMs,
+        turnStartedAt: initialMs != null ? new Date() : null,
       },
     });
     // If the bot has white, it opens.

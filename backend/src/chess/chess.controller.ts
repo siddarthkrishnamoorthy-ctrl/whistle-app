@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ChessService } from "./chess.service";
+import { TIME_CONTROLS } from "./chess-clock";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { AcademyRequiredGuard } from "../common/guards/academy-required.guard";
@@ -24,9 +25,9 @@ export class ChessController {
   @Post("challenges")
   challenge(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: { clientId: string; opponentClientId: string }
+    @Body() dto: { clientId: string; opponentClientId: string; timeControl?: string }
   ) {
-    return this.chess.challenge(user.academyId as string, dto.clientId, dto.opponentClientId);
+    return this.chess.challenge(user.academyId as string, dto.clientId, dto.opponentClientId, dto.timeControl);
   }
 
   @Get("challenges")
@@ -72,13 +73,25 @@ export class ChessController {
     return this.chess.resign(id, dto.playerId);
   }
 
+  // Standard time controls for the picker (BRD 5.7).
+  @Get("time-controls")
+  timeControls() {
+    return TIME_CONTROLS.map((c) => ({ key: c.key, label: c.label }));
+  }
+
   // ── Play vs Computer (BRD 5.1) ─────────────────────────────────────────────
   @Post("bot-games")
   createBotGame(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: { clientId: string; level?: number; playerColor?: "white" | "black" | "random" }
+    @Body() dto: { clientId: string; level?: number; playerColor?: "white" | "black" | "random"; timeControl?: string }
   ) {
-    return this.chess.createBotGame(user.academyId as string, dto.clientId, dto.level ?? 2, dto.playerColor ?? "white");
+    return this.chess.createBotGame(
+      user.academyId as string,
+      dto.clientId,
+      dto.level ?? 2,
+      dto.playerColor ?? "white",
+      dto.timeControl
+    );
   }
 
   // ── Puzzles (BRD 5.2) ──────────────────────────────────────────────────────

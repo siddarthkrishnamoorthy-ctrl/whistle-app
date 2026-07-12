@@ -16,6 +16,17 @@ interface Game {
   status: string;
   winner: string | null;
   moves: { from: string; to: string }[];
+  // Live clock (null on untimed games).
+  initialMs?: number | null;
+  whiteMs?: number | null;
+  blackMs?: number | null;
+}
+
+function fmtClock(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${rem.toString().padStart(2, "0")}`;
 }
 
 // Live game screen — polls while active so the opponent's moves appear
@@ -25,12 +36,18 @@ export default function ChessGameScreen() {
   const { selectedChild } = useChildren();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+  const fetchedAt = useRef(Date.now());
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(() => {
     if (!gameId) return;
     apiJson<Game>(`/chess/games/${gameId}`)
-      .then(setGame)
+      .then((g) => {
+        setGame(g);
+        fetchedAt.current = Date.now();
+      })
       .catch(() => setGame(null))
       .finally(() => setLoading(false));
   }, [gameId]);
@@ -38,8 +55,11 @@ export default function ChessGameScreen() {
   useEffect(() => {
     load();
     timer.current = setInterval(load, 2500);
+    // Local 250ms tick smoothly counts the running clock between server polls.
+    tick.current = setInterval(() => setNow(Date.now()), 250);
     return () => {
       if (timer.current) clearInterval(timer.current);
+      if (tick.current) clearInterval(tick.current);
     };
   }, [load]);
 
@@ -132,6 +152,48 @@ export default function ChessGameScreen() {
           {banner}
         </Text>
       </Card>
+
+      {/* Live clocks — the running side counts down locally between polls */}
+      {game.initialMs != null && game.whiteMs != null && game.blackMs != null && (
+        (() => {
+          const running = game.status === "active" ? turn : null;
+          const elapsed = Math.max(0, now - fetchedAt.current);
+          const whiteShow = running === "w" ? game.whiteMs - elapsed : game.whiteMs;
+          const blackShow = running === "b" ? game.blackMs - elapsed : game.blackMs;
+          const chip = (label: string, ms: number, live: boolean, low: boolean) => (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                paddingVertical: 8,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: live ? colors.accent : colors.border,
+                backgroundColor: live ? colors.accent + "1A" : colors.surface,
+              }}
+            >
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>{label}</Text>
+              <Text style={{ color: low ? colors.danger : live ? colors.accent : colors.textPrimary, fontSize: 22, fontWeight: "800", fontVariant: ["tabular-nums"] }}>
+                {fmtClock(ms)}
+              </Text>
+            </View>
+          );
+          // Bottom clock = the child's side (or white if spectating).
+          const iAmWhiteSide = !iAmBlack;
+          const top = iAmWhiteSide
+            ? chip(`♚ ${game.blackName}`, blackShow, running === "b", running === "b" && blackShow < 30000)
+            : chip(`♔ ${game.whiteName}`, whiteShow, running === "w", running === "w" && whiteShow < 30000);
+          const bottom = iAmWhiteSide
+            ? chip(`♔ ${game.whiteName}`, whiteShow, running === "w", running === "w" && whiteShow < 30000)
+            : chip(`♚ ${game.blackName}`, blackShow, running === "b", running === "b" && blackShow < 30000);
+          return (
+            <View style={{ gap: 8 }}>
+              {top}
+              {bottom}
+            </View>
+          );
+        })()
+      )}
 
       <ChessBoard fen={game.fen} canMove={myTurn} flipped={iAmBlack} getTargets={async (from) => {
         const res = await apiJson<{ targets: string[] }>(`/chess/games/${game.id}/legal-moves?from=${from}`);

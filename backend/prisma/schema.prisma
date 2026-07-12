@@ -1424,8 +1424,17 @@ model ChessGame {
   fen               String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
   // [{ from, to, promotion?, fen }] — the full move history, server-applied.
   moves             Json      @default("[]")
-  status            String    @default("active") // active | checkmate | stalemate | draw | resigned
+  status            String    @default("active") // active | checkmate | stalemate | draw | resigned | timeout
   winner            String? // "white" | "black" | "draw"
+  // Live clock (2026-07, Chess BRD 5.7). All null = untimed. initialMs +
+  // incrementMs define the control (e.g. 5+3 = 300000 + 3000); whiteMs/blackMs
+  // are the remaining budgets; turnStartedAt is when the side-to-move's clock
+  // started ticking so elapsed time is computed server-side on each request.
+  initialMs         Int?      @map("initial_ms")
+  incrementMs       Int?      @map("increment_ms")
+  whiteMs           Int?      @map("white_ms")
+  blackMs           Int?      @map("black_ms")
+  turnStartedAt     DateTime? @map("turn_started_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -1458,6 +1467,9 @@ model ChessChallenge {
   sameCenter         Boolean  @default(false) @map("same_center")
   status             String   @default("pending") // pending | accepted | declined
   gameId             String?  @map("game_id")
+  // Time control chosen by the challenger, applied when the game is created
+  // ("5+3" | "10+0" | "untimed"). Null = untimed.
+  timeControl        String?  @map("time_control")
   createdAt          DateTime @default(now()) @map("created_at")
 
   @@map("chess_challenges")
