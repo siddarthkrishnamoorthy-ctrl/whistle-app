@@ -109,8 +109,8 @@ export default function DashboardPage() {
           sub: `${activeRate}% of ${snap.totalClients} enrolled`,
           icon: Users,
           href: "/academy/clients",
-          chip: "bg-emerald-400/15 text-emerald-300",
-          bar: { pct: activeRate, cls: "bg-emerald-400" },
+          chip: "bg-accent/15 text-accent",
+          bar: { pct: activeRate, cls: "bg-accent" },
         },
         {
           label: "Sessions today",
@@ -118,7 +118,7 @@ export default function DashboardPage() {
           sub: "across all centers",
           icon: CalendarDays,
           href: "/academy/schedule",
-          chip: "bg-sky-400/15 text-sky-300",
+          chip: "bg-accent/15 text-accent",
         },
         {
           label: "Fees received",
@@ -126,8 +126,8 @@ export default function DashboardPage() {
           sub: `${collectionRate}% of ${inr(snap.invoices.totalInvoiced)} collected`,
           icon: Wallet,
           href: "/sales/invoices",
-          chip: "bg-amber-400/15 text-amber-300",
-          bar: { pct: collectionRate, cls: "bg-amber-400" },
+          chip: "bg-accent/15 text-accent",
+          bar: { pct: collectionRate, cls: "bg-accent" },
         },
         {
           label: "Open enquiries",
@@ -135,7 +135,7 @@ export default function DashboardPage() {
           sub: "leads waiting for follow-up",
           icon: Inbox,
           href: "/academy/enquiries",
-          chip: "bg-rose-400/15 text-rose-300",
+          chip: "bg-accent/15 text-accent",
         },
       ]
     : [];

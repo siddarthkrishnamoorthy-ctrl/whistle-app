@@ -135,7 +135,7 @@ export default function PulsePage() {
         <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
           <HotCard
             title="Top players this week"
-            icon={<Flame size={15} className="text-orange-400" />}
+            icon={<Flame size={15} className="text-amber-300" />}
             empty="No matches decided in the last 7 days — this space is up for grabs!"
             rows={pulse.topWeek.map((r) => ({
               name: r.name,
@@ -153,7 +153,7 @@ export default function PulsePage() {
           />
           <HotCard
             title="Most active (30 days)"
-            icon={<Activity size={15} className="text-sky-300" />}
+            icon={<Activity size={15} className="text-amber-300" />}
             empty="Nobody has taken the court this month yet."
             rows={pulse.mostActive.map((r) => ({ name: r.name, chip: `${r.played} matches` }))}
           />
