@@ -1,16 +1,24 @@
-# Whistle — shareable demo database
+# Whistle — shareable demo data
 
-`whistle-demo-db.sql.gz` is a full PostgreSQL dump of the Whistle demo database:
-the **complete schema + all the test data** (academies, students, coaches,
-classes, lesson plans, 105 drills with videos, Match Center events + chat +
-fixtures, tournaments, Chess & Scrabble games, ratings, etc.).
+Two files, two purposes:
 
-Load it into your local PostgreSQL and point the backend at it — no need to run
-migrations or seed anything.
+| File | What it's for |
+|------|---------------|
+| **`whistle-test-data.xlsx`** | **Review / share the data** — one tab per table (Students, Lesson Plans, Drills, Classes, Fixtures, …). Open in Excel / Google Sheets, no database needed. |
+| **`whistle-demo-db.sql.gz`** | **Load the data into the app to test** — a full PostgreSQL dump (schema + all data). Restore it and point the backend at it. |
+
+The `.xlsx` and the `.sql.gz` contain the **same** test data:
+~3,450 students, 111 lesson plans, 113 drills (all with videos), 80 classes,
+85 Match Center events, 214 fixtures, ratings, Chess & Scrabble games, etc.
+
+- Just want to **look at / hand over the data**? → open `whistle-test-data.xlsx`.
+- Want the team to **run the app against it**? → restore `whistle-demo-db.sql.gz` (below).
 
 ---
 
-## Prerequisites
+## Loading the database (to run the app)
+
+### Prerequisites
 - **PostgreSQL 14+** installed and running locally (the dump was taken from PG 17).
 - The `psql` client on your PATH.
 - A superuser you can log in as (usually `postgres`).
