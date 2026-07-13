@@ -177,12 +177,22 @@ export function Tabs<T extends string>({
 export function Table({
   columns,
   children,
+  // `flush` drops the table's own card chrome — use it when the table sits
+  // INSIDE another surface (e.g. a CollapsibleSection) so you don't get a
+  // washed-out card-in-a-card frame.
+  flush,
 }: {
   columns: string[];
   children: React.ReactNode;
+  flush?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md">
+    <div
+      className={clsx(
+        "overflow-x-auto",
+        flush ? "" : "rounded-lg border border-border bg-surface shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md"
+      )}
+    >
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
@@ -269,7 +279,7 @@ export function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface/60 backdrop-blur-md">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

@@ -147,7 +147,7 @@ export default function ClientsPage() {
               count={list.length}
               defaultOpen={groups.length <= 6}
             >
-              <Table columns={["Student", "Plan", "Status", "Balance"]}>
+              <Table flush columns={["Student", "Plan", "Status", "Balance"]}>
                 {list.map((client) => {
                   const enrollment = client.enrollments?.[0];
                   return (
