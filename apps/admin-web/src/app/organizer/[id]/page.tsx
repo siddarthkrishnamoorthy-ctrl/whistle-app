@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ScrollText, UserCheck, Wallet } from "lucide-react";
+import { ScrollText, Upload, UserCheck, Wallet } from "lucide-react";
 import { Card, EmptyState, PrimaryButton, OutlineButton, StatusPill } from "@/components/ui";
 import { tJson, tournamentSession } from "@/lib/tournament-client";
 import { RANK_MEDALS, sportEmoji } from "@/lib/sport-icons";
@@ -361,8 +361,8 @@ export default function ManageTournamentPage() {
                   <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
                     Add {ev.kind === "team" ? "teams" : "players"}
                   </span>
-                  <label className="cursor-pointer text-xs font-semibold text-accent hover:underline">
-                    ⬆ Upload list (.csv / .txt)
+                  <label className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-accent hover:underline">
+                    <Upload className="h-3.5 w-3.5" strokeWidth={2} /> Upload list (.csv / .txt)
                     <input
                       type="file"
                       accept=".csv,.txt,.tsv,text/csv,text/plain"

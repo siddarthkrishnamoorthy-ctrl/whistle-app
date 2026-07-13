@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Plus, Upload } from "lucide-react";
 import { useApiList } from "@/lib/hooks";
 import { apiJson } from "@/lib/api-client";
 import { Card, CollapsibleSection, EmptyState, MetricTile, SearchInput, StatusPill, Table } from "@/components/ui";
@@ -78,15 +79,15 @@ export default function ClientsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setImportOpen(true)}
-            className="rounded-full border border-accent/60 px-5 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+            className="flex items-center gap-1.5 rounded-full border border-accent/60 px-5 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
           >
-            ⬆ Import CSV
+            <Upload className="h-4 w-4" strokeWidth={2} /> Import CSV
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-text hover:opacity-90"
           >
-            + New Student
+            <Plus className="h-4 w-4" strokeWidth={2.5} /> New Student
           </button>
         </div>
       </div>
