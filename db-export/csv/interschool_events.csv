@@ -1,0 +1,86 @@
+id,host_academy_id,name,sports,format_type,age_bands,start_date,end_date,status,entry_rules,settings,pay_to_join,price_per_head,is_lbl,max_teams,venue,group_count,playoff_mode
+2c18d262-5114-412b-a702-18c26b050499,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,E2E Cricket Dual Meet,{cricket},team,"{U-18,Senior}",2026-07-10,2026-07-12,scheduled,,,f,,f,,,1,none
+ac5bcfa9-4c7d-4783-990d-513478d05e44,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Paid Friendly Test,{cricket},team,{Senior},2026-08-01,2026-08-01,draft,,,t,250.00,f,,,1,none
+eff8381f-692c-4962-80b0-1e45697571f6,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,Riverside Open 2026,{badminton},individual,"{U13,U15}",2026-07-22,2026-07-29,scheduled,,,f,,f,,,1,none
+fb9654bb-71fd-48c4-8542-31f9e752610f,2301f327-b291-495d-a14f-e55b1f1f9212,Coach Cup (hosted from app),{badminton},individual,{U15},2026-08-07,2026-08-08,scheduled,,,f,,f,,,1,none
+bc039909-9a77-44a6-9e68-a946e0af90a2,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Winter League 2026,"{badminton,football}",team,{Open},2026-07-30,2026-08-13,scheduled,,,t,1500.00,t,,,1,none
+eacea03e-5150-4d64-a477-f88c97ad9a31,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783583504030,{badminton},team,{Open},2026-08-08,2026-08-10,scheduled,,,t,500.00,t,,,1,none
+a5cdb1af-edb6-4697-b64e-7359f4be6221,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783652205773,{badminton},team,{Open},2026-08-09,2026-08-11,scheduled,,,t,500.00,t,,,1,none
+bd214fa5-9a69-4309-be68-4520a5af69af,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783709868645,{badminton},team,{Open},2026-08-09,2026-08-11,scheduled,,,t,500.00,t,,,1,none
+d65a5825-8859-49c8-85cf-b084a34de79c,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfdtquf,{football},team,{U15},2026-08-20,2026-08-21,scheduled,,,f,,f,2,,1,none
+40950b70-f9cc-43c5-b798-6b7b4758ad16,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfdujz2,{football},team,{U15},2026-08-20,2026-08-21,scheduled,,,f,,f,2,,1,none
+9c3a2143-ac5f-4202-8476-39531cf4c536,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfdws9m,{football},team,{U15},2026-08-20,2026-08-21,scheduled,,,f,,f,2,,1,none
+cf6ddd0c-c048-458c-b243-f83d6752207d,2301f327-b291-495d-a14f-e55b1f1f9212,Badminton Engine Test mrfgpnes,{badminton},team,{U15},2026-09-10,2026-09-11,scheduled,,,f,,f,2,,1,none
+d0e5e2cc-d5b9-43d8-a756-429b12276510,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfdyx0r,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+29a20cc6-da4f-4ad0-a16f-9c36be11139a,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783716927734,{badminton},team,{Open},2026-08-09,2026-08-11,scheduled,,,t,500.00,t,,,1,none
+a9ca3454-9690-4a41-b1f0-daef421970a8,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrff0axk,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+0fc7fdc8-b6dc-44a1-96cd-04f921e83f45,2301f327-b291-495d-a14f-e55b1f1f9212,Scoring Demo Basketball mrfgcv55,{basketball},team,{U15},2026-09-05,2026-09-06,scheduled,,,f,,f,2,,1,none
+6ecb266f-97e2-4a02-a7a1-05ddd2e7ebc9,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfgq0ay,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+0b3770f9-931f-4c1d-89b1-53ca5580c0c5,2301f327-b291-495d-a14f-e55b1f1f9212,Venue Flow Kabaddi mrfqdl21,{kabaddi},team,{U15},2026-09-15,2026-09-16,scheduled,,,f,,f,2,Demo Center,1,none
+b9d97097-68c4-4d36-bd08-5aca58e0df4a,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783736044696,{badminton},team,{Open},2026-08-10,2026-08-12,scheduled,,,t,500.00,t,,,1,none
+98db58c2-0987-482e-b915-75d7a45a03c6,e15be70d-298d-455a-87c9-12b85ba89d66,Badminton Return Leg mrg0s1wy,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0s1wy,1,none
+8990fd99-b542-43ed-990d-5218e0544f15,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrfqdybt,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+385c2ccc-9543-455e-a3c0-0e5b96398ca3,e15be70d-298d-455a-87c9-12b85ba89d66,Twin Sports Clash mrg0s1wy,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0s1wy,1,none
+892981f7-dd0b-43ee-8d10-9e935073a41f,e15be70d-298d-455a-87c9-12b85ba89d66,Hoops Rematch mrg0s1wy,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0s1wy,1,none
+b6800b23-8dde-4250-80a2-4a83a987a323,7f232f2e-fba6-4e1b-bba7-1ebaaa3e748e,Twin Sports Clash mrg0tz4h,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0tz4h,1,none
+7053c1da-4243-43e7-83ac-09a777cd0682,7f232f2e-fba6-4e1b-bba7-1ebaaa3e748e,Hoops Rematch mrg0tz4h,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0tz4h,1,none
+5bb1b2dc-03e5-4bf2-99e4-52572105ece4,7f232f2e-fba6-4e1b-bba7-1ebaaa3e748e,Badminton Return Leg mrg0tz4h,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0tz4h,1,none
+9b2a6c5a-c660-4874-ac32-d07fae2029bd,a4a2e357-78c8-4ac3-afb3-beb09fb7ce00,Twin Sports Clash mrg0wcls,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0wcls,1,none
+02a04c9f-8d69-4d1d-a35b-9bc5a35e55cf,a4a2e357-78c8-4ac3-afb3-beb09fb7ce00,Hoops Rematch mrg0wcls,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0wcls,1,none
+7dad6fcd-0605-46f6-ae22-c7f86767a882,a4a2e357-78c8-4ac3-afb3-beb09fb7ce00,Badminton Return Leg mrg0wcls,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0wcls,1,none
+b113d243-356e-4329-8244-c3b1e6c6babb,33e2f340-b022-4192-8529-ac92be698eb0,Twin Sports Clash mrg0xhly,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0xhly,1,none
+76f184eb-0f6c-4855-96f0-c7f9498f9e5c,33e2f340-b022-4192-8529-ac92be698eb0,Hoops Rematch mrg0xhly,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0xhly,1,none
+8cd035c4-3858-4aaa-81c4-c69095b85ee3,33e2f340-b022-4192-8529-ac92be698eb0,Badminton Return Leg mrg0xhly,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrg0xhly,1,none
+af8d4006-45f2-463c-be65-226317c58a13,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783753775671,{badminton},team,{Open},2026-08-10,2026-08-12,scheduled,,,t,500.00,t,,,1,none
+f206ea96-b39b-4334-8536-8a02d007d321,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrg0y02z,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+3155845f-14ab-4934-863c-d7e179b4d6ad,2301f327-b291-495d-a14f-e55b1f1f9212,Sched Demo schedmrgf0m87,{volleyball},team,{Open},2026-09-25,2026-09-25,scheduled,,,f,,f,2,Demo Center,1,none
+ee8fa380-aeda-4a09-abdb-0dd1ac786ec2,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrgf0wcz,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+91990765-d5e2-4d18-b16b-37f4303e0c2f,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrgfouh8,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+49924b9f-5e8a-4116-abeb-eb371d55a01f,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrgfwuhx,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+6e8db207-eae8-4d31-bf3d-5941aa4c4a9f,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrgs92m5,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+36167f30-6c68-41d3-9881-322c60547749,2301f327-b291-495d-a14f-e55b1f1f9212,Two-School Football Faceoff mrgfww0f,{football},team,{U15},2026-08-20,2026-08-21,closed,,,f,,f,2,,1,none
+c6b850f8-e2e5-4fc3-bf28-8265ea7d621a,c8010f09-96b2-403a-81de-5a7143a9b32c,Twin Sports Clash mrgoklc7,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgoklc7,1,none
+b512ead2-2a1e-4501-8c97-e8e358ccacb7,c8010f09-96b2-403a-81de-5a7143a9b32c,Hoops Rematch mrgoklc7,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgoklc7,1,none
+af44c443-1294-444d-ad9e-b97fa87c8481,c8010f09-96b2-403a-81de-5a7143a9b32c,Badminton Return Leg mrgoklc7,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgoklc7,1,none
+7bcb1760-a3e1-4f1f-a5ab-f492e98f2fb6,907d68a2-a097-4d78-9d22-3ccc63e76836,Twin Sports Clash mrgqjzgd,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgqjzgd,1,none
+18002182-f5fb-4bb8-bf32-313eca9e2899,907d68a2-a097-4d78-9d22-3ccc63e76836,Hoops Rematch mrgqjzgd,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgqjzgd,1,none
+35fa67f1-f45f-4568-942b-736636a8cf6f,907d68a2-a097-4d78-9d22-3ccc63e76836,Badminton Return Leg mrgqjzgd,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgqjzgd,1,none
+b515f5be-cf99-4dcb-bb1d-2529a4df82bb,a09d1868-4166-488b-b7bb-d4fa48d24f38,MC Playoff mrgs8svx,{football},team,{U17},2026-08-01,2026-08-02,scheduled,,,f,,f,4,,2,semis
+a2549683-4bee-45b4-a62c-b63037f24d1d,9082658f-3397-444d-b03d-53a7d3d12f90,Twin Sports Clash mrgs93is,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgs93is,1,none
+1486397b-864e-4198-af2a-650009fe2db9,9082658f-3397-444d-b03d-53a7d3d12f90,Hoops Rematch mrgs93is,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgs93is,1,none
+21cdcea9-54c4-4f57-8fb0-122e3a551e4a,9082658f-3397-444d-b03d-53a7d3d12f90,Badminton Return Leg mrgs93is,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrgs93is,1,none
+8877ad23-86d1-4d35-b816-af205cd84ab3,12803409-519d-4e35-a5b9-84267b528874,Neighbourhood Cup mrh0oikb,{football},team,{U17},2026-08-01,2026-08-02,scheduled,,,f,,f,4,Host Ground,1,none
+41b10e9f-2f20-475a-af64-5ae2464a5535,c6a865e9-70e2-4a0d-a088-34c242683423,City Football Cup mrgudt95,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+5f508572-5af1-4b63-9cc4-924d55e3a24a,d4e62405-fca8-4eaf-9c96-26c57e9fd683,City Football Cup mrguqwy3,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+7c48e05b-585f-4458-a109-4cb584177425,4f20de05-90ce-42a6-a6e9-a39fde1b9cbe,City Football Cup mrh0oo9w,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+453ec070-865d-4121-8bde-0c01873033d1,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrh1cv6l,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+b02dc33b-c55c-4a6d-92b6-410d223355cb,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrh2g5tg,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+e1a73c5f-7b2a-4aba-9116-fe76ef4adc71,1ad6705f-0387-46ad-811b-3654dda4a5de,Twin Sports Clash mrhefj4s,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhefj4s,1,none
+8e408848-647d-449a-819d-99a3b6b9f919,1ad6705f-0387-46ad-811b-3654dda4a5de,Hoops Rematch mrhefj4s,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhefj4s,1,none
+5c4de2aa-7aeb-413e-a051-b01523a98fa5,1ad6705f-0387-46ad-811b-3654dda4a5de,Badminton Return Leg mrhefj4s,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhefj4s,1,none
+1a109e77-fc85-42d7-9732-6e5acbe28031,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783836915214,{badminton},team,{Open},2026-08-11,2026-08-13,scheduled,,,t,500.00,t,,,1,none
+33e088c6-b66c-4dcd-abe2-f89203d34b22,0eba9ac8-1c1e-4475-a9fe-d311e46a830c,City Football Cup mrhefy0y,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+6f63f190-59c9-41a2-b6b9-48b90b681218,fbd1b239-f9c8-4015-abf5-604366fb77c5,Neighbourhood Cup mrhefz64,{football},team,{U17},2026-08-01,2026-08-02,scheduled,,,f,,f,4,Host Ground,1,none
+0430b5ad-a59b-487a-a1df-c887717b4f91,46bfa9a3-f725-4cb0-ae47-811d4b4d4845,MC Playoff mrheg193,{football},team,{U17},2026-08-01,2026-08-02,scheduled,,,f,,f,4,,2,semis
+10d099b4-39ec-4ea5-b79a-72f1dab21d0e,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783836930711,{badminton},team,{Open},2026-08-11,2026-08-13,scheduled,,,t,500.00,t,,,1,none
+147a9124-9d7a-494b-8b66-438d09a0df50,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783836932125,{badminton},team,{Open},2026-08-11,2026-08-13,scheduled,,,t,500.00,t,,,1,none
+1bd6adec-d3e5-420f-9c9d-ebbe7f629a2a,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrhegjk2,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+3839e9f8-3055-4572-b97e-086c3b2ab7b9,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783837337052,{badminton},team,{Open},2026-08-11,2026-08-13,scheduled,,,t,500.00,t,,,1,none
+fa92b6f7-c452-457f-91e0-2b7e5d811020,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrhiicu1,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none
+a31a1f4f-7de9-4e44-a64a-f68f98a8a162,8d191c92-6386-4771-89ee-687aba633011,Twin Sports Clash mrhiiekq,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhiiekq,1,none
+f6d8d5de-3ebe-4801-a463-6da9504eeb0e,8d191c92-6386-4771-89ee-687aba633011,Hoops Rematch mrhiiekq,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhiiekq,1,none
+ad8a439c-baed-40f7-90ce-112cdec03f98,8d191c92-6386-4771-89ee-687aba633011,Badminton Return Leg mrhiiekq,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrhiiekq,1,none
+dd4cf3b7-3851-4a5d-bef4-572fcdd44d41,28ddaa48-a913-498b-9ee9-394e25e4165d,DUPR Night at PB&J mri95foq,{pickleball},team,{Open},2026-07-20,2026-07-20,scheduled,,,f,,f,6,"PB&J Courts, Palakkad",1,none
+131bbdf6-b83a-4aa7-89b5-7685346ae0c4,c53ce1ff-6298-4eb0-9cd6-7f66b1b99bfd,DUPR Night at PB&J mri97kpa,{badminton},team,{Open},2026-07-20,2026-07-20,scheduled,,,f,,f,6,"PB&J Courts, Palakkad",1,none
+1425cc43-812b-4987-8544-afb2f9d1949b,169789f3-e957-4be3-a1dc-cd9174757c1a,DUPR Night at PB&J mri99o75,{badminton},team,{Open},2026-07-20,2026-07-20,scheduled,,,f,,f,6,"PB&J Courts, Palakkad",1,none
+6c29e558-b8f7-4dbe-b9ec-51b66433cfe9,02720aa8-2596-4352-ae90-529a2906db24,DUPR Night at PB&J mrih3gj4,{badminton},team,{Open},2026-07-20,2026-07-20,scheduled,,,f,,f,6,"PB&J Courts, Palakkad",1,none
+10c6c20d-1275-4975-9c14-7d5a4328d837,590cfc8f-d968-4c4f-9df2-017301adb9ab,City Football Cup mri99pw9,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+5f7dcec1-eecb-42a3-8f05-81b93df8a13e,e056df4e-b42f-4590-bbcf-0cfce0198982,Neighbourhood Cup mri99rh9,{football},team,{U17},2026-08-01,2026-08-02,scheduled,,,f,,f,4,Host Ground,1,none
+4cd81dae-4ee7-4473-b0bf-c42a0d78330b,2301f327-b291-495d-a14f-e55b1f1f9212,Coach Cup mrih70eh,{badminton},team,{Open},2026-07-25,2026-07-25,scheduled,,,f,,f,4,Whistle Arena Court 1,1,final
+4ad863fe-5bfa-4db2-a60b-12b5d519104e,626f1292-2017-47f3-9928-68470695b4fc,Twin Sports Clash mrii7zmk,"{badminton,football}",team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrii7zmk,1,none
+ad826014-88c9-4a13-9e0a-be72b232a762,626f1292-2017-47f3-9928-68470695b4fc,Hoops Rematch mrii7zmk,{basketball},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrii7zmk,1,none
+759b7abd-dd86-47c1-b9f5-e8381a7d36a5,626f1292-2017-47f3-9928-68470695b4fc,Badminton Return Leg mrii7zmk,{badminton},team,{Open},2026-09-20,2026-09-21,scheduled,,,f,,f,2,North Arena mrii7zmk,1,none
+9c14a4d0-a8f4-4ef7-a9ac-8bba071ade86,785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,LBL Verify 1783903738367,{badminton},team,{Open},2026-08-12,2026-08-14,scheduled,,,t,500.00,t,,,1,none
+0c1192b0-8826-4d89-a0aa-74aa88c1e433,991e2028-d31e-4bee-b54c-c941efacf939,City Football Cup mrii875a,{football},team,{U17},2026-07-20,2026-07-21,closed,,,f,,f,4,Main Ground,1,final
+31424535-d416-4a03-920e-278aa10f9a80,6f2bff63-138a-4197-babe-a9f123cec121,DUPR Night at PB&J mrii88h2,{badminton},team,{Open},2026-07-20,2026-07-20,scheduled,,,f,,f,6,"PB&J Courts, Palakkad",1,none
+072a8d78-7280-4668-95bf-8e92046d150b,2301f327-b291-495d-a14f-e55b1f1f9212,Chess Faceoff chessmrii89pu,{chess},individual,{Open},2026-09-28,2026-09-28,scheduled,,,f,,f,2,Demo Center,1,none

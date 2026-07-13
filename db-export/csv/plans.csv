@@ -1,0 +1,33 @@
+id,academy_id,title,type,duration_value,duration_unit,fee,sessions_included,makeups_included,auto_renew_default,visibility
+829ead2d-706c-44f6-ae17-3bb22581d339,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Monthly Pro,subscription,1,month,4500.00,12,2,f,all
+e29b6941-8a99-4bca-8a9b-1d2ff775384d,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Quarterly Elite,subscription,1,month,12000.00,,0,f,all
+a8553e7d-3291-4a86-8209-74b2cc8e8a5f,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Trial Pass,trial,1,week,500.00,2,0,f,all
+5847c4bd-8185-492b-b169-59f4a4006ae1,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Annual Elite,subscription,12,month,45000.00,200,10,t,all
+ee17e11b-8889-4152-83ea-4798acaf5f7a,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Drop-in Session,one_time,,,800.00,1,0,f,all
+cc512e0f-075c-45f8-aee2-f0ba7a51ee88,d7d65f95-4376-4d0a-be66-a5efa8d648e7,Standard Plan,subscription,1,month,3000.00,12,0,f,all
+4cf371ad-e4d4-4b3a-93bc-3426000479a1,d87ac4ae-29ce-46c0-869e-3f2894822670,Verify Plan,subscription,1,month,1000.00,,0,f,all
+1a7580e3-a647-4746-ac29-e723644ad71b,858c67a9-fe68-4a3e-a3e9-568e0656633a,Verify Plan,subscription,1,month,1000.00,,0,f,all
+176a0601-6897-44b8-b6c1-6bdc3befa172,98890751-580f-4bf2-be9a-b266e16133ee,Verify Plan,subscription,1,month,1000.00,,0,f,all
+0f8df984-bea5-4d51-aac5-f3a0f14b3d1b,9523b81a-5380-40f4-9bb0-c3704fe228d5,Weekly Sprint,subscription,3,day,500.00,,0,f,all
+0a117461-52f9-47f8-afc1-a43a6502883a,75a6a3d0-7fc7-4907-9480-76559c6d27ac,Weekly Sprint,subscription,3,day,500.00,,0,f,all
+b82cd6aa-0551-4bf3-ab97-a91c366393a1,c52e2fdf-7a6f-4ac8-962a-7f985acbd69c,Verify Plan,subscription,1,month,1000.00,,0,f,all
+18bb7a7d-5da1-42fa-afc8-58bd8e5ec7de,2301f327-b291-495d-a14f-e55b1f1f9212,Demo Monthly,subscription,1,month,2000.00,,0,f,all
+d54af256-0349-491e-904b-60652ea8de0a,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,School - In school activity,one_time,12,month,1000.00,96,0,t,all
+eab5bf46-d554-48a2-979d-e2201a75777f,3af25196-f3f9-4474-b1b9-02c9f1bbfd08,In School Activity,subscription,12,month,1000.00,96,0,t,all
+f560e034-e89b-40db-93f7-e7615597d0ad,2301f327-b291-495d-a14f-e55b1f1f9212,Probe Plan probemrg0vemr,subscription,1,month,100.00,,0,f,all
+d597c933-323d-4aaa-b236-bd3e247b54f5,a4a2e357-78c8-4ac3-afb3-beb09fb7ce00,Term Plan,subscription,3,month,5000.00,36,0,f,all
+b915c7e3-d409-433c-8c3b-45f2a709dc42,f38bd662-eb76-4f72-9a26-14dec18e2710,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+2fe75e57-339b-430c-94ff-35240f2ef2c0,33e2f340-b022-4192-8529-ac92be698eb0,Term Plan,subscription,3,month,5000.00,36,0,f,all
+87fb5c8e-6bd8-4795-a340-ff10582ed9c6,68856101-7089-4784-a7e3-efe434a3d5a5,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+00bb8bc2-39c0-4325-949a-d868fcd306de,c8010f09-96b2-403a-81de-5a7143a9b32c,Term Plan,subscription,3,month,5000.00,36,0,f,all
+2b4f6847-1a8b-47b0-b79f-a6439702c366,cc9d2b0e-90e6-4de4-ab39-acaeef193070,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+4f99c35b-1e9a-4604-8bff-523e9c8b7683,907d68a2-a097-4d78-9d22-3ccc63e76836,Term Plan,subscription,3,month,5000.00,36,0,f,all
+7bf3a41e-8627-4830-b9d7-a3fd81426ac4,d43d2d6d-c198-4fd0-a40d-13837fa5098f,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+d29a9510-5130-4267-8c8e-dc023bdc98ac,9082658f-3397-444d-b03d-53a7d3d12f90,Term Plan,subscription,3,month,5000.00,36,0,f,all
+e6f9fe48-0e12-47de-a6b9-16e6f872c52f,86222ee7-07a5-46e5-a2f6-5fcfd78d6d6e,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+789c777a-95a4-4f3f-96f4-b74b47ba5e54,1ad6705f-0387-46ad-811b-3654dda4a5de,Term Plan,subscription,3,month,5000.00,36,0,f,all
+a26ca66d-860c-4357-9c83-5d6263234dc5,477c981c-6ef3-45dc-b96a-dc7b747e1378,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+461b615d-de48-474a-a96f-e9d844390afc,8d191c92-6386-4771-89ee-687aba633011,Term Plan,subscription,3,month,5000.00,36,0,f,all
+34be0b5d-6ebb-41b9-b89a-c884b85f4554,b3a48533-2a0e-4812-9bf7-0ec2847051a1,Term Plan B,subscription,3,month,5000.00,36,0,f,all
+4d282025-8306-4ae3-98a4-6e72b25bdffe,626f1292-2017-47f3-9928-68470695b4fc,Term Plan,subscription,3,month,5000.00,36,0,f,all
+a21e5a88-a51d-4356-9854-6cde7de62807,87571f48-cb0f-401d-8f47-abfa03e1201a,Term Plan B,subscription,3,month,5000.00,36,0,f,all

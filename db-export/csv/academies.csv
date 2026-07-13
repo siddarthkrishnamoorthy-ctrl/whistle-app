@@ -1,0 +1,171 @@
+id,name,network_opt_in,brand_theme,created_at,contact_email,phone,settings,website,allowance_mode,student_allowance,suspended,allowed_sports
+27681b60-63fd-4832-aa0b-58d3e1f9cd31,Preview Admin's Academy,f,,2026-07-07 18:52:57.421,,,,,true_up,,f,{}
+7bc3ac12-e47c-4ce7-a301-151fa7a7f640,Rival Admin's Academy,t,,2026-07-10 20:55:34.967,,,,,true_up,,f,{}
+cbda2def-8063-48bf-b667-4bf017c62629,Rival Admin's Academy,t,,2026-07-11 13:43:48.606,,,,,true_up,,f,{}
+b95056b0-b2c6-4da8-8a8c-fe5cf4013a7b,Third Admin's Academy,f,,2026-07-10 20:55:35.265,,,,,true_up,,f,{}
+d116d7b7-0ccf-4f57-9681-518d631d6065,Scorer Rival's Academy,t,,2026-07-10 21:33:20.38,,,,,true_up,,f,{}
+d7d65f95-4376-4d0a-be66-a5efa8d648e7,Rival Admin's Academy,t,,2026-07-08 02:07:24.808,,,,,true_up,,f,{}
+3af25196-f3f9-4474-b1b9-02c9f1bbfd08,Test Admin's Academy,t,,2026-07-07 18:43:20.239,admin@testacademy.com,9000011111,"{""policies"": {""deductOnAbsence"": ""afterNoticeWindow"", ""priorNoticeHours"": 12, ""allowMakeupSessions"": true}, ""whatsapp"": {""automatedReminders"": true, ""invoiceGenerationAlerts"": false, ""classCancellationNotices"": false}, ""interschool"": {""showReliabilityScore"": true}}","",true_up,,f,{}
+0fe0085a-2d33-4327-bfef-0610e0b55681,New Test Academy Owner's Academy,f,,2026-07-08 05:17:05.129,,,,,true_up,,f,{}
+d87ac4ae-29ce-46c0-869e-3f2894822670,Verify Admin's Academy,f,,2026-07-08 09:35:22.114,,,,,true_up,,f,{}
+858c67a9-fe68-4a3e-a3e9-568e0656633a,Verify Admin's Academy,f,,2026-07-08 09:36:41.923,,,,,true_up,,f,{}
+b4ad9e2f-4202-46c4-8a61-1a79e2637461,Dbg Admin's Academy,f,,2026-07-08 09:36:57.021,,,,,true_up,,f,{}
+98890751-580f-4bf2-be9a-b266e16133ee,Verify Admin's Academy,f,,2026-07-08 09:37:16.329,,,,,true_up,,f,{}
+9523b81a-5380-40f4-9bb0-c3704fe228d5,Jobs Admin's Academy,f,,2026-07-08 09:45:02.107,,,,,true_up,,f,{}
+75a6a3d0-7fc7-4907-9480-76559c6d27ac,Jobs Admin's Academy,f,,2026-07-08 09:45:32.824,,,,,true_up,,f,{}
+c52e2fdf-7a6f-4ac8-962a-7f985acbd69c,Verify Admin's Academy,f,,2026-07-08 09:50:16.583,,,,,true_up,,f,{}
+eb6dc50a-ac30-4d23-bce3-6bb15a20bb42,Q Admin's Academy,f,,2026-07-08 10:09:07.999,,,,,true_up,,f,{}
+7c15f63b-c212-45aa-9605-1117874d3896,Bad Rival's Academy,t,,2026-07-10 21:43:16.829,,,,,true_up,,f,{}
+733ec782-9fe4-4c3f-8292-f64fb9d4f004,Rival Admin's Academy,t,,2026-07-10 21:43:33.459,,,,,true_up,,f,{}
+6ebf9936-953b-4339-bd59-4f2d66b3942d,Third Admin's Academy,f,,2026-07-10 21:43:33.601,,,,,true_up,,f,{}
+91f61b89-694a-493f-8245-12d51912a77a,Venue Rival's Academy,t,,2026-07-11 02:13:50.179,,,,,true_up,,f,{}
+0373caa6-5a8e-49fd-9a3c-6ac9b7e1f16e,Rival Admin's Academy,t,,2026-07-11 02:14:07.26,,,,,true_up,,f,{}
+b2de4109-f226-430a-b2eb-09c310b4c29a,Third Admin's Academy,f,,2026-07-11 13:43:48.784,,,,,true_up,,f,{}
+d888c47b-183c-4bd0-b9d2-ffdde93c7e35,Third Admin's Academy,f,,2026-07-11 02:14:07.473,,,,,true_up,,f,{}
+785ef66d-5f7d-4dfc-88d9-f7903cbb3c3a,Riverside Admin's Academy,t,,2026-07-08 13:07:34.744,,,,,true_up,,f,{}
+38bf0337-211f-423b-a58a-6c1789af196a,Rival Admin's Academy,t,,2026-07-10 20:22:29.452,,,,,true_up,,f,{}
+4296db6d-01c3-4c17-8fe6-90426fbcb67f,Third Admin's Academy,f,,2026-07-10 20:22:29.774,,,,,true_up,,f,{}
+dbbec2a2-e10c-4991-be8e-0da2dc0c8f5f,Rival Admin's Academy,t,,2026-07-10 20:23:07.179,,,,,true_up,,f,{}
+e15be70d-298d-455a-87c9-12b85ba89d66,North Admin's Academy,t,,2026-07-11 07:05:01.119,,,,,true_up,,f,{}
+3bece28e-5fd5-42df-9368-c6a3ecb8c736,Third Admin's Academy,f,,2026-07-10 20:23:07.482,,,,,true_up,,f,{}
+829e42ae-2e4e-4a50-8f05-a5cc88c4d7dc,Rival Admin's Academy,t,,2026-07-10 20:24:51.239,,,,,true_up,,f,{}
+f5371622-adf0-4ee8-8b3a-50b622edb5af,Third Admin's Academy,f,,2026-07-10 20:24:51.511,,,,,true_up,,f,{}
+814c8b25-0b12-4654-bad0-149d2caa7550,Rival Admin's Academy,t,,2026-07-10 20:26:30.918,,,,,true_up,,f,{}
+1e1c5caf-9909-46fa-8732-30588f983333,Third Admin's Academy,f,,2026-07-10 20:26:31.303,,,,,true_up,,f,{}
+c56fbd97-dc16-484f-b3c0-2cccf805c586,South Admin's Academy,t,,2026-07-11 07:05:02.152,,,,,true_up,,f,{}
+7f232f2e-fba6-4e1b-bba7-1ebaaa3e748e,North Admin's Academy,t,,2026-07-11 07:06:30.727,,,,,true_up,,f,{}
+e95754e6-0dac-4bf8-943a-a282a0f64675,South Admin's Academy,t,,2026-07-11 07:06:31.566,,,,,true_up,,f,{}
+a4a2e357-78c8-4ac3-afb3-beb09fb7ce00,North Admin's Academy,t,,2026-07-11 07:08:21.527,,,,,true_up,,f,{}
+f38bd662-eb76-4f72-9a26-14dec18e2710,South Admin's Academy,t,,2026-07-11 07:08:22.559,,,,,true_up,,f,{}
+33e2f340-b022-4192-8529-ac92be698eb0,North Admin's Academy,t,,2026-07-11 07:09:14.661,,,,,true_up,,f,{}
+68856101-7089-4784-a7e3-efe434a3d5a5,South Admin's Academy,t,,2026-07-11 07:09:15.544,,,,,true_up,,f,{}
+e5695d3e-b515-4a71-a379-0f54be48d834,Rival Admin's Academy,t,,2026-07-11 07:09:38.871,,,,,true_up,,f,{}
+c8010f09-96b2-403a-81de-5a7143a9b32c,North Admin's Academy,t,,2026-07-11 18:11:03.699,,,,,true_up,,f,{}
+e5e8e642-7abe-45c2-a0ec-718ed57ac031,Third Admin's Academy,f,,2026-07-11 07:09:39.039,,,,,true_up,,f,{}
+5832b122-a41c-408b-8170-aef6f53b685d,Sched Rival's Academy,t,,2026-07-11 13:43:35.569,,,,,true_up,,f,{}
+626c86e7-d10f-42bb-825e-094901decf19,Chess Rival's Academy,t,,2026-07-11 14:02:26.517,,,,,true_up,,f,{}
+e6a092de-0613-4915-80af-e682068118a2,Chess Rival's Academy,t,,2026-07-11 14:08:39.568,,,,,true_up,,f,{}
+7f706ecb-3368-4765-8509-26b0c600eb28,Rival Admin's Academy,t,,2026-07-11 14:08:41.152,,,,,true_up,,f,{}
+410a295a-9588-4865-9774-ffd9f24f3f3d,Third Admin's Academy,f,,2026-07-11 19:54:05.141,,,,,true_up,,f,{}
+6d038d58-4594-470c-ad6a-0e2da04e6902,Third Admin's Academy,f,,2026-07-11 14:08:41.363,,,,,true_up,,f,{}
+cc9d2b0e-90e6-4de4-ab39-acaeef193070,South Admin's Academy,t,,2026-07-11 18:11:04.593,,,,,true_up,,f,{}
+907d68a2-a097-4d78-9d22-3ccc63e76836,North Admin's Academy,t,,2026-07-11 19:06:34.625,,,,,true_up,,f,{}
+d43d2d6d-c198-4fd0-a40d-13837fa5098f,South Admin's Academy,t,,2026-07-11 19:06:35.723,,,,,true_up,,f,{}
+e19e6870-abea-42be-b337-798868066c9c,PO CTeam mrgs8svx's Academy,f,,2026-07-11 19:53:53.271,,,,,true_up,,f,{}
+69e12726-bb61-4c97-8852-9ec6b5756a6e,Cap Test School mrgqk6tq,f,,2026-07-11 19:06:44.318,captest-admin-mrgqk6tq@whistle.test,,,,hard,10,f,{}
+060a3b62-6f52-4889-bdde-3b3416425b2e,PO DTeam mrgs8svx's Academy,f,,2026-07-11 19:53:53.394,,,,,true_up,,f,{}
+a09d1868-4166-488b-b7bb-d4fa48d24f38,PO Host mrgs8svx's Academy,f,,2026-07-11 19:53:53.021,,,,,true_up,,f,{}
+193f9489-71d3-4c43-8c62-a435b6f4b13f,PO BTeam mrgs8svx's Academy,f,,2026-07-11 19:53:53.142,,,,,true_up,,f,{}
+4994e314-3920-4e48-b764-123694463291,Rival Admin's Academy,t,,2026-07-11 19:54:04.965,,,,,true_up,,f,{}
+2301f327-b291-495d-a14f-e55b1f1f9212,Demo Admin's Academy,t,,2026-07-08 10:24:00.141,,,"{""lessonPlanAssignmentMode"": ""calendar""}",,true_up,,f,{}
+9082658f-3397-444d-b03d-53a7d3d12f90,North Admin's Academy,t,,2026-07-11 19:54:05.883,,,,,true_up,,f,{}
+86222ee7-07a5-46e5-a2f6-5fcfd78d6d6e,South Admin's Academy,t,,2026-07-11 19:54:06.77,,,,,true_up,,f,{}
+c6a865e9-70e2-4a0d-a088-34c242683423,MCF Host mrgudt95's Academy,f,,2026-07-11 20:53:45.383,,,,,true_up,,f,{}
+953c8381-c205-485d-b721-20a8ffa6232c,MCF Blue mrgudt95's Academy,f,,2026-07-11 20:53:45.634,,,,,true_up,,f,{}
+2fc13f89-19e1-4162-aeb6-008b3648ced0,MCF Crim mrgudt95's Academy,f,,2026-07-11 20:53:45.784,,,,,true_up,,f,{}
+dc53c020-2626-42e2-aeae-9e0cc617204f,MCF Dash mrgudt95's Academy,f,,2026-07-11 20:53:45.93,,,,,true_up,,f,{}
+2a777a97-a93b-4079-b049-2fcfa9cffa3d,MCF Extra mrgudt95's Academy,f,,2026-07-11 20:53:46.068,,,,,true_up,,f,{}
+d4e62405-fca8-4eaf-9c96-26c57e9fd683,MCF Host mrguqwy3's Academy,f,,2026-07-11 21:03:56.475,,,,,true_up,,f,{}
+28be1902-f78c-47fb-b768-6bf6830d61d5,MCF Blue mrguqwy3's Academy,f,,2026-07-11 21:03:56.725,,,,,true_up,,f,{}
+65825fa0-741a-4d9f-bbf3-08322a1e5d81,MCF Crim mrguqwy3's Academy,f,,2026-07-11 21:03:56.892,,,,,true_up,,f,{}
+c0bf733a-caf7-4713-a744-9bd128cfa00a,MCF Dash mrguqwy3's Academy,f,,2026-07-11 21:03:57.047,,,,,true_up,,f,{}
+adb4ac70-de81-4d58-b936-9d2571734291,MCF Extra mrguqwy3's Academy,f,,2026-07-11 21:03:57.183,,,,,true_up,,f,{}
+12803409-519d-4e35-a5b9-84267b528874,MCT Host mrh0oikb's Academy,f,,2026-07-11 23:50:02.363,,,,,true_up,,f,{}
+cc768dad-f757-4c03-9ec0-d028cdb5ee1c,MCT Near mrh0oikb's Academy,f,,2026-07-11 23:50:02.652,,,,,true_up,,f,{}
+9a685222-0c5e-47ea-b16e-802a43d07a14,MCT Far mrh0oikb's Academy,f,,2026-07-11 23:50:02.862,,,,,true_up,,f,{}
+4f20de05-90ce-42a6-a6e9-a39fde1b9cbe,MCF Host mrh0oo9w's Academy,f,,2026-07-11 23:50:09.631,,,,,true_up,,f,{}
+9546d29a-92d7-4430-a5b2-a41f4a0fb32b,MCF Blue mrh0oo9w's Academy,f,,2026-07-11 23:50:09.763,,,,,true_up,,f,{}
+fe89c334-7fab-4e76-b4da-1f492f4cdd8a,MCF Crim mrh0oo9w's Academy,f,,2026-07-11 23:50:09.972,,,,,true_up,,f,{}
+b91b7175-dca2-4dd9-818d-3a6f9bca030f,MCF Dash mrh0oo9w's Academy,f,,2026-07-11 23:50:10.176,,,,,true_up,,f,{}
+1ab42d28-3a80-4ccd-baec-3987cdc90d9c,MCF Extra mrh0oo9w's Academy,f,,2026-07-11 23:50:10.384,,,,,true_up,,f,{}
+f808d7bc-05bb-4e9a-b2c5-24ef425ffabc,Chess Admin mrh18s1b's Academy,f,,2026-07-12 00:05:47.901,,,,,true_up,,f,{}
+318aa352-b0ee-4678-9dbf-749d580f93c5,PZ Check's Academy,f,,2026-07-12 00:06:10.547,,,,,true_up,,f,{}
+dbc68ecb-959f-4d4c-86f7-7a5f8867fae3,Chess Rival's Academy,t,,2026-07-12 00:08:59.297,,,,,true_up,,f,{}
+8fbc1e8b-7694-40d5-8c95-124b6cc6be93,Clock Admin mrh2e9ay's Academy,f,,2026-07-12 00:38:03.225,,,,,true_up,,f,{}
+2cdcce9d-a77e-4d21-8725-7b58e481d6cb,Clock Admin mrh2fron's Academy,f,,2026-07-12 00:39:13.597,,,,,true_up,,f,{}
+95490521-90e8-4296-a1e6-defbdf86000b,Chess Admin mrh2g4vt's Academy,f,,2026-07-12 00:39:30.614,,,,,true_up,,f,{}
+64132bed-1f47-42f7-b01b-5e260fbac3a9,Chess Rival's Academy,t,,2026-07-12 00:39:32.677,,,,,true_up,,f,{}
+0fa3a2c9-f4d5-4702-8d20-e614f2387b02,BotClock's Academy,f,,2026-07-12 00:41:54.248,,,,,true_up,,f,{}
+1ad6705f-0387-46ad-811b-3654dda4a5de,North Admin's Academy,t,,2026-07-12 06:14:57.664,,,,,true_up,,f,{}
+477c981c-6ef3-45dc-b96a-dc7b747e1378,South Admin's Academy,t,,2026-07-12 06:14:58.856,,,,,true_up,,f,{}
+0eba9ac8-1c1e-4475-a9fe-d311e46a830c,MCF Host mrhefy0y's Academy,f,,2026-07-12 06:15:16.877,,,,,true_up,,f,{}
+0c6b22a2-646f-44c1-94bc-71e68bd989c1,MCF Blue mrhefy0y's Academy,f,,2026-07-12 06:15:16.989,,,,,true_up,,f,{}
+cf1b3062-4186-467e-a303-f675c2e8643a,MCF Crim mrhefy0y's Academy,f,,2026-07-12 06:15:17.086,,,,,true_up,,f,{}
+6f17b04b-dca0-4ff5-a606-2420b59b7b4b,MCF Dash mrhefy0y's Academy,f,,2026-07-12 06:15:17.188,,,,,true_up,,f,{}
+7e4adbbc-209e-48e6-a356-3a0dcb28356f,MCF Extra mrhefy0y's Academy,f,,2026-07-12 06:15:17.303,,,,,true_up,,f,{}
+fbd1b239-f9c8-4015-abf5-604366fb77c5,MCT Host mrhefz64's Academy,f,,2026-07-12 06:15:18.358,,,,,true_up,,f,{}
+c1447e3b-a515-4c78-992e-44ffbce47e2e,MCT Near mrhefz64's Academy,f,,2026-07-12 06:15:18.487,,,,,true_up,,f,{}
+7d221dfe-4b95-4d27-9937-66b43e062f34,MCT Far mrhefz64's Academy,f,,2026-07-12 06:15:18.586,,,,,true_up,,f,{}
+ada199a5-7ceb-4795-9d75-14d0c22b7342,Cap Test School mrgokdjf,f,"{""fontKey"": ""serif"", ""logoUrl"": ""/uploads/ada199a5-7ceb-4795-9d75-14d0c22b7342/logo-1b1628ee-57ef-43d7-bb47-a3146fdf02cc.png"", ""displayName"": ""Cap Test International""}",2026-07-11 18:10:54.003,captest-admin-mrgokdjf@whistle.test,,,,hard,10,f,{}
+46bfa9a3-f725-4cb0-ae47-811d4b4d4845,PO Host mrheg193's Academy,f,,2026-07-12 06:15:21.852,,,,,true_up,,f,{}
+77a3ea48-10b8-4317-9e3a-353e961c899b,PO BTeam mrheg193's Academy,f,,2026-07-12 06:15:21.959,,,,,true_up,,f,{}
+538e690b-e6b7-467e-8303-3c3338905caf,PO CTeam mrheg193's Academy,f,,2026-07-12 06:15:22.058,,,,,true_up,,f,{}
+bdbb2175-5971-46da-83ca-6dda3024ad60,Cap Test School mrhefzq1,f,,2026-07-12 06:15:19.29,captest-admin-mrhefzq1@whistle.test,,,,hard,10,f,{}
+3a7cadd8-235f-4a77-9644-b0adb76213e9,PO DTeam mrheg193's Academy,f,,2026-07-12 06:15:22.169,,,,,true_up,,f,{}
+5704c4bc-8fa4-4be3-98fa-2f144ec48dcd,Chess Rival's Academy,t,,2026-07-12 06:15:45.28,,,,,true_up,,f,{}
+260e4df5-25cf-45fb-b988-8f1ff2ce15df,Chess Admin mrhegkti's Academy,f,,2026-07-12 06:15:46.416,,,,,true_up,,f,{}
+6501ca49-e213-4c1d-aaa5-99130c850eb9,Clock Admin mrhegldv's Academy,f,,2026-07-12 06:15:47.15,,,,,true_up,,f,{}
+12a8e933-3a72-40a7-b03f-d5e5aa3e3885,Scrab Admin mrhii28q's Academy,f,,2026-07-12 08:08:54.278,,,,,true_up,,f,{}
+e1a057fb-cd2c-4d7e-a8a9-a847fc32aba9,Chess Rival's Academy,t,,2026-07-12 08:09:08.683,,,,,true_up,,f,{}
+8d191c92-6386-4771-89ee-687aba633011,North Admin's Academy,t,,2026-07-12 08:09:10.137,,,,,true_up,,f,{}
+b3a48533-2a0e-4812-9bf7-0ec2847051a1,South Admin's Academy,t,,2026-07-12 08:09:11.218,,,,,true_up,,f,{}
+d16480a1-eded-4bcd-819a-a54adf91ac40,P2 Admin mrhjkl71's Academy,f,,2026-07-12 08:38:51.862,,,,,true_up,,f,{}
+34bbef41-987a-40fa-82c2-ac93730ed71b,Scrab Admin mrhjkm0b's Academy,f,,2026-07-12 08:38:52.753,,,,,true_up,,f,{}
+28ddaa48-a913-498b-9ee9-394e25e4165d,Coach Meghkalyan's Academy,f,,2026-07-12 20:34:54.971,,,,,true_up,,f,{}
+e1538379-31ac-4d23-a837-0ce7027c764b,Rishi's Academy,f,,2026-07-12 20:34:55.174,,,,,true_up,,f,{}
+dcbcce93-6bb4-44a2-b028-8c9aa4b4b1b6,Srinath's Academy,f,,2026-07-12 20:34:55.29,,,,,true_up,,f,{}
+1a2a95b1-14de-4746-b6fb-3e214d18ffb3,Karthikkumar's Academy,f,,2026-07-12 20:34:55.398,,,,,true_up,,f,{}
+e0d2c201-d470-464f-8253-63b8754c4315,Tomriddle's Academy,f,,2026-07-12 20:34:55.516,,,,,true_up,,f,{}
+8e80cf0d-600a-42a3-8b5f-dd98852af5e7,Spbalaji's Academy,f,,2026-07-12 20:34:55.627,,,,,true_up,,f,{}
+05467cc9-e1f5-461a-9949-688257c1d311,Randomcoach's Academy,f,,2026-07-12 20:34:55.741,,,,,true_up,,f,{}
+98ca2193-32d7-49c5-9022-0a55a83de50d,Sport Check's Academy,f,,2026-07-12 20:36:06.065,,,,,true_up,,f,{}
+c53ce1ff-6298-4eb0-9cd6-7f66b1b99bfd,Coach Meghkalyan's Academy,f,,2026-07-12 20:36:34.47,,,,,true_up,,f,{}
+f5eb815a-7bc8-4636-9a63-8d80db8a0704,Rishi's Academy,f,,2026-07-12 20:36:34.591,,,,,true_up,,f,{}
+421b4c6f-6b51-4c82-afaa-26c7785e12d2,Srinath's Academy,f,,2026-07-12 20:36:34.697,,,,,true_up,,f,{}
+12d44203-b239-479e-9af6-03fa78f3a530,Karthikkumar's Academy,f,,2026-07-12 20:36:34.807,,,,,true_up,,f,{}
+bcc39678-ff94-45c8-b74e-813b660429a7,Tomriddle's Academy,f,,2026-07-12 20:36:34.929,,,,,true_up,,f,{}
+9ff46408-f793-42a3-93a8-9f831f796cd8,Spbalaji's Academy,f,,2026-07-12 20:36:35.05,,,,,true_up,,f,{}
+4d2fba6c-c8f6-4543-8ec7-f345d41074dc,Randomcoach's Academy,f,,2026-07-12 20:36:35.208,,,,,true_up,,f,{}
+f513f032-ec01-4a5a-9a43-7f9d01d714d1,Hard Check's Academy,f,,2026-07-12 20:38:01.498,,,,,true_up,,f,{}
+169789f3-e957-4be3-a1dc-cd9174757c1a,Coach Meghkalyan's Academy,f,,2026-07-12 20:38:12.394,,,,,true_up,,f,{}
+aecb515c-7d29-4ad5-b069-6dfeb5a781b3,Rishi's Academy,f,,2026-07-12 20:38:12.565,,,,,true_up,,f,{}
+bb6245aa-62f8-4836-8d8f-947c074b646f,Srinath's Academy,f,,2026-07-12 20:38:12.71,,,,,true_up,,f,{}
+560e8bfd-dd48-464c-876b-d37f240d2b65,Karthikkumar's Academy,f,,2026-07-12 20:38:12.86,,,,,true_up,,f,{}
+95c24389-639d-4421-b860-ef8ec8520886,Tomriddle's Academy,f,,2026-07-12 20:38:12.992,,,,,true_up,,f,{}
+ddc9cb54-bbdc-42d4-89d3-0cdd7893710e,Spbalaji's Academy,f,,2026-07-12 20:38:13.143,,,,,true_up,,f,{}
+66693fa7-51bd-4162-9ad4-8ddf5ed4a2bb,Randomcoach's Academy,f,,2026-07-12 20:38:13.286,,,,,true_up,,f,{}
+590cfc8f-d968-4c4f-9df2-017301adb9ab,MCF Host mri99pw9's Academy,f,,2026-07-12 20:38:14.542,,,,,true_up,,f,{}
+00d15b77-febc-4352-ae79-f8cc0390b835,MCF Blue mri99pw9's Academy,f,,2026-07-12 20:38:14.847,,,,,true_up,,f,{}
+177a5ae9-cac9-4b8c-82d0-125268efb030,MCF Crim mri99pw9's Academy,f,,2026-07-12 20:38:14.998,,,,,true_up,,f,{}
+9fd62268-49dc-4d75-ac76-9c53d218ce3c,MCF Dash mri99pw9's Academy,f,,2026-07-12 20:38:15.15,,,,,true_up,,f,{}
+e62dd0d8-6b1f-456a-a26c-2d217f68c5fa,MCF Extra mri99pw9's Academy,f,,2026-07-12 20:38:15.3,,,,,true_up,,f,{}
+e056df4e-b42f-4590-bbcf-0cfce0198982,MCT Host mri99rh9's Academy,f,,2026-07-12 20:38:16.586,,,,,true_up,,f,{}
+6a215a22-ae4e-4340-8d8f-aaabd3ed9415,MCT Near mri99rh9's Academy,f,,2026-07-12 20:38:16.717,,,,,true_up,,f,{}
+52b76ba7-53cc-4249-9639-7bc027435e75,MCT Far mri99rh9's Academy,f,,2026-07-12 20:38:16.844,,,,,true_up,,f,{}
+02720aa8-2596-4352-ae90-529a2906db24,Coach Meghkalyan's Academy,f,,2026-07-13 00:17:19.468,,,,,true_up,,f,{}
+66662ea0-2962-419b-8f55-c3964db0491b,Rishi's Academy,f,,2026-07-13 00:17:19.7,,,,,true_up,,f,{}
+107de511-df77-4cc0-8f95-df70c34a176c,Srinath's Academy,f,,2026-07-13 00:17:19.817,,,,,true_up,,f,{}
+31d65bf5-8dfe-4037-8438-0ce37115f9cc,Karthikkumar's Academy,f,,2026-07-13 00:17:19.94,,,,,true_up,,f,{}
+25cdaa45-9b7c-4948-9154-f034e903670d,Tomriddle's Academy,f,,2026-07-13 00:17:20.05,,,,,true_up,,f,{}
+68bdd736-43d9-4a0c-b78f-4e24399f026c,Spbalaji's Academy,f,,2026-07-13 00:17:20.153,,,,,true_up,,f,{}
+c70589f0-aeb7-4de5-9bf8-18161eed7212,Randomcoach's Academy,f,,2026-07-13 00:17:20.269,,,,,true_up,,f,{}
+d4c14abe-c306-48a6-b9a6-bef802bedfbc,Coach Falcons's Academy,f,,2026-07-13 00:20:05.216,,,,,true_up,,f,{}
+b5f1d534-20dd-4c05-b64b-be66776ae538,Coach Sharks's Academy,f,,2026-07-13 00:20:05.358,,,,,true_up,,f,{}
+bad3040b-f8a7-48a4-920f-8fdfb48b82fb,Coach Titans's Academy,f,,2026-07-13 00:20:05.449,,,,,true_up,,f,{}
+626f1292-2017-47f3-9928-68470695b4fc,North Admin's Academy,t,,2026-07-13 00:48:50.401,,,,,true_up,,f,{}
+87571f48-cb0f-401d-8f47-abfa03e1201a,South Admin's Academy,t,,2026-07-13 00:48:51.319,,,,,true_up,,f,{}
+991e2028-d31e-4bee-b54c-c941efacf939,MCF Host mrii875a's Academy,f,,2026-07-13 00:49:00.095,,,,,true_up,,f,{}
+c3b729c1-c8dd-4911-b2d6-a56641c5657c,MCF Blue mrii875a's Academy,f,,2026-07-13 00:49:00.225,,,,,true_up,,f,{}
+e40ff9c0-f4dd-41c3-84bd-cbbc2c17a4ed,MCF Crim mrii875a's Academy,f,,2026-07-13 00:49:00.329,,,,,true_up,,f,{}
+063cf324-39ec-4b18-9aa8-5f76650e6a63,MCF Dash mrii875a's Academy,f,,2026-07-13 00:49:00.424,,,,,true_up,,f,{}
+39f4f65c-e01a-488b-ad44-0139db5e9fac,MCF Extra mrii875a's Academy,f,,2026-07-13 00:49:00.533,,,,,true_up,,f,{}
+6f2bff63-138a-4197-babe-a9f123cec121,Coach Meghkalyan's Academy,f,,2026-07-13 00:49:01.852,,,,,true_up,,f,{}
+35f081e1-b42e-4224-be4d-dd6c2136c093,Rishi's Academy,f,,2026-07-13 00:49:01.969,,,,,true_up,,f,{}
+b5479a43-e539-4efb-8e00-50ef5b226d81,Srinath's Academy,f,,2026-07-13 00:49:02.078,,,,,true_up,,f,{}
+c58c5451-c0e6-46f7-8c3d-977f3ffc13ce,Karthikkumar's Academy,f,,2026-07-13 00:49:02.226,,,,,true_up,,f,{}
+ce821e4c-f73f-48ce-ae8c-7db2de39adf2,Tomriddle's Academy,f,,2026-07-13 00:49:02.334,,,,,true_up,,f,{}
+511825e7-8f67-40a2-9be7-2f557b36bc5e,Spbalaji's Academy,f,,2026-07-13 00:49:02.434,,,,,true_up,,f,{}
+662702d8-c2ca-460d-bf55-d554c0736ac9,Randomcoach's Academy,f,,2026-07-13 00:49:02.532,,,,,true_up,,f,{}
+1823066c-9f8b-437e-9778-3e421e777329,Chess Rival's Academy,t,,2026-07-13 00:49:03.934,,,,,true_up,,f,{}
+37a78a7a-a649-49b5-9254-40174cc8ea6f,Scrab Admin mrii8b0m's Academy,f,,2026-07-13 00:49:05.114,,,,,true_up,,f,{}
+6efc0de0-0443-4131-9360-4942f8d5f39b,Cap Test School mrii8cy0,f,,2026-07-13 00:49:07.88,captest-admin-mrii8cy0@whistle.test,,,,hard,10,f,{}

@@ -6,13 +6,15 @@ Two files, two purposes:
 |------|---------------|
 | **`whistle-test-data.xlsx`** | **Review / share the data** — one tab per table (Students, Lesson Plans, Drills, Classes, Fixtures, …). Open in Excel / Google Sheets, no database needed. |
 | **`whistle-demo-db.sql.gz`** | **Load the data into the app to test** — a full PostgreSQL dump (schema + all data). Restore it and point the backend at it. |
+| **`csv/`** | **Import from CSV** into an already-created schema (`\copy`). Core content only (students, lesson plans, drills, classes, events, fixtures, …) — not the full dataset. See `csv/README.md`. |
 
 The `.xlsx` and the `.sql.gz` contain the **same** test data:
 ~3,450 students, 111 lesson plans, 113 drills (all with videos), 80 classes,
 85 Match Center events, 214 fixtures, ratings, Chess & Scrabble games, etc.
 
 - Just want to **look at / hand over the data**? → open `whistle-test-data.xlsx`.
-- Want the team to **run the app against it**? → restore `whistle-demo-db.sql.gz` (below).
+- Want the team to **run the app against it**? → restore `whistle-demo-db.sql.gz` (below). **Recommended.**
+- Specifically want to **import from CSV** into an existing schema? → see `csv/` (core content only).
 
 ---
 
