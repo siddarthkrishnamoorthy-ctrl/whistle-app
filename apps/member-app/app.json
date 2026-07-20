@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Whistle",
+    "slug": "whistle",
+    "scheme": "whistle",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#0A0A0A",
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"]
+  }
+}
