@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, Field, SelectField, StatusPill } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
+import { AGE_BANDS, ageBandSummary, findAgeBand } from "@/lib/age-bands";
 import { PageHeader, type PlatformDrill } from "../platform-ui";
 
 interface Sport {
@@ -25,6 +26,7 @@ export default function PlatformDrillBankPage() {
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState("");
   const [level, setLevel] = useState("");
+  const [ageBand, setAgeBand] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -39,9 +41,13 @@ export default function PlatformDrillBankPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return drills.filter(
-      (d) => (!sportKey || d.sportKey === sportKey) && (!level || (d.level ?? "").toLowerCase() === level) && (!q || d.title.toLowerCase().includes(q))
+      (d) =>
+        (!sportKey || d.sportKey === sportKey) &&
+        (!level || (d.level ?? "").toLowerCase() === level) &&
+        (!ageBand || d.ageBand === ageBand) &&
+        (!q || d.title.toLowerCase().includes(q))
     );
-  }, [drills, search, sportKey, level]);
+  }, [drills, search, sportKey, level, ageBand]);
 
   async function handleDelete(drill: PlatformDrill) {
     if (!window.confirm(`Delete "${drill.title}" from the platform library? Tenants will stop seeing it.`)) return;
@@ -89,6 +95,14 @@ export default function PlatformDrillBankPage() {
             </option>
           ))}
         </SelectField>
+        <SelectField label="" value={ageBand} onChange={(e) => setAgeBand(e.target.value)} className="max-w-xs">
+          <option value="">All age bands</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band} ({b.ageMin}-{b.ageMax})
+            </option>
+          ))}
+        </SelectField>
       </div>
 
       {loading ? (
@@ -108,6 +122,11 @@ export default function PlatformDrillBankPage() {
                   {drill.level && <StatusPill tone={LEVEL_TONE[drill.level as keyof typeof LEVEL_TONE]}>{drill.level}</StatusPill>}
                 </div>
                 <p className="text-xs text-text-muted">{drill.sport.name}</p>
+                {drill.ageBand && (
+                  <span className="inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                    {drill.ageBand} · {ageBandSummary(drill.ageBand)}
+                  </span>
+                )}
                 {drill.description && <p className="text-sm text-text-secondary">{drill.description}</p>}
                 <div className="flex flex-wrap gap-1 text-xs text-text-muted">
                   {drill.durationMin && <span className="rounded-full bg-surface-alt px-2 py-0.5">{drill.durationMin} min</span>}
@@ -163,7 +182,7 @@ function NewPlatformDrillModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({ title: "", sportKey: "", level: "beginner", durationMin: "10", equipment: "", videoUrl: "", description: "" });
+  const [form, setForm] = useState({ title: "", sportKey: "", level: "beginner", ageBand: "", durationMin: "10", equipment: "", videoUrl: "", description: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -185,13 +204,14 @@ function NewPlatformDrillModal({
           title: form.title,
           sportKey: form.sportKey,
           level: form.level,
+          ageBand: form.ageBand || undefined,
           durationMin: form.durationMin ? Number(form.durationMin) : undefined,
           equipment: form.equipment ? form.equipment.split(",").map((s) => s.trim()).filter(Boolean) : [],
           videoUrl: form.videoUrl || undefined,
           description: form.description || undefined,
         }),
       });
-      setForm({ title: "", sportKey: "", level: "beginner", durationMin: "10", equipment: "", videoUrl: "", description: "" });
+      setForm({ title: "", sportKey: "", level: "beginner", ageBand: "", durationMin: "10", equipment: "", videoUrl: "", description: "" });
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the drill.");
@@ -225,6 +245,30 @@ function NewPlatformDrillModal({
             </option>
           ))}
         </SelectField>
+      </div>
+      <div>
+        <SelectField label="Age band" value={form.ageBand} onChange={(e) => set("ageBand", e.target.value)}>
+          <option value="">No age band</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band}
+            </option>
+          ))}
+        </SelectField>
+        {(() => {
+          const b = findAgeBand(form.ageBand);
+          return b ? (
+            <div className="mt-1.5 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Age group <b className="text-text-primary">{b.ageMin}-{b.ageMax} yrs</b>
+              </span>
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Class <b className="text-text-primary">{b.classLabel}</b>
+              </span>
+              <span className="self-center text-text-muted">auto-filled from the band</span>
+            </div>
+          ) : null;
+        })()}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Duration (min)" type="number" min={1} value={form.durationMin} onChange={(e) => set("durationMin", e.target.value)} />

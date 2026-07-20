@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal, ModalFooter } from "@/components/modal";
 import { Field, SelectField, TextareaField } from "@/components/ui";
 import { useApiList } from "@/lib/hooks";
+import { AGE_BANDS, findAgeBand } from "@/lib/age-bands";
 import type { Sport, WhistleClass } from "@/lib/types";
 
 export interface CreateLessonPlanPayload {
@@ -11,6 +12,7 @@ export interface CreateLessonPlanPayload {
   classId?: string;
   sportKey?: string;
   level?: string;
+  ageBand?: string;
   goals?: string;
   targetDurationMin?: number;
 }
@@ -31,6 +33,7 @@ export function NewLessonPlanModal({
   const [classId, setClassId] = useState("");
   const [sportKey, setSportKey] = useState("");
   const [level, setLevel] = useState("");
+  const [ageBand, setAgeBand] = useState("");
   const [goals, setGoals] = useState("");
   const [targetDurationMin, setTargetDurationMin] = useState("90");
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +44,7 @@ export function NewLessonPlanModal({
     setClassId("");
     setSportKey("");
     setLevel("");
+    setAgeBand("");
     setGoals("");
     setTargetDurationMin("90");
     setError(null);
@@ -59,6 +63,7 @@ export function NewLessonPlanModal({
         classId: classId || undefined,
         sportKey: sportKey || undefined,
         level: level || undefined,
+        ageBand: ageBand || undefined,
         goals: goals || undefined,
         targetDurationMin: targetDurationMin ? Number(targetDurationMin) : undefined,
       });
@@ -124,6 +129,31 @@ export function NewLessonPlanModal({
           <option value="advanced">Advanced</option>
           <option value="elite">Elite</option>
         </SelectField>
+      </div>
+
+      <div>
+        <SelectField label="Age band" value={ageBand} onChange={(e) => setAgeBand(e.target.value)}>
+          <option value="">No age band</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band}
+            </option>
+          ))}
+        </SelectField>
+        {(() => {
+          const b = findAgeBand(ageBand);
+          return b ? (
+            <div className="mt-1.5 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Age group <b className="text-text-primary">{b.ageMin}-{b.ageMax} yrs</b>
+              </span>
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Class <b className="text-text-primary">{b.classLabel}</b>
+              </span>
+              <span className="self-center text-text-muted">auto-filled from the band</span>
+            </div>
+          ) : null;
+        })()}
       </div>
 
       <TextareaField

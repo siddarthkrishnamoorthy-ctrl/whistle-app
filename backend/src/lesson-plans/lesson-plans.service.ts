@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { allowedSportsFor } from "../common/sport-access";
+import { ageBandFields } from "../common/age-bands";
 import { SemestersService } from "../semesters/semesters.service";
 import type { CreateLessonPlanDto } from "./dto/create-lesson-plan.dto";
 import type { UpdateLessonPlanDto } from "./dto/update-lesson-plan.dto";
@@ -48,6 +49,7 @@ export class LessonPlansService {
         semesterId: dto.semesterId,
         sportKey: dto.sportKey,
         level: dto.level,
+        ...ageBandFields(dto.ageBand),
         goals: dto.goals,
         objectives: dto.objectives ?? [],
         targetDurationMin: dto.targetDurationMin,
@@ -70,6 +72,7 @@ export class LessonPlansService {
       data: {
         ...dto,
         sessionFlow: dto.sessionFlow ? (dto.sessionFlow as unknown as object) : undefined,
+        ...(dto.ageBand !== undefined ? ageBandFields(dto.ageBand) : {}),
         ...(whatToBring ? { whatToBring } : {}),
       },
       include: { class: true, sport: true },

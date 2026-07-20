@@ -607,6 +607,16 @@ model Drill {
   sportKey          String      @map("sport_key")
   skillCategory     String?     @map("skill_category")
   ageGroups         String[]    @default([]) @map("age_groups")
+  // Age band (2026-07): a single pick that maps to a fixed age range + school
+  // class range, so drills and the lesson plans they feed target the same
+  // cohort. Derived fields are stored (not just the band) so lists can filter
+  // and display without re-deriving. See common/age-bands.ts.
+  ageBand           String?     @map("age_band")
+  ageMin            Int?        @map("age_min")
+  ageMax            Int?        @map("age_max")
+  classMin          String?     @map("class_min")
+  classMax          String?     @map("class_max")
+  classLabel        String?     @map("class_label")
   level             SkillLevel?
   durationMin       Int?        @map("duration_min")
   equipment         String[]    @default([])
@@ -651,6 +661,14 @@ model LessonPlan {
   title             String
   sportKey          String?  @map("sport_key")
   level             String?
+  // Age band (2026-07): same taxonomy as drills, so a plan targets one cohort
+  // and the drills it's built from line up. See common/age-bands.ts.
+  ageBand           String?  @map("age_band")
+  ageMin            Int?     @map("age_min")
+  ageMax            Int?     @map("age_max")
+  classMin          String?  @map("class_min")
+  classMax          String?  @map("class_max")
+  classLabel        String?  @map("class_label")
   goals             String?
   // "Player takeaways" (BRD 8.3) and the auto-aggregated equipment checklist
   // (BRD 8.3 "Equipment for the entire session is aggregated automatically

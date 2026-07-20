@@ -25,6 +25,10 @@ export class CreateLessonPlanDto {
 
   @IsOptional()
   @IsString()
+  ageBand?: string;
+
+  @IsOptional()
+  @IsString()
   goals?: string;
 
   @IsOptional()

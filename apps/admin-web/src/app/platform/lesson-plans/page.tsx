@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, Field, SelectField } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
+import { AGE_BANDS, ageBandSummary, findAgeBand } from "@/lib/age-bands";
 import { PageHeader, type PlatformDrill, type PlatformPlan } from "../platform-ui";
 
 interface Sport {
@@ -25,6 +26,7 @@ export default function PlatformLessonPlansPage() {
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState("");
   const [level, setLevel] = useState("");
+  const [ageBand, setAgeBand] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [viewPlan, setViewPlan] = useState<PlatformPlan | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -41,9 +43,13 @@ export default function PlatformLessonPlansPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return plans.filter(
-      (p) => (!sportKey || p.sportKey === sportKey) && (!level || (p.level ?? "").toLowerCase() === level) && (!q || p.title.toLowerCase().includes(q))
+      (p) =>
+        (!sportKey || p.sportKey === sportKey) &&
+        (!level || (p.level ?? "").toLowerCase() === level) &&
+        (!ageBand || p.ageBand === ageBand) &&
+        (!q || p.title.toLowerCase().includes(q))
     );
-  }, [plans, search, sportKey, level]);
+  }, [plans, search, sportKey, level, ageBand]);
 
   async function handleDelete(plan: PlatformPlan) {
     if (!window.confirm(`Delete "${plan.title}" from the repository? Tenants will stop seeing it (their adopted copies stay).`)) return;
@@ -91,6 +97,14 @@ export default function PlatformLessonPlansPage() {
             </option>
           ))}
         </SelectField>
+        <SelectField label="" value={ageBand} onChange={(e) => setAgeBand(e.target.value)} className="max-w-xs">
+          <option value="">All age bands</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band} ({b.ageMin}-{b.ageMax})
+            </option>
+          ))}
+        </SelectField>
       </div>
 
       {loading ? (
@@ -110,6 +124,11 @@ export default function PlatformLessonPlansPage() {
                     {plan.sport?.name}
                     {plan.level ? ` · ${plan.level}` : ""}
                   </p>
+                  {plan.ageBand && (
+                    <span className="mt-1 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                      {plan.ageBand} · {ageBandSummary(plan.ageBand)}
+                    </span>
+                  )}
                 </div>
                 <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent">🏛 Repository</span>
               </div>
@@ -170,7 +189,13 @@ function ViewPlanModal({ plan, drills, onClose }: { plan: PlatformPlan | null; d
   if (!plan) return null;
   const byId = new Map(drills.map((d) => [d.id, d]));
   return (
-    <Modal open={!!plan} onClose={onClose} title={plan.title} subtitle={[plan.sport?.name, plan.level ? LEVEL_LABEL[plan.level] ?? plan.level : null].filter(Boolean).join(" · ")} wide>
+    <Modal
+      open={!!plan}
+      onClose={onClose}
+      title={plan.title}
+      subtitle={[plan.sport?.name, plan.level ? LEVEL_LABEL[plan.level] ?? plan.level : null, ageBandSummary(plan.ageBand) ? `${plan.ageBand} (${ageBandSummary(plan.ageBand)})` : null].filter(Boolean).join(" · ")}
+      wide
+    >
       <div className="space-y-4">
         {plan.goals && (
           <div>
@@ -232,7 +257,7 @@ function NewPlatformPlanModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({ title: "", sportKey: "", level: "beginner", goals: "" });
+  const [form, setForm] = useState({ title: "", sportKey: "", level: "beginner", ageBand: "", goals: "" });
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,11 +282,12 @@ function NewPlatformPlanModal({
           title: form.title,
           sportKey: form.sportKey,
           level: form.level,
+          ageBand: form.ageBand || undefined,
           goals: form.goals || undefined,
           drillIds: selected,
         }),
       });
-      setForm({ title: "", sportKey: "", level: "beginner", goals: "" });
+      setForm({ title: "", sportKey: "", level: "beginner", ageBand: "", goals: "" });
       setSelected([]);
       onCreated();
     } catch (err) {
@@ -304,6 +330,30 @@ function NewPlatformPlanModal({
             </option>
           ))}
         </SelectField>
+      </div>
+      <div>
+        <SelectField label="Age band" value={form.ageBand} onChange={(e) => setForm((f) => ({ ...f, ageBand: e.target.value }))}>
+          <option value="">No age band</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band}
+            </option>
+          ))}
+        </SelectField>
+        {(() => {
+          const b = findAgeBand(form.ageBand);
+          return b ? (
+            <div className="mt-1.5 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Age group <b className="text-text-primary">{b.ageMin}-{b.ageMax} yrs</b>
+              </span>
+              <span className="rounded-md bg-surface-alt px-2 py-1 text-text-secondary">
+                Class <b className="text-text-primary">{b.classLabel}</b>
+              </span>
+              <span className="self-center text-text-muted">auto-filled from the band</span>
+            </div>
+          ) : null;
+        })()}
       </div>
       <Field label="Goals" value={form.goals} onChange={(e) => setForm((f) => ({ ...f, goals: e.target.value }))} placeholder="What this session builds toward" />
 

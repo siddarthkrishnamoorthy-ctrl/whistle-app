@@ -144,6 +144,7 @@ export class PlatformController {
       title: string;
       sportKey: string;
       level?: string;
+      ageBand?: string;
       durationMin?: number;
       description?: string;
       equipment?: string[];
@@ -157,7 +158,7 @@ export class PlatformController {
   updateDrill(
     @Param("id") id: string,
     @Body()
-    dto: { title?: string; level?: string; durationMin?: number; description?: string; equipment?: string[]; videoUrl?: string }
+    dto: { title?: string; level?: string; ageBand?: string; durationMin?: number; description?: string; equipment?: string[]; videoUrl?: string }
   ) {
     return this.service.updatePlatformDrill(id, dto);
   }
@@ -179,6 +180,7 @@ export class PlatformController {
       title: string;
       sportKey: string;
       level?: string;
+      ageBand?: string;
       goals?: string;
       objectives?: string[];
       targetDurationMin?: number;

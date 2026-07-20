@@ -3,6 +3,7 @@ import * as bcrypt from "bcrypt";
 import { PrismaService } from "../prisma/prisma.service";
 import { PlatformBillingService } from "../platform-billing/platform-billing.service";
 import { DEFAULT_GRADES } from "../auth/auth.service";
+import { ageBandFields } from "../common/age-bands";
 
 const PASSWORD_SALT_ROUNDS = 10;
 const TRIAL_DAYS = 14;
@@ -325,6 +326,7 @@ export class PlatformService implements OnModuleInit {
     title: string;
     sportKey: string;
     level?: string;
+    ageBand?: string;
     durationMin?: number;
     description?: string;
     equipment?: string[];
@@ -337,6 +339,7 @@ export class PlatformService implements OnModuleInit {
         title: dto.title.trim(),
         sportKey: dto.sportKey,
         level: (dto.level as never) ?? undefined,
+        ...ageBandFields(dto.ageBand),
         durationMin: dto.durationMin,
         description: dto.description,
         equipment: dto.equipment ?? [],
@@ -357,7 +360,7 @@ export class PlatformService implements OnModuleInit {
 
   async updatePlatformDrill(
     id: string,
-    dto: { title?: string; level?: string; durationMin?: number; description?: string; equipment?: string[]; videoUrl?: string }
+    dto: { title?: string; level?: string; ageBand?: string; durationMin?: number; description?: string; equipment?: string[]; videoUrl?: string }
   ) {
     const existing = await this.platformDrillOrThrow(id);
     return this.prisma.drill.update({
@@ -365,6 +368,7 @@ export class PlatformService implements OnModuleInit {
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
         ...(dto.level !== undefined ? { level: dto.level as never } : {}),
+        ...(dto.ageBand !== undefined ? ageBandFields(dto.ageBand) : {}),
         ...(dto.durationMin !== undefined ? { durationMin: dto.durationMin } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.equipment !== undefined ? { equipment: dto.equipment } : {}),
@@ -399,6 +403,7 @@ export class PlatformService implements OnModuleInit {
     title: string;
     sportKey: string;
     level?: string;
+    ageBand?: string;
     goals?: string;
     objectives?: string[];
     targetDurationMin?: number;
@@ -420,6 +425,7 @@ export class PlatformService implements OnModuleInit {
         title: dto.title.trim(),
         sportKey: dto.sportKey,
         level: dto.level,
+        ...ageBandFields(dto.ageBand),
         goals: dto.goals,
         objectives: dto.objectives ?? [],
         targetDurationMin: dto.targetDurationMin ?? sessionFlow.reduce((s, f) => s + f.durationMin, 0),

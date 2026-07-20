@@ -52,6 +52,7 @@ export interface PlatformDrill {
   title: string;
   sportKey: string;
   level: string | null;
+  ageBand: string | null;
   durationMin: number | null;
   description: string | null;
   equipment: string[];
@@ -64,6 +65,7 @@ export interface PlatformPlan {
   title: string;
   sportKey: string | null;
   level: string | null;
+  ageBand: string | null;
   goals: string | null;
   targetDurationMin: number | null;
   whatToBring: string[];
