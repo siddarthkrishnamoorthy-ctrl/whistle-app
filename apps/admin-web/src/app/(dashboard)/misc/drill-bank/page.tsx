@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useApiList } from "@/lib/hooks";
 import { apiJson, assetUrl } from "@/lib/api-client";
 import { Card, CollapsibleSection, EmptyState, SearchInput, SelectField, StatusPill } from "@/components/ui";
+import { AGE_BANDS, ageBandSummary } from "@/lib/age-bands";
 import type { Drill, LessonPlan, Sport } from "@/lib/types";
 import { NewDrillModal, type CreateDrillPayload } from "./new-drill-modal";
 
@@ -18,6 +19,7 @@ export default function DrillBankPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState(searchParams.get("sportKey") ?? "");
+  const [ageBand, setAgeBand] = useState("");
   const { data: sports } = useApiList<Sport>("/sports");
 
   const [targetPlan, setTargetPlan] = useState<LessonPlan | null>(null);
@@ -26,14 +28,21 @@ export default function DrillBankPage() {
 
   useEffect(() => {
     if (!forLessonPlan) return;
-    apiJson<LessonPlan>(`/lesson-plans/${forLessonPlan}`).then(setTargetPlan);
+    apiJson<LessonPlan>(`/lesson-plans/${forLessonPlan}`).then((p) => {
+      setTargetPlan(p);
+      // Default the drill picker to the plan's age band so coaches see the
+      // right cohort's drills first (they can widen to all bands).
+      if (p.ageBand) setAgeBand(p.ageBand);
+    });
   }, [forLessonPlan]);
 
   const query = new URLSearchParams();
   if (search) query.set("search", search);
   if (sportKey) query.set("sportKey", sportKey);
   const path = `/drills${query.toString() ? `?${query}` : ""}`;
-  const { data: drills, loading, error, refetch } = useApiList<Drill>(path);
+  const { data: rawDrills, loading, error, refetch } = useApiList<Drill>(path);
+  // Age band filters client-side (the /drills API doesn't know about bands yet).
+  const drills = useMemo(() => (ageBand ? rawDrills.filter((d) => d.ageBand === ageBand) : rawDrills), [rawDrills, ageBand]);
 
   async function handleAddToLessonPlan(drill: Drill) {
     if (!targetPlan) return;
@@ -97,6 +106,9 @@ export default function DrillBankPage() {
         {drill.description && <p className="text-sm text-text-secondary">{drill.description}</p>}
         <div className="flex flex-wrap gap-1 text-xs text-text-muted">
           {drill.durationMin && <span className="rounded-full bg-surface-alt px-2 py-0.5">{drill.durationMin} min</span>}
+          {drill.ageBand && (
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 font-semibold text-accent">{drill.ageBand}</span>
+          )}
           {drill.ageGroups.map((g) => (
             <span key={g} className="rounded-full bg-surface-alt px-2 py-0.5">
               {g}
@@ -140,6 +152,11 @@ export default function DrillBankPage() {
             </div>
             <div className="text-xs text-text-secondary">
               {targetPlan ? `${targetPlan.sessionFlow.length} drill(s) in this plan so far` : "Loading plan…"}
+              {targetPlan?.ageBand && (
+                <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 font-semibold text-accent">
+                  {targetPlan.ageBand} · {ageBandSummary(targetPlan.ageBand)}
+                </span>
+              )}
             </div>
           </div>
           <Link
@@ -179,6 +196,14 @@ export default function DrillBankPage() {
             </option>
           ))}
         </SelectField>
+        <SelectField compact value={ageBand} onChange={(e) => setAgeBand(e.target.value)} className="max-w-xs" title="Filter drills by age group">
+          <option value="">All age bands</option>
+          {AGE_BANDS.map((b) => (
+            <option key={b.band} value={b.band}>
+              {b.band} ({b.ageMin}-{b.ageMax})
+            </option>
+          ))}
+        </SelectField>
       </div>
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
@@ -186,8 +211,22 @@ export default function DrillBankPage() {
       {loading ? (
         <Card className="text-sm text-text-secondary">Loading…</Card>
       ) : drills.length === 0 ? (
-        <Card>
-          <EmptyState message="No drills match — try another search or sport." />
+        <Card className="space-y-3 text-center">
+          <EmptyState
+            message={
+              ageBand
+                ? `No drills tagged for the ${ageBand} age band${sportKey ? " in this sport" : ""} yet.`
+                : "No drills match — try another search or sport."
+            }
+          />
+          {ageBand && rawDrills.length > 0 && (
+            <button
+              onClick={() => setAgeBand("")}
+              className="mx-auto rounded-full border border-accent px-4 py-1.5 text-sm font-semibold text-accent hover:bg-accent/10"
+            >
+              Show all age bands ({rawDrills.length})
+            </button>
+          )}
         </Card>
       ) : sportKey ? (
         // Single sport selected — a flat grid reads best.

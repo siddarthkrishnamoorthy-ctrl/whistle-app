@@ -262,7 +262,11 @@ function NewPlatformPlanModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sportDrills = form.sportKey ? drills.filter((d) => d.sportKey === form.sportKey) : [];
+  // Drills to pick from: the plan's sport, narrowed to the plan's age band when
+  // one is chosen so you build a plan from the right cohort's drills.
+  const sportDrills = form.sportKey
+    ? drills.filter((d) => d.sportKey === form.sportKey && (!form.ageBand || d.ageBand === form.ageBand))
+    : [];
 
   function toggleDrill(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -361,6 +365,7 @@ function NewPlatformPlanModal({
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary">
             Session flow — {selected.length} drill{selected.length === 1 ? "" : "s"} selected (in order)
+            {form.ageBand && <span className="ml-1 font-normal normal-case text-accent">· {form.ageBand} drills</span>}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {sportDrills.map((d) => {
@@ -380,7 +385,11 @@ function NewPlatformPlanModal({
               );
             })}
             {sportDrills.length === 0 && (
-              <p className="text-xs text-text-muted">No platform drills for this sport yet — add some in the Drill Bank first.</p>
+              <p className="text-xs text-text-muted">
+                {form.ageBand
+                  ? `No ${form.ageBand} drills for this sport yet — clear the age band above or tag drills with this band in the Drill Bank.`
+                  : "No platform drills for this sport yet — add some in the Drill Bank first."}
+              </p>
             )}
           </div>
         </div>

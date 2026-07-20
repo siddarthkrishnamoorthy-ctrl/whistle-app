@@ -29,3 +29,22 @@ export function ageBandSummary(band?: string | null): string | null {
   const b = findAgeBand(band);
   return b ? `${b.ageMin}-${b.ageMax} yrs · ${b.classLabel}` : null;
 }
+
+// Map a grade / class name (e.g. "KG", "Grade 5", "Class 11") to its age band,
+// so the curriculum (organised by grade) can auto-surface the lesson plans built
+// for that cohort. Kindergarten-ish names -> Little Champs; numbered grades map
+// by the band class ranges (1-3, 4-6, 7-9, 10-12).
+export function ageBandForGrade(gradeName?: string | null): string | null {
+  if (!gradeName) return null;
+  const g = gradeName.trim().toLowerCase();
+  if (/pre-?kg|lkg|ukg|\bkg\b|nursery|kindergarten|playgroup|montessori/.test(g)) return "Little Champs";
+  const m = g.match(/(\d+)/);
+  if (m) {
+    const n = Number(m[1]);
+    if (n >= 1 && n <= 3) return "Foundation";
+    if (n <= 6) return "Development";
+    if (n <= 9) return "Performance";
+    if (n <= 12) return "Elite";
+  }
+  return null;
+}

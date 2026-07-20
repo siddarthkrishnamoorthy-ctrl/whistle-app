@@ -131,6 +131,8 @@ export interface Drill {
   sportKey: string;
   skillCategory: string | null;
   ageGroups: string[];
+  ageBand: string | null;
+  classLabel: string | null;
   level: SkillLevel | null;
   durationMin: number | null;
   equipment: string[];
@@ -157,6 +159,8 @@ export interface LessonPlan {
   title: string;
   sportKey: string | null;
   level: string | null;
+  ageBand: string | null;
+  classLabel: string | null;
   goals: string | null;
   objectives: string[];
   whatToBring: string[];

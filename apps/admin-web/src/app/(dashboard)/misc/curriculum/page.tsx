@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { useApiList } from "@/lib/hooks";
 import { Card, EmptyState, OutlineButton, PrimaryButton, SelectField } from "@/components/ui";
+import { ageBandForGrade, ageBandSummary } from "@/lib/age-bands";
 import type { CurriculumTrack, Grade, LessonPlan, Sport } from "@/lib/types";
 
 export default function CurriculumPage() {
@@ -99,9 +100,17 @@ export default function CurriculumPage() {
   }
 
   const sortedItems = track ? [...track.items].sort((a, b) => a.sequenceNo - b.sequenceNo) : [];
-  const availableLessonPlans = lessonPlans.filter(
-    (lp) => !sortedItems.some((i) => i.lessonPlanId === lp.id) && (!lp.sportKey || lp.sportKey === sportKey)
-  );
+  // A grade (class) maps to an age band; lesson plans built for that band are the
+  // ones that "auto-fall" to this grade, so we surface them first.
+  const trackGradeName = grades.find((g) => g.id === track?.gradeId)?.name;
+  const trackBand = ageBandForGrade(trackGradeName);
+  const availableLessonPlans = lessonPlans
+    .filter((lp) => !sortedItems.some((i) => i.lessonPlanId === lp.id) && (!lp.sportKey || lp.sportKey === sportKey))
+    .sort((a, b) => {
+      const am = trackBand && a.ageBand === trackBand ? 0 : 1;
+      const bm = trackBand && b.ageBand === trackBand ? 0 : 1;
+      return am - bm || a.title.localeCompare(b.title);
+    });
 
   return (
     <div className="space-y-6">
@@ -175,18 +184,28 @@ export default function CurriculumPage() {
             </div>
           )}
 
-          <div className="flex items-end gap-3 border-t border-border pt-4">
-            <SelectField label="Add a lesson plan" value={addLessonPlanId} onChange={(e) => setAddLessonPlanId(e.target.value)}>
-              <option value="">Lesson plan…</option>
-              {availableLessonPlans.map((lp) => (
-                <option key={lp.id} value={lp.id}>
-                  {lp.title}
-                </option>
-              ))}
-            </SelectField>
-            <OutlineButton className="w-auto px-6" onClick={handleAddItem} disabled={busy || !addLessonPlanId}>
-              Add to end
-            </OutlineButton>
+          <div className="space-y-2 border-t border-border pt-4">
+            {trackBand && (
+              <p className="text-xs text-text-muted">
+                <b className="text-text-secondary">{trackGradeName}</b> maps to the{" "}
+                <b className="text-accent">{trackBand}</b> age band ({ageBandSummary(trackBand)}) — matching lesson plans (✓) are listed first.
+              </p>
+            )}
+            <div className="flex items-end gap-3">
+              <SelectField label="Add a lesson plan" value={addLessonPlanId} onChange={(e) => setAddLessonPlanId(e.target.value)}>
+                <option value="">Lesson plan…</option>
+                {availableLessonPlans.map((lp) => (
+                  <option key={lp.id} value={lp.id}>
+                    {lp.title}
+                    {lp.ageBand ? ` — ${lp.ageBand}` : ""}
+                    {trackBand && lp.ageBand === trackBand ? " ✓" : ""}
+                  </option>
+                ))}
+              </SelectField>
+              <OutlineButton className="w-auto px-6" onClick={handleAddItem} disabled={busy || !addLessonPlanId}>
+                Add to end
+              </OutlineButton>
+            </div>
           </div>
         </Card>
       )}
