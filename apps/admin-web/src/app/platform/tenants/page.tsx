@@ -1,13 +1,16 @@
 "use client";
 
-// Tenants — every school/academy on Whistle. Search, onboard (with branding:
-// name, font, logo), and manage each tenant: allowance, billing mode,
-// declared strength, sport access grant, branding, suspension.
+// Tenants — every school/academy on Whistle. Search, filter (status / sport),
+// onboard (with branding: name, font, logo), and manage each tenant: allowance,
+// billing mode, declared strength, sport access grant, branding, suspension.
+//
+// Per business rule there is intentionally NO delete — a tenant can only be
+// Suspended (reversible lock-out) or Reinstated, never destroyed.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Building2, CheckCircle2, ChevronDown, ChevronUp, IndianRupee, ReceiptText, Search, Users } from "lucide-react";
+import { Ban, Building2, CheckCircle2, ChevronDown, ChevronUp, CircleDot, Clock, ReceiptText, Save, Search } from "lucide-react";
 import { apiJson } from "@/lib/api-client";
-import { Card, Field, PrimaryButton, SelectField } from "@/components/ui";
+import { Card, Field, SelectField } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
 import { brandFont, brandLogoSrc, FONT_OPTIONS } from "@/components/tenant-brand";
 import { inr, PageHeader, SUB_STATUS_TONE, type Tenant } from "../platform-ui";
@@ -17,10 +20,30 @@ interface Sport {
   name: string;
 }
 
+// The one status a tenant is bucketed under, everywhere on this page: a
+// suspension always wins over the billing status beneath it.
+function tenantStatus(t: Tenant): string {
+  if (t.suspended) return "suspended";
+  return t.subscription?.status ?? "none";
+}
+
+// Full status vocabulary for the dropdown (superset of the clickable tiles).
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "trial", label: "Trial" },
+  { value: "past_due", label: "Past due" },
+  { value: "pending_quote", label: "Pending quote" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "suspended", label: "Suspended" },
+];
+
 export default function PlatformTenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sportFilter, setSportFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,22 +54,32 @@ export default function PlatformTenantsPage() {
   }, []);
   useEffect(load, [load]);
 
+  // Every active filter is applied together — clicking a status tile only sets
+  // `statusFilter`, so the sport dropdown and search text stay in effect.
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return q ? tenants.filter((t) => t.name.toLowerCase().includes(q) || (t.contactEmail ?? "").toLowerCase().includes(q)) : tenants;
-  }, [tenants, search]);
+    return tenants.filter((t) => {
+      if (statusFilter && tenantStatus(t) !== statusFilter) return false;
+      if (sportFilter) {
+        const granted = t.allowedSports.length === 0 || t.allowedSports.includes(sportFilter);
+        if (!granted) return false;
+      }
+      if (q && !(t.name.toLowerCase().includes(q) || (t.contactEmail ?? "").toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [tenants, search, statusFilter, sportFilter]);
 
   const totalStudents = tenants.reduce((s, t) => s + t.counts.clients, 0);
   const totalCenters = tenants.reduce((s, t) => s + t.counts.centers, 0);
   const collected = tenants.reduce((s, t) => s + t.revenue.collected, 0);
-  const activeSubs = tenants.filter((t) => t.subscription?.status === "active" || t.subscription?.status === "trial").length;
-  const suspended = tenants.filter((t) => t.suspended).length;
+  const countFor = (status: string) => tenants.filter((t) => tenantStatus(t) === status).length;
 
-  const stats = [
-    { label: "Academies & Schools", value: String(tenants.length), sub: `${suspended} suspended`, icon: Building2, chip: "bg-sky-400/15 text-sky-300" },
-    { label: "Students", value: totalStudents.toLocaleString("en-IN"), sub: `${totalCenters} centers`, icon: Users, chip: "bg-emerald-400/15 text-emerald-300" },
-    { label: "Active subscriptions", value: String(activeSubs), sub: `of ${tenants.length}`, icon: CheckCircle2, chip: "bg-violet-400/15 text-violet-300" },
-    { label: "Revenue collected", value: inr(collected), sub: "lifetime", icon: IndianRupee, chip: "bg-amber-400/15 text-amber-300" },
+  // Clickable status summary tiles — each toggles the shared statusFilter.
+  const tiles = [
+    { key: "", label: "All academies & schools", value: tenants.length, icon: Building2, chip: "bg-sky-400/15 text-sky-300" },
+    { key: "active", label: "Active", value: countFor("active"), icon: CheckCircle2, chip: "bg-emerald-400/15 text-emerald-300" },
+    { key: "trial", label: "On trial", value: countFor("trial"), icon: Clock, chip: "bg-violet-400/15 text-violet-300" },
+    { key: "suspended", label: "Suspended", value: countFor("suspended"), icon: Ban, chip: "bg-rose-400/15 text-rose-300" },
   ];
 
   return (
@@ -64,31 +97,78 @@ export default function PlatformTenantsPage() {
         }
       />
 
-      {/* Summary tiles */}
+      {/* Clickable status tiles — filter the table to the matching records */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {stats.map((s) => {
+        {tiles.map((s) => {
           const Icon = s.icon;
+          const active = statusFilter === s.key;
           return (
-            <div key={s.label} className="rounded-xl border border-border bg-surface p-4">
+            <button
+              key={s.label}
+              onClick={() => setStatusFilter(s.key)}
+              aria-pressed={active}
+              className={`rounded-xl border p-4 text-left transition ${
+                active ? "border-accent bg-accent/10 shadow-[0_0_14px_rgba(245,185,63,0.18)]" : "border-border bg-surface hover:border-white/25"
+              }`}
+            >
               <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg ${s.chip}`}>
                 <Icon className="h-4 w-4" strokeWidth={1.8} />
               </div>
               <div className="text-xl font-bold text-text-primary">{s.value}</div>
-              <div className="text-xs font-medium text-text-secondary">{s.label}</div>
-              <div className="text-[11px] text-text-muted">{s.sub}</div>
-            </div>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+                {s.label}
+                {active && <CircleDot className="h-3 w-3 text-accent" strokeWidth={2} />}
+              </div>
+            </button>
           );
         })}
       </div>
 
-      <div className="relative max-w-xs">
-        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-muted" strokeWidth={1.8} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search academies & schools…"
-          className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
-        />
+      <p className="text-[11px] text-text-muted">
+        {totalStudents.toLocaleString("en-IN")} students · {totalCenters} centers · {inr(collected)} collected lifetime
+      </p>
+
+      {/* Filter bar — search + status + sport, all applied together */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-muted" strokeWidth={1.8} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search academies & schools…"
+            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
+          />
+        </div>
+        <SelectField compact value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="min-w-[150px]">
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField compact value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className="min-w-[150px]">
+          <option value="">All sports</option>
+          {sports.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name}
+            </option>
+          ))}
+        </SelectField>
+        {(statusFilter || sportFilter || search) && (
+          <button
+            onClick={() => {
+              setStatusFilter("");
+              setSportFilter("");
+              setSearch("");
+            }}
+            className="text-xs text-text-muted hover:text-text-primary"
+          >
+            Clear filters
+          </button>
+        )}
+        <span className="ml-auto text-xs text-text-muted">
+          {visible.length} of {tenants.length}
+        </span>
       </div>
 
       {error && <Card className="text-sm text-danger">{error}</Card>}
@@ -106,7 +186,7 @@ export default function PlatformTenantsPage() {
         ))}
         {visible.length === 0 && (
           <Card className="p-8 text-center text-sm text-text-secondary">
-            {tenants.length === 0 ? "No academies yet — onboard the first school or academy." : "Nothing matches your search."}
+            {tenants.length === 0 ? "No academies yet — onboard the first school or academy." : "Nothing matches your filters."}
           </Card>
         )}
       </div>
@@ -119,6 +199,71 @@ export default function PlatformTenantsPage() {
           load();
         }}
       />
+    </div>
+  );
+}
+
+// ─── Student-allowance editor: explicit, working Save affordance ─────────────
+// (Previously a bare blur-to-save input — users couldn't tell it had saved.
+// Now it shows a Save button the moment the value differs, and confirms.)
+
+function AllowanceEditor({
+  value,
+  placeholder,
+  disabled,
+  onSave,
+}: {
+  value: number | null;
+  placeholder?: string;
+  disabled?: boolean;
+  onSave: (v: number | null) => Promise<void> | void;
+}) {
+  const [text, setText] = useState(value == null ? "" : String(value));
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    setText(value == null ? "" : String(value));
+  }, [value]);
+
+  const parsed = text.trim() === "" ? null : Number(text);
+  const invalid = parsed !== null && (!Number.isFinite(parsed) || parsed < 0);
+  const dirty = parsed !== value && !invalid;
+
+  async function save() {
+    if (!dirty) return;
+    await onSave(parsed);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-white/[0.04] px-2.5 py-1.5 text-xs text-text-secondary">
+      <span>Student allowance</span>
+      <input
+        type="number"
+        min={0}
+        value={text}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+        }}
+        className="w-16 bg-transparent text-right font-semibold text-text-primary outline-none placeholder:text-text-muted"
+      />
+      {dirty ? (
+        <button
+          type="button"
+          onClick={save}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-text hover:opacity-90 disabled:opacity-50"
+        >
+          <Save className="h-3 w-3" strokeWidth={2} /> Save
+        </button>
+      ) : saved ? (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300">
+          <CheckCircle2 className="h-3 w-3" strokeWidth={2} /> Saved
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -248,28 +393,19 @@ function TenantCard({
           <div className="space-y-4">
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary">Access &amp; billing</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className={chipCls}>
-                  Student allowance
-                  <input
-                    type="number"
-                    min={0}
-                    defaultValue={t.studentAllowance ?? ""}
-                    placeholder={String(t.subscription?.declaredStrength ?? "—")}
-                    onBlur={(e) => {
-                      const v = e.target.value === "" ? null : Number(e.target.value);
-                      if (v !== t.studentAllowance) patch({ studentAllowance: v });
-                    }}
-                    className="w-16 bg-transparent text-right font-semibold text-text-primary outline-none"
-                  />
-                </label>
+              <div className="flex flex-wrap items-stretch gap-2">
+                <AllowanceEditor
+                  value={t.studentAllowance}
+                  placeholder={String(t.subscription?.declaredStrength ?? "—")}
+                  disabled={busy}
+                  onSave={(v) => patch({ studentAllowance: v })}
+                />
                 <SelectField
                   compact
-                  label=""
                   value={t.allowanceMode}
                   onChange={(e) => patch({ allowanceMode: e.target.value })}
                   disabled={busy}
-                  className="w-auto"
+                  className="min-w-[150px]"
                   title="hard = block the N+1th student · true-up = allow growth, bill the real count"
                 >
                   <option value="true_up">True-up billing</option>
@@ -299,6 +435,7 @@ function TenantCard({
                 >
                   <ReceiptText className="mr-1 inline h-3.5 w-3.5" strokeWidth={1.8} /> Close billing period
                 </button>
+                {/* Suspend / Reinstate is the ONLY lifecycle control — no delete by design */}
                 <button
                   onClick={() =>
                     patch(
@@ -372,7 +509,7 @@ function TenantCard({
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Branding — shown top-right for their admins, coaches &amp; parents
             </p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Field
                 label="Display name"
                 defaultValue={t.brandTheme?.displayName ?? ""}
@@ -389,31 +526,41 @@ function TenantCard({
                   </option>
                 ))}
               </SelectField>
-              <div className="flex items-center gap-3">
-                <label className="cursor-pointer rounded-lg border border-border bg-white/[0.04] px-3 py-2 text-xs text-text-secondary hover:border-accent/50 hover:text-accent">
-                  {t.brandTheme?.logoUrl ? "Replace logo" : "Upload logo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadLogo(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                <span className="text-xs text-text-muted">Preview:</span>
-                <span
-                  className="rounded-lg border border-border bg-white/[0.04] px-3 py-1.5 text-sm font-bold text-text-primary"
-                  style={{ fontFamily: brandFont(t.brandTheme?.fontKey) }}
-                >
-                  {t.brandTheme?.displayName || t.name}
-                </span>
-                {logo && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={logo} alt="logo" className="h-9 w-9 rounded-lg border border-border object-contain" />
-                )}
+
+              {/* Replace-logo control and the live preview, aligned side by side */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <span className="mb-1.5 block text-sm text-text-secondary">Logo</span>
+                  <label className="flex h-[46px] cursor-pointer items-center justify-center rounded-md border border-dashed border-border bg-white/[0.04] px-3 text-xs font-medium text-text-secondary hover:border-accent/50 hover:text-accent">
+                    {t.brandTheme?.logoUrl ? "Replace logo" : "Upload logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadLogo(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                <div>
+                  <span className="mb-1.5 block text-sm text-text-secondary">Preview</span>
+                  <div className="flex h-[46px] items-center gap-2.5 rounded-md border border-border bg-white/[0.04] px-3">
+                    {logo ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={logo} alt="logo" className="h-8 w-8 shrink-0 rounded-md border border-border object-contain" />
+                    ) : (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[11px] font-bold text-text-muted">
+                        {t.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="truncate text-sm font-bold text-text-primary" style={{ fontFamily: brandFont(t.brandTheme?.fontKey) }}>
+                      {t.brandTheme?.displayName || t.name}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -537,24 +684,35 @@ function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </SelectField>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <label className="cursor-pointer rounded-lg border border-border bg-white/[0.04] px-3 py-2 text-xs text-text-secondary hover:border-accent/50 hover:text-accent">
-            {logoFile ? `Logo: ${logoFile.name}` : "Choose logo image…"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-          <span className="text-xs text-text-muted">Preview:</span>
-          <span className="rounded-lg border border-border bg-white/[0.04] px-3 py-1.5 text-sm font-bold text-text-primary" style={{ fontFamily: brandFont(form.fontKey) }}>
-            {form.displayName || form.name || "School name"}
-          </span>
-          {logoFile && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={URL.createObjectURL(logoFile)} alt="logo preview" className="h-9 w-9 rounded-lg border border-border object-contain" />
-          )}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <span className="mb-1.5 block text-sm text-text-secondary">Logo</span>
+            <label className="flex h-[46px] cursor-pointer items-center justify-center rounded-md border border-dashed border-border bg-white/[0.04] px-3 text-xs font-medium text-text-secondary hover:border-accent/50 hover:text-accent">
+              {logoFile ? `Logo: ${logoFile.name}` : "Choose logo image…"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+          <div>
+            <span className="mb-1.5 block text-sm text-text-secondary">Preview</span>
+            <div className="flex h-[46px] items-center gap-2.5 rounded-md border border-border bg-white/[0.04] px-3">
+              {logoFile ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={URL.createObjectURL(logoFile)} alt="logo preview" className="h-8 w-8 shrink-0 rounded-md border border-border object-contain" />
+              ) : (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[11px] font-bold text-text-muted">
+                  {(form.displayName || form.name || "S").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span className="truncate text-sm font-bold text-text-primary" style={{ fontFamily: brandFont(form.fontKey) }}>
+                {form.displayName || form.name || "School name"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

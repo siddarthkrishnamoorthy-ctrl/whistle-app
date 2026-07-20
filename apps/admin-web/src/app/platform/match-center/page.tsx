@@ -4,10 +4,10 @@
 // school on Whistle. The operator sees the cross-school table (wins from
 // confirmed fixtures) and can drill into any event's public microsite.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Search, Swords, Trophy } from "lucide-react";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, StatusPill, Table } from "@/components/ui";
+import { Card, EmptyState, SelectField, StatusPill, Table } from "@/components/ui";
 import { RANK_MEDALS } from "@/lib/sport-icons";
 import { PageHeader } from "../platform-ui";
 
@@ -37,10 +37,16 @@ const STATUS_TONE: Record<string, "success" | "warning" | "info" | "neutral"> = 
 export default function PlatformMatchCenterPage() {
   const [data, setData] = useState<MatchCenter | null>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sportFilter, setSportFilter] = useState("");
 
   useEffect(() => {
     apiJson<MatchCenter>("/platform/match-center").then(setData).catch(() => {});
   }, []);
+
+  // Distinct statuses & sports present in the data, for the filter dropdowns.
+  const statuses = useMemo(() => Array.from(new Set((data?.events ?? []).map((e) => e.status))).sort(), [data]);
+  const sportsInPlay = useMemo(() => Array.from(new Set((data?.events ?? []).flatMap((e) => e.sports))).sort(), [data]);
 
   if (!data) return <p className="text-sm text-text-secondary">Loading…</p>;
 
@@ -51,7 +57,12 @@ export default function PlatformMatchCenterPage() {
   ];
 
   const q = search.trim().toLowerCase();
-  const events = q ? data.events.filter((e) => e.name.toLowerCase().includes(q) || e.host.toLowerCase().includes(q)) : data.events;
+  const events = data.events.filter((e) => {
+    if (statusFilter && e.status !== statusFilter) return false;
+    if (sportFilter && !e.sports.includes(sportFilter)) return false;
+    if (q && !(e.name.toLowerCase().includes(q) || e.host.toLowerCase().includes(q))) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -100,16 +111,37 @@ export default function PlatformMatchCenterPage() {
 
       {/* Events across the network */}
       <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">Events · {data.events.length}</h3>
-          <div className="relative max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-muted" strokeWidth={1.8} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search events or hosts…"
-              className="w-64 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
-            />
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
+            Events · {events.length}
+            {events.length !== data.events.length && <span className="text-text-muted"> of {data.events.length}</span>}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-muted" strokeWidth={1.8} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search events or hosts…"
+                className="w-56 rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
+              />
+            </div>
+            <SelectField compact value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="min-w-[130px]">
+              <option value="">All statuses</option>
+              {statuses.map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField compact value={sportFilter} onChange={(e) => setSportFilter(e.target.value)} className="min-w-[130px]">
+              <option value="">All sports</option>
+              {sportsInPlay.map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </SelectField>
           </div>
         </div>
         {events.length === 0 ? (

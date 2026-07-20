@@ -16,6 +16,7 @@ interface Sport {
 
 const LEVEL_TONE = { beginner: "success", intermediate: "warning", advanced: "danger", elite: "info" } as const;
 const LEVELS = ["beginner", "intermediate", "advanced", "elite"];
+const LEVEL_LABEL: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", elite: "Elite" };
 
 export default function PlatformDrillBankPage() {
   const [drills, setDrills] = useState<PlatformDrill[]>([]);
@@ -23,6 +24,7 @@ export default function PlatformDrillBankPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState("");
+  const [level, setLevel] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -37,9 +39,9 @@ export default function PlatformDrillBankPage() {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return drills.filter(
-      (d) => (!sportKey || d.sportKey === sportKey) && (!q || d.title.toLowerCase().includes(q))
+      (d) => (!sportKey || d.sportKey === sportKey) && (!level || (d.level ?? "").toLowerCase() === level) && (!q || d.title.toLowerCase().includes(q))
     );
-  }, [drills, search, sportKey]);
+  }, [drills, search, sportKey, level]);
 
   async function handleDelete(drill: PlatformDrill) {
     if (!window.confirm(`Delete "${drill.title}" from the platform library? Tenants will stop seeing it.`)) return;
@@ -76,6 +78,14 @@ export default function PlatformDrillBankPage() {
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField label="" value={level} onChange={(e) => setLevel(e.target.value)} className="max-w-xs">
+          <option value="">All skill levels</option>
+          {LEVELS.map((l) => (
+            <option key={l} value={l}>
+              {LEVEL_LABEL[l]}
             </option>
           ))}
         </SelectField>

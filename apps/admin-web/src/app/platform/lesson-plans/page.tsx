@@ -15,6 +15,7 @@ interface Sport {
 }
 
 const LEVELS = ["beginner", "intermediate", "advanced", "elite"];
+const LEVEL_LABEL: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", elite: "Elite" };
 
 export default function PlatformLessonPlansPage() {
   const [plans, setPlans] = useState<PlatformPlan[]>([]);
@@ -23,7 +24,9 @@ export default function PlatformLessonPlansPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sportKey, setSportKey] = useState("");
+  const [level, setLevel] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewPlan, setViewPlan] = useState<PlatformPlan | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -37,8 +40,10 @@ export default function PlatformLessonPlansPage() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return plans.filter((p) => (!sportKey || p.sportKey === sportKey) && (!q || p.title.toLowerCase().includes(q)));
-  }, [plans, search, sportKey]);
+    return plans.filter(
+      (p) => (!sportKey || p.sportKey === sportKey) && (!level || (p.level ?? "").toLowerCase() === level) && (!q || p.title.toLowerCase().includes(q))
+    );
+  }, [plans, search, sportKey, level]);
 
   async function handleDelete(plan: PlatformPlan) {
     if (!window.confirm(`Delete "${plan.title}" from the repository? Tenants will stop seeing it (their adopted copies stay).`)) return;
@@ -75,6 +80,14 @@ export default function PlatformLessonPlansPage() {
           {sports.map((s) => (
             <option key={s.key} value={s.key}>
               {s.name}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField label="" value={level} onChange={(e) => setLevel(e.target.value)} className="max-w-xs">
+          <option value="">All skill levels</option>
+          {LEVELS.map((l) => (
+            <option key={l} value={l}>
+              {LEVEL_LABEL[l]}
             </option>
           ))}
         </SelectField>
@@ -116,18 +129,25 @@ export default function PlatformLessonPlansPage() {
                   {plan.targetDurationMin && <span className="rounded-full bg-surface-alt px-2 py-0.5">{plan.targetDurationMin} min</span>}
                   {plan.whatToBring.length > 0 && <span className="rounded-full bg-surface-alt px-2 py-0.5">🎒 {plan.whatToBring.join(", ")}</span>}
                 </div>
-                <button
-                  onClick={() => handleDelete(plan)}
-                  disabled={deletingId === plan.id}
-                  className="text-xs text-text-muted hover:text-danger disabled:opacity-50"
-                >
-                  {deletingId === plan.id ? "Deleting…" : "Delete"}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setViewPlan(plan)} className="text-xs font-semibold text-accent hover:underline">
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleDelete(plan)}
+                    disabled={deletingId === plan.id}
+                    className="text-xs text-text-muted hover:text-danger disabled:opacity-50"
+                  >
+                    {deletingId === plan.id ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <ViewPlanModal plan={viewPlan} drills={drills} onClose={() => setViewPlan(null)} />
 
       <NewPlatformPlanModal
         open={modalOpen}
@@ -140,6 +160,62 @@ export default function PlatformLessonPlansPage() {
         }}
       />
     </div>
+  );
+}
+
+// Full lesson-plan detail — resolves each session-flow step against the Drill
+// Bank so the operator sees the drill description and demo video, not just the
+// titles shown on the card.
+function ViewPlanModal({ plan, drills, onClose }: { plan: PlatformPlan | null; drills: PlatformDrill[]; onClose: () => void }) {
+  if (!plan) return null;
+  const byId = new Map(drills.map((d) => [d.id, d]));
+  return (
+    <Modal open={!!plan} onClose={onClose} title={plan.title} subtitle={[plan.sport?.name, plan.level ? LEVEL_LABEL[plan.level] ?? plan.level : null].filter(Boolean).join(" · ")} wide>
+      <div className="space-y-4">
+        {plan.goals && (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">Goals</p>
+            <p className="text-sm text-text-secondary">{plan.goals}</p>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2 text-xs text-text-muted">
+          <span className="rounded-full bg-surface-alt px-2.5 py-1">{plan.sessionFlow.length} drills</span>
+          {plan.targetDurationMin && <span className="rounded-full bg-surface-alt px-2.5 py-1">Target {plan.targetDurationMin} min</span>}
+          {plan.whatToBring.length > 0 && <span className="rounded-full bg-surface-alt px-2.5 py-1">🎒 {plan.whatToBring.join(", ")}</span>}
+        </div>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Session flow</p>
+          {plan.sessionFlow.length === 0 ? (
+            <p className="text-sm text-text-muted">No drills in this plan.</p>
+          ) : (
+            <ol className="space-y-2">
+              {plan.sessionFlow.map((s, i) => {
+                const drill = byId.get(s.drillId);
+                const video = drill?.media?.find((m) => m.type === "video");
+                return (
+                  <li key={i} className="rounded-lg border border-border bg-white/[0.03] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-text-primary">
+                          {i + 1}. {s.drillTitle}
+                          <span className="ml-2 text-xs font-normal text-text-muted">{s.durationMin} min</span>
+                        </p>
+                        {drill?.description && <p className="mt-1 text-xs text-text-secondary">{drill.description}</p>}
+                      </div>
+                      {video && (
+                        <a href={video.url} target="_blank" rel="noreferrer" className="shrink-0 text-xs font-semibold text-accent hover:underline">
+                          ▶ Watch
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
 
