@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiJson } from "@/lib/api-client";
 import { useApiList } from "@/lib/hooks";
 import { Card, EmptyState, OutlineButton, PrimaryButton, SelectField } from "@/components/ui";
@@ -19,6 +19,31 @@ export default function CurriculumPage() {
   const [addLessonPlanId, setAddLessonPlanId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Placement mode: how these lesson plans reach coaches. "calendar" = as per the
+  // timetable (each class's schedule drives the plan); "grade_sequence" = as per
+  // the age band (coach picks a class and gets the plans in order).
+  const [mode, setMode] = useState<"calendar" | "grade_sequence" | null>(null);
+  const [savingMode, setSavingMode] = useState(false);
+
+  useEffect(() => {
+    apiJson<{ settings?: { lessonPlanAssignmentMode?: "calendar" | "grade_sequence" } }>("/settings")
+      .then((s) => setMode(s?.settings?.lessonPlanAssignmentMode ?? "calendar"))
+      .catch(() => setMode("calendar"));
+  }, []);
+
+  async function saveMode(next: "calendar" | "grade_sequence") {
+    if (next === mode) return;
+    setSavingMode(true);
+    setMode(next);
+    try {
+      await apiJson("/settings", { method: "PATCH", body: JSON.stringify({ lessonPlanAssignmentMode: next }) });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not change placement mode.");
+    } finally {
+      setSavingMode(false);
+    }
+  }
 
   async function loadOrCreateTrack() {
     if (!sportKey || !gradeId) return;
@@ -121,6 +146,51 @@ export default function CurriculumPage() {
           from this order as sessions complete.
         </p>
       </div>
+
+      {/* Placement mode — how these plans reach coaches */}
+      <Card className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-text-primary">Lesson-plan placement</h2>
+          <p className="text-xs text-text-secondary">Choose how coaches receive these plans (academy default).</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {[
+            {
+              key: "calendar" as const,
+              title: "As per the timetable",
+              desc: "Each class's schedule drives it — the plan shows on the coach's calendar for that class's sessions.",
+            },
+            {
+              key: "grade_sequence" as const,
+              title: "As per the age band",
+              desc: "The coach picks a class and gets these plans in sequence — placed by the grade's age band.",
+            },
+          ].map((opt) => {
+            const active = mode === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => saveMode(opt.key)}
+                disabled={savingMode}
+                className={`rounded-lg border p-3 text-left transition disabled:opacity-60 ${
+                  active ? "border-accent bg-accent/10 shadow-[0_0_14px_rgba(245,185,63,0.15)]" : "border-border bg-surface hover:border-white/25"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`flex h-4 w-4 items-center justify-center rounded-full border ${active ? "border-accent" : "border-text-muted"}`}>
+                    {active && <span className="h-2 w-2 rounded-full bg-accent" />}
+                  </span>
+                  <span className="text-sm font-semibold text-text-primary">{opt.title}</span>
+                </div>
+                <p className="mt-1 pl-6 text-xs text-text-secondary">{opt.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-text-muted">
+          Per-class and per-school overrides still win over this academy default. Age-band placement uses the grade → age-band map below.
+        </p>
+      </Card>
 
       <Card className="flex items-end gap-3">
         <SelectField label="Sport" value={sportKey} onChange={(e) => setSportKey(e.target.value)}>

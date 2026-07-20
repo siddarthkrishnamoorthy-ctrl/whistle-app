@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
+import { ageBandForGrade } from "@/lib/age-bands";
 import { Card, EmptyState, ListRow, Pill, colors } from "@/components/ui";
 import { formatDate, formatTime, type ClassSummary, type ScheduledSession } from "@whistle/shared";
 
@@ -48,6 +49,7 @@ export default function LessonsScreen() {
   const [calendarRows, setCalendarRows] = useState<SessionWithLesson[]>([]);
   const [tracks, setTracks] = useState<(CurriculumTrack & { schoolName?: string })[]>([]);
   const [nextByTrack, setNextByTrack] = useState<Record<string, number>>({});
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -115,6 +117,9 @@ export default function LessonsScreen() {
   );
 
   const empty = calendarRows.length === 0 && tracks.length === 0;
+  // Age-band (grade-sequence) mode: let the coach pick which class's curriculum
+  // to view; default to all.
+  const shownTracks = selectedTrackId ? tracks.filter((t) => t.id === selectedTrackId) : tracks;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
@@ -156,10 +161,39 @@ export default function LessonsScreen() {
             </View>
           ) : null}
 
-          {tracks.map((track) => (
+          {tracks.length > 0 && (
+            <View>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 6 }}>By age band — pick a class</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+                {[{ id: null as string | null, label: "All classes" }, ...tracks.map((t) => ({ id: t.id, label: `${t.grade.name} · ${t.sport.name}` }))].map((chip) => {
+                  const active = selectedTrackId === chip.id;
+                  return (
+                    <TouchableOpacity
+                      key={chip.id ?? "all"}
+                      onPress={() => setSelectedTrackId(chip.id)}
+                      activeOpacity={0.7}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: active ? colors.accent : colors.border,
+                        backgroundColor: active ? colors.accent : "transparent",
+                      }}
+                    >
+                      <Text style={{ color: active ? colors.accentText : colors.textSecondary, fontWeight: "700", fontSize: 13 }}>{chip.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {shownTracks.map((track) => (
             <View key={track.id}>
               <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
                 {track.grade.name} · {track.sport.name}
+                {ageBandForGrade(track.grade.name) ? ` · ${ageBandForGrade(track.grade.name)} band` : ""}
                 {track.schoolName ? ` — ${track.schoolName}` : ""}
                 {track.title ? ` (${track.title})` : ""}
               </Text>

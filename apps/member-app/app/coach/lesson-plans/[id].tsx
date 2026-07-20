@@ -19,6 +19,10 @@ interface LessonPlanFull {
   title: string;
   sportKey?: string | null;
   level?: string | null;
+  ageBand?: string | null;
+  classLabel?: string | null;
+  ageMin?: number | null;
+  ageMax?: number | null;
   status?: string | null;
   goals?: string | null;
   objectives?: string[] | null;
@@ -66,9 +70,16 @@ export default function LessonPlanDetailScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
           {lesson.sportKey ? <Pill tone="info">{lesson.sportKey}</Pill> : null}
           {lesson.level ? <Pill tone="neutral">{lesson.level}</Pill> : null}
+          {lesson.ageBand ? <Pill tone="warning">{lesson.ageBand}</Pill> : null}
           {lesson.status ? <Pill tone={lesson.status === "published" || lesson.status === "active" ? "success" : "neutral"}>{lesson.status}</Pill> : null}
           {totalMin > 0 ? <Text style={{ color: colors.textMuted, fontSize: 12 }}>{totalMin} min total</Text> : null}
         </View>
+        {(lesson.ageBand || lesson.classLabel) && (
+          <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 6 }}>
+            Age group{lesson.ageMin && lesson.ageMax ? ` ${lesson.ageMin}-${lesson.ageMax} yrs` : ""}
+            {lesson.classLabel ? ` · ${lesson.classLabel}` : ""}
+          </Text>
+        )}
       </View>
 
       {/* Lesson description — goals, objectives, what to bring */}
