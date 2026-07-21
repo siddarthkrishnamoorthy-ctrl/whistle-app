@@ -1,7 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { PrimaryButton, OutlineButton } from "./ui";
+
+// Stack of open modals so Escape only closes the topmost one (nested dialogs).
+const MODAL_STACK: symbol[] = [];
 
 export function Modal({
   open,
@@ -20,6 +23,29 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  // Keep the latest onClose without re-subscribing the key listener each render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Close on Escape — only when this is the top-most open modal.
+  useEffect(() => {
+    if (!open) return;
+    const id = Symbol("modal");
+    MODAL_STACK.push(id);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && MODAL_STACK[MODAL_STACK.length - 1] === id) {
+        e.stopPropagation();
+        onCloseRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      const i = MODAL_STACK.indexOf(id);
+      if (i >= 0) MODAL_STACK.splice(i, 1);
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -32,7 +58,7 @@ export function Modal({
             <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
             {subtitle && <p className="mt-0.5 text-sm text-text-secondary">{subtitle}</p>}
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text-primary" aria-label="Close">
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary" aria-label="Close (Esc)" title="Close (Esc)">
             ✕
           </button>
         </div>
