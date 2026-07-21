@@ -259,14 +259,20 @@ function NewPlatformPlanModal({
 }) {
   const [form, setForm] = useState({ title: "", sportKey: "", level: "beginner", ageBand: "", goals: "" });
   const [selected, setSelected] = useState<string[]>([]);
+  const [drillSearch, setDrillSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Drills to pick from: the plan's sport, narrowed to the plan's age band when
-  // one is chosen so you build a plan from the right cohort's drills.
+  // one is chosen so you build a plan from the right cohort's drills, then by
+  // the in-picker search box.
   const sportDrills = form.sportKey
     ? drills.filter((d) => d.sportKey === form.sportKey && (!form.ageBand || d.ageBand === form.ageBand))
     : [];
+  const filteredDrills = drillSearch.trim()
+    ? sportDrills.filter((d) => d.title.toLowerCase().includes(drillSearch.trim().toLowerCase()))
+    : sportDrills;
+  const selectedDrills = selected.map((id) => drills.find((d) => d.id === id)).filter(Boolean) as PlatformDrill[];
 
   function toggleDrill(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -361,14 +367,55 @@ function NewPlatformPlanModal({
       </div>
       <Field label="Goals" value={form.goals} onChange={(e) => setForm((f) => ({ ...f, goals: e.target.value }))} placeholder="What this session builds toward" />
 
-      {form.sportKey && (
-        <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-secondary">
-            Session flow — {selected.length} drill{selected.length === 1 ? "" : "s"} selected (in order)
-            {form.ageBand && <span className="ml-1 font-normal normal-case text-accent">· {form.ageBand} drills</span>}
+      {/* Drill selection — always visible so it's obvious this is where the
+          session flow is built by picking from the Drill Bank. */}
+      <div className="rounded-lg border border-border bg-white/[0.03] p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+            Add drills from the Drill Bank
+            <span className="ml-1 font-normal normal-case text-text-muted">· {selected.length} selected (in playing order)</span>
+            {form.ageBand && <span className="ml-1 font-normal normal-case text-accent">· {form.ageBand} band</span>}
           </p>
+          {form.sportKey && sportDrills.length > 0 && (
+            <input
+              value={drillSearch}
+              onChange={(e) => setDrillSearch(e.target.value)}
+              placeholder="Search drills…"
+              className="w-44 rounded-md border border-border bg-surface-alt px-2.5 py-1 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-accent/60"
+            />
+          )}
+        </div>
+
+        {/* Chosen drills, in order, with a quick remove */}
+        {selectedDrills.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {selectedDrills.map((d, i) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => toggleDrill(d.id)}
+                title="Remove from plan"
+                className="rounded-full border border-accent/60 bg-accent/15 px-3 py-1 text-xs font-medium text-accent"
+              >
+                {i + 1}. {d.title} ✕
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!form.sportKey ? (
+          <p className="text-xs text-text-muted">Select a sport above to load its drills from the Drill Bank.</p>
+        ) : filteredDrills.length === 0 ? (
+          <p className="text-xs text-text-muted">
+            {drillSearch.trim()
+              ? "No drills match your search."
+              : form.ageBand
+                ? `No ${form.ageBand} drills for this sport yet — clear the age band above, or tag drills with this band in the Drill Bank.`
+                : "No platform drills for this sport yet — add some in the Drill Bank first."}
+          </p>
+        ) : (
           <div className="flex flex-wrap gap-1.5">
-            {sportDrills.map((d) => {
+            {filteredDrills.map((d) => {
               const idx = selected.indexOf(d.id);
               return (
                 <button
@@ -379,21 +426,15 @@ function NewPlatformPlanModal({
                     idx >= 0 ? "border-accent/60 bg-accent/15 text-accent" : "border-border bg-white/[0.04] text-text-secondary hover:border-accent/40"
                   }`}
                 >
-                  {idx >= 0 ? `${idx + 1}. ` : ""}
+                  {idx >= 0 ? `${idx + 1}. ` : "+ "}
                   {d.title} {d.durationMin ? `(${d.durationMin}m)` : ""}
+                  {d.ageBand && !form.ageBand ? <span className="ml-1 text-text-muted">· {d.ageBand}</span> : null}
                 </button>
               );
             })}
-            {sportDrills.length === 0 && (
-              <p className="text-xs text-text-muted">
-                {form.ageBand
-                  ? `No ${form.ageBand} drills for this sport yet — clear the age band above or tag drills with this band in the Drill Bank.`
-                  : "No platform drills for this sport yet — add some in the Drill Bank first."}
-              </p>
-            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
       {error && <p className="text-sm text-danger">{error}</p>}
     </Modal>
   );
