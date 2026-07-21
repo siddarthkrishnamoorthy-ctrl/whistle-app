@@ -4,8 +4,8 @@ import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { apiJson } from "@/lib/api-client";
 import { ageBandForGrade } from "@/lib/age-bands";
-import { Card, EmptyState, ListRow, Pill, colors } from "@/components/ui";
-import { formatDate, formatTime, type ClassSummary, type ScheduledSession } from "@whistle/shared";
+import { Card, EmptyState, Pill, colors } from "@/components/ui";
+import { formatDate, type ClassSummary, type ScheduledSession } from "@whistle/shared";
 
 // Delivery mode per class: the mode chosen at class creation wins, then the
 // school setting, then the academy default. A coach with two classes can see
@@ -121,6 +121,21 @@ export default function LessonsScreen() {
   // to view; default to all.
   const shownTracks = selectedTrackId ? tracks.filter((t) => t.id === selectedTrackId) : tracks;
 
+  // Calendar mode: group the upcoming sessions by class so Lessons shows each
+  // class's NEXT lesson (curriculum) instead of re-listing every session — that
+  // session list already lives on the Schedule tab.
+  const calendarClasses = Object.values(
+    calendarRows.reduce<Record<string, { classId: string; title: string; next: NextLesson | null; sessions: ScheduledSession[] }>>(
+      (acc, { session, next }) => {
+        const cid = session.classId;
+        if (!acc[cid]) acc[cid] = { classId: cid, title: session.class?.title ?? "Class", next, sessions: [] };
+        acc[cid].sessions.push(session);
+        return acc;
+      },
+      {}
+    )
+  );
+
   return (
     <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
       <View>
@@ -136,27 +151,49 @@ export default function LessonsScreen() {
         <EmptyState message="No lesson plans assigned to your classes yet." />
       ) : (
         <>
-          {calendarRows.length > 0 ? (
+          {calendarClasses.length > 0 ? (
             <View>
               <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "700", marginBottom: 8 }}>
-                From your class calendar
+                Calendar classes — your next lesson
               </Text>
               <View style={{ gap: 8 }}>
-                {calendarRows.map(({ session, next }) => (
-                  <ListRow
-                    key={session.id}
-                    title={`${formatDate(session.sessionDate)} · ${formatTime(session.startTime)} — ${session.class?.title ?? "Class"}`}
-                    subtitle={
-                      next?.hasCurriculum
-                        ? next.syllabusComplete
-                          ? "Syllabus complete 🎉"
-                          : `Lesson ${next.sequenceNo} of ${next.totalLessons}: ${next.lessonPlan?.title ?? "—"}`
-                        : "No curriculum linked to this class yet"
-                    }
-                    right={next?.hasCurriculum && !next.syllabusComplete ? <Pill tone="info">next up</Pill> : undefined}
-                    onPress={next?.lessonPlan ? () => router.push(`/coach/lesson-plans/${next.lessonPlan!.id}`) : undefined}
-                  />
-                ))}
+                {calendarClasses.map((cc) => {
+                  const next = cc.next;
+                  const nextDate = cc.sessions[0]?.sessionDate;
+                  return (
+                    <Card key={cc.classId}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 15, flex: 1 }}>{cc.title}</Text>
+                        {next?.hasCurriculum && !next.syllabusComplete ? <Pill tone="info">next up</Pill> : null}
+                      </View>
+                      {next?.hasCurriculum ? (
+                        next.syllabusComplete ? (
+                          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 6 }}>Syllabus complete 🎉</Text>
+                        ) : (
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={next.lessonPlan ? () => router.push(`/coach/lesson-plans/${next.lessonPlan!.id}`) : undefined}
+                            style={{ marginTop: 6 }}
+                          >
+                            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                              Lesson {next.sequenceNo} of {next.totalLessons}
+                            </Text>
+                            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "600", marginTop: 1 }}>
+                              {next.lessonPlan?.title ?? "—"}
+                            </Text>
+                            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700", marginTop: 3 }}>▶ Open lesson plan</Text>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 6 }}>No curriculum linked to this class yet.</Text>
+                      )}
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 8 }}>
+                        {cc.sessions.length} upcoming session{cc.sessions.length === 1 ? "" : "s"}
+                        {nextDate ? ` · next ${formatDate(nextDate)}` : ""} · see the Schedule tab for dates
+                      </Text>
+                    </Card>
+                  );
+                })}
               </View>
             </View>
           ) : null}
