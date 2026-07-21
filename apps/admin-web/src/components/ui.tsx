@@ -3,10 +3,13 @@
 import { InputHTMLAttributes, ButtonHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, useState } from "react";
 import clsx from "clsx";
 
-export function Field({ label, ...props }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+export function Field({ label, ...props }: { label?: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm text-text-secondary">{label}</span>
+      {/* Only reserve label space when there IS a label — otherwise an empty
+          label pushed the input below label-less siblings (e.g. filter rows
+          where a search Field sits next to unlabeled SelectFields). */}
+      {label ? <span className="mb-1.5 block text-sm text-text-secondary">{label}</span> : null}
       <input
         {...props}
         className={clsx(
