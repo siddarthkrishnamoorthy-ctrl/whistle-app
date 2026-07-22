@@ -5,6 +5,7 @@ import { apiJson } from "@/lib/api-client";
 import { useApiList } from "@/lib/hooks";
 import { Card, EmptyState, OutlineButton, PrimaryButton, SelectField } from "@/components/ui";
 import { ageBandForGrade, ageBandSummary } from "@/lib/age-bands";
+import { toast } from "@/components/toast";
 import type { CurriculumTrack, Grade, LessonPlan, Sport } from "@/lib/types";
 
 export default function CurriculumPage() {
@@ -38,8 +39,10 @@ export default function CurriculumPage() {
     setMode(next);
     try {
       await apiJson("/settings", { method: "PATCH", body: JSON.stringify({ lessonPlanAssignmentMode: next }) });
+      toast(next === "calendar" ? "Placement: as per the timetable" : "Placement: as per the age band");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not change placement mode.");
+      setMode(mode);
+      toast(err instanceof Error ? err.message : "Could not change placement mode.", "error");
     } finally {
       setSavingMode(false);
     }

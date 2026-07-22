@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/lib/auth-context";
+import { Toaster } from "@/components/toast";
 import { initials } from "@whistle/shared";
 
 interface NavItem {
@@ -149,6 +150,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { apiJson } from "@/lib/api-client";
 import { Card, EmptyState, Field, SelectField } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
 import { AGE_BANDS, ageBandSummary, findAgeBand } from "@/lib/age-bands";
+import { toast } from "@/components/toast";
 import { PageHeader, type PlatformDrill, type PlatformPlan } from "../platform-ui";
 
 interface Sport {
@@ -57,8 +58,9 @@ export default function PlatformLessonPlansPage() {
     try {
       await apiJson(`/platform/lesson-plans/${plan.id}`, { method: "DELETE" });
       load();
+      toast(`"${plan.title}" deleted`);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Delete failed.");
+      toast(e instanceof Error ? e.message : "Delete failed.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -294,6 +296,7 @@ function NewPlatformPlanModal({
           drillIds: selected,
         }),
       });
+      toast(`"${form.title}" published`);
       setForm({ title: "", sportKey: "", level: "beginner", ageBand: "", goals: "" });
       setSelected([]);
       setBrowseOpen(false);

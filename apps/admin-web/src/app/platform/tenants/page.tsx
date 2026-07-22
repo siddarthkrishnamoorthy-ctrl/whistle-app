@@ -12,6 +12,7 @@ import { Ban, Building2, CheckCircle2, ChevronDown, ChevronUp, CircleDot, Clock,
 import { apiJson } from "@/lib/api-client";
 import { Card, Field, SelectField } from "@/components/ui";
 import { Modal, ModalFooter } from "@/components/modal";
+import { toast } from "@/components/toast";
 import { brandFont, brandLogoSrc, FONT_OPTIONS } from "@/components/tenant-brand";
 import { inr, PageHeader, SUB_STATUS_TONE, type Tenant } from "../platform-ui";
 
@@ -292,8 +293,9 @@ function TenantCard({
     try {
       await apiJson(`/platform/tenants/${t.id}`, { method: "PATCH", body: JSON.stringify(body) });
       onChanged();
+      toast(`${t.name} updated`);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed.");
+      toast(e instanceof Error ? e.message : "Update failed.", "error");
     } finally {
       setBusy(false);
     }
@@ -304,8 +306,9 @@ function TenantCard({
     try {
       await apiJson(`/platform/tenants/${t.id}/subscription`, { method: "PATCH", body: JSON.stringify(body) });
       onChanged();
+      toast("Subscription updated");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Update failed.");
+      toast(e instanceof Error ? e.message : "Update failed.", "error");
     } finally {
       setBusy(false);
     }
@@ -317,8 +320,9 @@ function TenantCard({
     try {
       await apiJson(`/platform/tenants/${t.id}/close-period`, { method: "POST" });
       onChanged();
+      toast("Billing period closed");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Period close failed.");
+      toast(e instanceof Error ? e.message : "Period close failed.", "error");
     } finally {
       setBusy(false);
     }
@@ -331,8 +335,9 @@ function TenantCard({
       form.append("file", file);
       await apiJson(`/platform/tenants/${t.id}/logo`, { method: "POST", body: form });
       onChanged();
+      toast("Logo updated");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Logo upload failed.");
+      toast(e instanceof Error ? e.message : "Logo upload failed.", "error");
     } finally {
       setBusy(false);
     }
@@ -631,6 +636,7 @@ function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClos
         fd.append("file", logoFile);
         await apiJson(`/platform/tenants/${created.academy.id}/logo`, { method: "POST", body: fd });
       }
+      toast(`${form.name} onboarded`);
       setForm({ name: "", contactEmail: "", adminName: "", adminEmail: "", adminPassword: "", studentAllowance: "", allowanceMode: "true_up", displayName: "", fontKey: "default" });
       setLogoFile(null);
       onCreated();

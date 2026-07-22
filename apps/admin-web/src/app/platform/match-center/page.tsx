@@ -7,9 +7,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Search, Swords, Trophy } from "lucide-react";
 import { apiJson } from "@/lib/api-client";
-import { Card, EmptyState, SelectField, StatusPill, Table } from "@/components/ui";
+import { Card, EmptyState, MetricTile, SelectField, StatusPill, Table } from "@/components/ui";
+import { Modal } from "@/components/modal";
 import { RANK_MEDALS } from "@/lib/sport-icons";
 import { PageHeader } from "../platform-ui";
+
+type EventRow = MatchCenter["events"][number];
+type SchoolRow = MatchCenter["schoolTable"][number];
 
 interface MatchCenter {
   totals: { events: number; live: number; completed: number; matchesPlayed: number };
@@ -39,6 +43,8 @@ export default function PlatformMatchCenterPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sportFilter, setSportFilter] = useState("");
+  const [detailEvent, setDetailEvent] = useState<EventRow | null>(null);
+  const [detailSchool, setDetailSchool] = useState<SchoolRow | null>(null);
 
   useEffect(() => {
     apiJson<MatchCenter>("/platform/match-center").then(setData).catch(() => {});
@@ -93,9 +99,14 @@ export default function PlatformMatchCenterPage() {
             <EmptyState message="No completed interschool matches yet." />
           </Card>
         ) : (
+          <div className="max-h-[340px] overflow-y-auto rounded-lg border border-border">
           <Table columns={["#", "School", "P", "W", "D", "L", "Pts"]}>
             {data.schoolTable.map((r, i) => (
-              <tr key={r.academyId} className={`hover:bg-surface-alt ${i === 0 ? "bg-amber-400/5" : ""}`}>
+              <tr
+                key={r.academyId}
+                onClick={() => setDetailSchool(r)}
+                className={`cursor-pointer hover:bg-surface-alt ${i === 0 ? "bg-amber-400/5" : ""}`}
+              >
                 <td className="px-4 py-3">{RANK_MEDALS[i] ?? <span className="text-text-muted">{i + 1}</span>}</td>
                 <td className={`px-4 py-3 font-medium ${i === 0 ? "text-amber-300" : "text-text-primary"}`}>{r.name}</td>
                 <td className="px-4 py-3 text-center text-text-secondary">{r.played}</td>
@@ -106,6 +117,7 @@ export default function PlatformMatchCenterPage() {
               </tr>
             ))}
           </Table>
+          </div>
         )}
       </div>
 
@@ -149,9 +161,13 @@ export default function PlatformMatchCenterPage() {
             <EmptyState message="No events match." />
           </Card>
         ) : (
-          <div className="space-y-2">
+          <div className="max-h-[440px] space-y-2 overflow-y-auto pr-1">
             {events.map((e) => (
-              <Card key={e.id} className="flex flex-wrap items-center justify-between gap-3">
+              <Card
+                key={e.id}
+                onClick={() => setDetailEvent(e)}
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-3 hover:border-accent/40"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-text-primary">{e.name}</span>
@@ -161,11 +177,66 @@ export default function PlatformMatchCenterPage() {
                     Hosted by {e.host} · {e.sports.join(", ")} · {e.fixtures} fixtures · {e.rosters} players · {e.startDate.slice(0, 10)}
                   </p>
                 </div>
+                <span className="text-xs font-semibold text-accent">View →</span>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Event detail */}
+      <Modal open={!!detailEvent} onClose={() => setDetailEvent(null)} title={detailEvent?.name ?? "Event"} subtitle={detailEvent ? `Hosted by ${detailEvent.host}` : undefined}>
+        {detailEvent && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPill tone={STATUS_TONE[detailEvent.status] ?? "neutral"}>{detailEvent.status}</StatusPill>
+              {detailEvent.sports.map((s) => (
+                <span key={s} className="rounded-full bg-surface-alt px-2.5 py-0.5 text-xs text-text-secondary">{s}</span>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MetricTile label="Fixtures" value={detailEvent.fixtures} />
+              <MetricTile label="Players" value={detailEvent.rosters} />
+              <MetricTile label="Sports" value={detailEvent.sports.length} />
+              <MetricTile label="Start date" value={detailEvent.startDate.slice(0, 10)} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* School detail — its record + the events it hosts */}
+      <Modal open={!!detailSchool} onClose={() => setDetailSchool(null)} title={detailSchool?.name ?? "School"} subtitle="Interschool record & hosted events">
+        {detailSchool && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <MetricTile label="Played" value={detailSchool.played} />
+              <MetricTile label="Won" value={detailSchool.won} tone="success" />
+              <MetricTile label="Points" value={detailSchool.points} tone="accent" />
+              <MetricTile label="Drawn" value={detailSchool.drawn} />
+              <MetricTile label="Lost" value={detailSchool.lost} tone="danger" />
+              <MetricTile label="Win %" value={detailSchool.played ? `${Math.round((detailSchool.won / detailSchool.played) * 100)}%` : "—"} />
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Events hosted</p>
+              {(() => {
+                const hosted = (data?.events ?? []).filter((e) => e.host === detailSchool.name);
+                return hosted.length === 0 ? (
+                  <p className="text-sm text-text-muted">No events hosted by this school.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {hosted.map((e) => (
+                      <div key={e.id} className="flex items-center justify-between rounded-lg border border-border bg-white/[0.03] px-3 py-2 text-sm">
+                        <span className="text-text-primary">{e.name}</span>
+                        <StatusPill tone={STATUS_TONE[e.status] ?? "neutral"}>{e.status}</StatusPill>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

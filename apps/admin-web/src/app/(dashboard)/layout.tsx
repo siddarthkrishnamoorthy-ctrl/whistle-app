@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { NAV_SECTIONS } from "@/lib/nav-config";
 import { TenantBrand } from "@/components/tenant-brand";
+import { Toaster } from "@/components/toast";
 import { initials } from "@whistle/shared";
 import clsx from "clsx";
 
@@ -137,6 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }
